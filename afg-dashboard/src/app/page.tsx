@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toPng } from "html-to-image";
 import {
   Bar,
   XAxis,
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const [globalRanks, setGlobalRanks] = useState<Record<string, number[]>>({});
   const [updateDate, setUpdateDate] = useState<string>("");
   const [selectedViewMonth, setSelectedViewMonth] = useState<1 | 2>(2); // 1월 | 2월
+  const [prizeMonthDropdownOpen, setPrizeMonthDropdownOpen] = useState(false);
   const [agentSearchOpen, setAgentSearchOpen] = useState(false);
   const [agentSearchQuery, setAgentSearchQuery] = useState("");
   const [agentsError, setAgentsError] = useState<string | null>(null);
@@ -35,8 +37,65 @@ export default function Dashboard() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const exportAreaRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
+
+  const handleExportPng = async () => {
+    const el = exportAreaRef.current;
+    if (!el) return;
+    setExportLoading(true);
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const removed: { link: HTMLLinkElement; parent: Node; next: Node | null }[] = [];
+    try {
+      // cross-origin 스타일시트는 cssRules 접근 시 SecurityError → 캡처 동안만 DOM에서 제거
+      document.querySelectorAll('link[rel="stylesheet"]').forEach((linkEl) => {
+        const link = linkEl as HTMLLinkElement;
+        if (link.href && new URL(link.href).origin !== origin) {
+          const parent = link.parentNode;
+          if (parent) {
+            removed.push({ link, parent, next: link.nextSibling });
+            parent.removeChild(link);
+          }
+        }
+      });
+      // 화면과 동일한 픽셀 너비로 고정해 클론이 같은 비율로 렌더링되게 함 (글씨 두 줄 내려감 방지)
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const origStyle = { width: el.style.width, minWidth: el.style.minWidth, maxWidth: el.style.maxWidth, boxSizing: el.style.boxSizing, padding: el.style.padding };
+      try {
+        el.style.width = `${w}px`;
+        el.style.minWidth = `${w}px`;
+        el.style.maxWidth = `${w}px`;
+        el.style.boxSizing = "border-box";
+        el.style.padding = "2px"; // PNG 내보낼 때 네 방향 2px 여백
+        const dataUrl = await toPng(el, {
+          width: w + 4,
+          height: h + 4,
+          pixelRatio: 3,
+          backgroundColor: document.documentElement.classList.contains("dark") ? "#111827" : "#f3f4f6",
+          cacheBust: true,
+          skipFonts: false,
+        });
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `대시보드_${selectedAgent?.name ?? "내보내기"}_${new Date().toISOString().slice(0, 10)}.png`;
+        a.click();
+      } finally {
+        el.style.width = origStyle.width;
+        el.style.minWidth = origStyle.minWidth;
+        el.style.maxWidth = origStyle.maxWidth;
+        el.style.boxSizing = origStyle.boxSizing;
+        el.style.padding = origStyle.padding;
+      }
+    } catch (e) {
+      console.error("PNG 내보내기 실패:", e);
+    } finally {
+      removed.forEach(({ link, parent, next }) => parent.insertBefore(link, next));
+      setExportLoading(false);
+    }
+  };
 
   useEffect(() => {
     // 세션 및 에이전트 데이터 가져오기
@@ -229,9 +288,10 @@ export default function Dashboard() {
   let viewW3 = 0;
   let week1Past = false;
   let week2Past = false;
-  // 업데이트 날짜(MMDD) 기준 현재 주차. updateDate는 fetch 후 state에서 옴
-  const dayFromUpdate = (updateDate && updateDate.length >= 4) ? parseInt(updateDate.slice(2, 4), 10) : new Date().getDate();
-  const currentWeekNum = Math.min(4, Math.max(1, Math.ceil((dayFromUpdate || 1) / 7)));
+  // 주차 종료 여부는 '지금 시점'(오늘 날짜) 기준. 진행중/달성 실패 배지가 실제와 맞도록
+  const todayDay = new Date().getDate();
+  const currentWeekNum = Math.min(4, Math.max(1, Math.ceil((todayDay || 1) / 7)));
+  const dayFromUpdate = (updateDate && updateDate.length >= 4) ? parseInt(updateDate.slice(2, 4), 10) : todayDay;
 
   if (selectedAgent && selectedAgent.performance) {
     performanceData = [
@@ -642,6 +702,15 @@ export default function Dashboard() {
                   <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-primary underline">
                     로그아웃
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleExportPng}
+                    disabled={exportLoading}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <span className="material-symbols-outlined text-base">download</span>
+                    {exportLoading ? "내보내는 중..." : "내보내기"}
+                  </button>
                 </div>
               </div>
               {/* 2줄(모바일) / 우측(데스크톱): 검색+리스트 (admin/manager만) */}
@@ -727,6 +796,7 @@ export default function Dashboard() {
             </div>
           </header>
           <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-14">
+            <div ref={exportAreaRef} className="space-y-0">
             <div
               className={`rounded-2xl shadow-lg p-4 md:p-6 mb-6 md:mb-8 relative overflow-hidden ${
                 isTop3
@@ -763,17 +833,17 @@ export default function Dashboard() {
                       <img src={profileImageSrc} alt="" className="w-[77%] h-[77%] object-contain" />
                     </div>
                     {isTop3 ? (
-                      <div className="absolute -top-4 -right-1 bg-gradient-to-br from-meritz-gold to-amber-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg border border-amber-200/50 flex items-center gap-0.5 scale-[0.8] origin-top-right">
+                      <div className="absolute -top-4 -right-1 bg-gradient-to-br from-meritz-gold to-amber-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg border border-amber-200/50 flex items-center gap-0.5 scale-[0.8] origin-top-right whitespace-nowrap">
                         <span className="material-symbols-outlined text-xs">workspace_premium</span>
                         TOP {rankInMonth}
                       </div>
                     ) : isTop30 ? (
-                      <div className="absolute -bottom-4 -right-2 bg-meritz-gold text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center scale-[0.8] origin-bottom-right">
+                      <div className="absolute -bottom-4 -right-2 bg-meritz-gold text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center scale-[0.8] origin-bottom-right whitespace-nowrap">
                         <span className="material-symbols-outlined text-xs mr-0.5">military_tech</span>
                         TOP {rankInMonth}
                       </div>
                     ) : (
-                      <div className="absolute -bottom-2 -right-2 bg-meritz-gold text-white text-xs font-bold px-3 py-1 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center">
+                      <div className="absolute -bottom-2 -right-2 bg-meritz-gold text-white text-xs font-bold px-3 py-1 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center whitespace-nowrap">
                         <span className="material-symbols-outlined text-sm mr-1">military_tech</span> VIP
                       </div>
                     )}
@@ -791,7 +861,7 @@ export default function Dashboard() {
                         </span>
                       </h2>
                       {isTop30 && (
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${isTop3 ? "bg-meritz-gold/20 text-meritz-gold border border-meritz-gold/40" : "bg-primary/10 text-primary border border-primary/30"}`}>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded whitespace-nowrap ${isTop3 ? "bg-meritz-gold/20 text-meritz-gold border border-meritz-gold/40" : "bg-primary/10 text-primary border border-primary/30"}`}>
                           당월실적 {rankInMonth}위
                         </span>
                       )}
@@ -801,18 +871,18 @@ export default function Dashboard() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {totalEstimatedPrize > 0 && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-meritz-gold/10 text-meritz-gold border border-meritz-gold/30">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-meritz-gold/10 text-meritz-gold border border-meritz-gold/30 whitespace-nowrap">
                           2월 시상 달성
                         </span>
                       )}
                       {prevMonthPerf >= 200000 && currentMonthPerf >= 200000 && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
                           연속가동 달성
                         </span>
                       )}
                     </div>
                     {remainToShow > 0 && (
-                      <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 border border-primary/30 animate-sway">
+                      <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 border border-primary/30 animate-sway whitespace-nowrap">
                         <span className="text-sm font-bold text-primary">
                           {remainLabel === "gap"
                             ? `2위와의 격차 ${Math.round(remainToShow / 10000).toLocaleString()}만원`
@@ -836,7 +906,7 @@ export default function Dashboard() {
                       </h3>
                     </div>
                     {selectedViewMonth === 2 && (
-                      <div className="mt-2 text-xs bg-white/20 inline-block px-2 py-1 rounded">
+                      <div className="mt-2 text-xs bg-white/20 inline-block px-2 py-1 rounded whitespace-nowrap">
                         전월 대비{" "}
                         <span className="font-bold">
                           {prizeDiff > 0 ? "+" : ""}
@@ -868,7 +938,7 @@ export default function Dashboard() {
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <p className="text-xs text-right mt-1 text-gray-400 whitespace-normal md:whitespace-nowrap">
+                    <p className="text-xs text-right mt-1 text-gray-400 whitespace-nowrap">
                       {isRank1 ? (
                         "전국 TOP 실적 달성!"
                       ) : (
@@ -884,168 +954,205 @@ export default function Dashboard() {
               <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
                   <span className="w-1.5 h-6 bg-meritz-gold rounded-sm mr-3"></span>
-                  나의 시상 현황 (My Rewards)
+                  MY MERITZ PRIZE
                 </h2>
-                <div className="flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden bg-surface-light dark:bg-surface-dark">
-                  {([1, 2] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setSelectedViewMonth(m)}
-                      className={`px-4 py-2 text-sm font-medium transition-colors ${
-                        selectedViewMonth === m
-                          ? "bg-primary text-white"
-                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      }`}
-                    >
-                      {m}월
-                    </button>
-                  ))}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setPrizeMonthDropdownOpen((v) => !v)}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-md bg-surface-light dark:bg-surface-dark px-3 py-1.5 whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    {selectedViewMonth}월
+                    <span className="material-symbols-outlined text-base text-gray-500">expand_more</span>
+                  </button>
+                  {prizeMonthDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setPrizeMonthDropdownOpen(false)} aria-hidden />
+                      <div className="absolute top-full right-0 mt-1 z-50 min-w-[4rem] py-1 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-surface-dark shadow-lg">
+                        {([1, 2] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => {
+                              setSelectedViewMonth(m);
+                              setPrizeMonthDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm font-medium transition-colors ${
+                              selectedViewMonth === m
+                                ? "text-primary bg-primary/10 dark:bg-primary/20"
+                                : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            }`}
+                          >
+                            {m}월
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className={`grid grid-cols-1 gap-4 md:gap-5 mb-6 ${selectedViewMonth === 1 ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
                 {/* 1줄: 1주차, 2주차, (3주차 1월만), 월간 */}
                 {/* 1주차 현금시상 */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-green-500 p-3 md:p-4 hover:shadow-lg transition-shadow">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-lg">
-                      <span className="material-symbols-outlined text-green-600 dark:text-green-400">payments</span>
+                <div className="group rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-4 hover:shadow-md hover:border-emerald-400/40 dark:hover:border-emerald-500/40 transition-all duration-200 relative overflow-hidden bg-emerald-500/5 dark:bg-emerald-400/5">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 dark:bg-emerald-400 rounded-l-xl" aria-hidden />
+                  <div className="flex justify-between items-start mb-3 pl-1">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-emerald-500/20 dark:bg-emerald-400/20 p-1.5 rounded-lg border border-emerald-500/20 dark:border-emerald-400/20 flex items-center justify-center w-10 h-10">
+                        <svg viewBox="0 0 24 14" className="w-6 h-4 flex-shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden>
+                          <text x="0" y="11" fill="currentColor" fontSize="12" fontWeight="800" fontFamily="var(--font-nunito), sans-serif">1W</text>
+                        </svg>
+                      </div>
                     </div>
                     {week1Prize > 0 ? (
-                      <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 text-xs px-2 py-1 rounded font-bold">달성완료</span>
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 whitespace-nowrap">달성완료</span>
                     ) : (
-                      <span className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 text-xs px-2 py-1 rounded font-bold">달성 실패</span>
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 whitespace-nowrap">달성 실패</span>
                     )}
                   </div>
-                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">1주차 현금시상</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">1주차 실적 기준</p>
-                  <div className="mb-3">
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-0.5 pl-1">1주차 현금시상</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 pl-1">1주차 실적 기준</p>
+                  <div className="mb-3 pl-1">
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-600 dark:text-gray-300">현재 {Math.round(viewW1 / 10000)}만</span>
-                      <span className={`font-bold ${week1Next === "달성 실패" ? "text-red-500" : "text-green-600 dark:text-green-400"}`}>
+                      <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(viewW1 / 10000)}만</span>
+                      <span className={`font-semibold ${week1Next === "달성 실패" ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"}`}>
                         {week1Past ? week1Next : `다음 구간 ${week1Next}`}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                      <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${week1Progress}%` }}></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className="bg-emerald-500 dark:bg-emerald-400 h-2 rounded-full transition-[width] duration-300" style={{ width: `${week1Progress}%` }} />
                     </div>
                   </div>
-                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2 flex justify-between items-center">
-                    <span className="text-xs text-gray-500">예상 시상금</span>
-                    <span className="text-base font-bold text-green-600 dark:text-green-400">{Math.round(week1Prize / 10000).toLocaleString()}만원</span>
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2.5 flex justify-between items-center pl-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">예상 시상금</span>
+                    <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">{Math.round(week1Prize / 10000).toLocaleString()}만원</span>
                   </div>
                 </div>
 
                 {/* 2주차 현금시상 */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-primary p-3 md:p-4 hover:shadow-lg transition-shadow relative overflow-hidden">
-                  <div className="flex justify-between items-start mb-3 relative z-10">
-                    <div className="bg-red-50 dark:bg-red-900/20 p-1.5 rounded-lg">
-                      <span className="material-symbols-outlined text-primary">add_task</span>
+                <div className="group rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-4 hover:shadow-md hover:border-primary/50 dark:hover:border-primary/50 transition-all duration-200 relative overflow-hidden bg-primary/5">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl" aria-hidden />
+                  <div className="flex justify-between items-start mb-3 pl-1 relative z-10">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20 flex items-center justify-center w-10 h-10">
+                        <svg viewBox="0 0 24 14" className="w-6 h-4 flex-shrink-0 text-primary" aria-hidden>
+                          <text x="0" y="11" fill="currentColor" fontSize="12" fontWeight="800" fontFamily="var(--font-nunito), sans-serif">2W</text>
+                        </svg>
+                      </div>
                     </div>
                     {week2Prize > 0 ? (
-                      <span className="bg-red-50 text-primary dark:bg-red-900/30 text-xs px-2 py-1 rounded font-bold">달성완료</span>
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-primary/15 text-primary border border-primary/20 whitespace-nowrap">달성완료</span>
                     ) : (
-                      <span className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 text-xs px-2 py-1 rounded font-bold">
-                        {currentWeekNum >= 3 ? "달성 실패" : "진행중"}
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                        {week2Past ? "달성 실패" : "진행중"}
                       </span>
                     )}
                   </div>
-                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-0.5 relative z-10">2주차 현금시상</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 relative z-10">2주차 실적 기준</p>
-                  <div className="mb-3 relative z-10">
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-0.5 pl-1 relative z-10">2주차 현금시상</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 pl-1 relative z-10">2주차 실적 기준</p>
+                  <div className="mb-3 pl-1 relative z-10">
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-600 dark:text-gray-300">현재 {Math.round(viewW2 / 10000)}만</span>
-                      <span className={`font-bold ${week2Next === "달성 실패" ? "text-red-500" : "text-primary"}`}>
+                      <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(viewW2 / 10000)}만</span>
+                      <span className={`font-semibold ${week2Next === "달성 실패" ? "text-red-500" : "text-primary"}`}>
                         {week2Past ? week2Next : `다음 구간 ${week2Next}`}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                      <div className="bg-primary h-1.5 rounded-full relative" style={{ width: `${week2Progress}%` }}></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className="bg-primary h-2 rounded-full transition-[width] duration-300" style={{ width: `${week2Progress}%` }} />
                     </div>
                   </div>
-                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2 flex justify-between items-center relative z-10">
-                    <span className="text-xs text-gray-500">예상 시상금</span>
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2.5 flex justify-between items-center pl-1 relative z-10">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">예상 시상금</span>
                     <span className="text-base font-bold text-primary">{Math.round(week2Prize / 10000).toLocaleString()}만원</span>
                   </div>
                 </div>
 
                 {/* 3주차 현금시상 (1월만) */}
                 {selectedViewMonth === 1 && (
-                  <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-purple-500 p-3 md:p-4 hover:shadow-lg transition-shadow">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="bg-purple-100 dark:bg-purple-900/30 p-1.5 rounded-lg">
-                        <span className="material-symbols-outlined text-purple-600 dark:text-purple-400">calendar_month</span>
+                  <div className="group rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-4 hover:shadow-md hover:border-violet-400/40 dark:hover:border-violet-500/40 transition-all duration-200 relative overflow-hidden bg-violet-500/5 dark:bg-violet-400/5">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-violet-500 dark:bg-violet-400 rounded-l-xl" aria-hidden />
+                    <div className="flex justify-between items-start mb-3 pl-1">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-violet-500/20 dark:bg-violet-400/20 p-1.5 rounded-lg border border-violet-500/20 dark:border-violet-400/20 flex items-center justify-center w-10 h-10">
+                          <svg viewBox="0 0 24 14" className="w-6 h-4 flex-shrink-0 text-violet-600 dark:text-violet-400" aria-hidden>
+                            <text x="0" y="11" fill="currentColor" fontSize="12" fontWeight="800" fontFamily="var(--font-nunito), sans-serif">3W</text>
+                          </svg>
+                        </div>
                       </div>
                       {week3Prize > 0 ? (
-                        <span className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 text-xs px-2 py-1 rounded font-bold">달성완료</span>
+                        <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/20 whitespace-nowrap">달성완료</span>
                       ) : (
-                        <span className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 text-xs px-2 py-1 rounded font-bold">달성 실패</span>
+                        <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 whitespace-nowrap">달성 실패</span>
                       )}
                     </div>
-                    <h4 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">3주차 현금시상</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">3주차 실적 기준</p>
-                    <div className="mb-3">
+                    <h4 className="text-base font-bold text-gray-900 dark:text-white mb-0.5 pl-1">3주차 현금시상</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 pl-1">3주차 실적 기준</p>
+                    <div className="mb-3 pl-1">
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-gray-600 dark:text-gray-300">현재 {Math.round(viewW3 / 10000)}만</span>
-                        <span className={`font-bold ${week3Next === "달성 실패" ? "text-red-500" : "text-purple-600 dark:text-purple-400"}`}>
+                        <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(viewW3 / 10000)}만</span>
+                        <span className={`font-semibold ${week3Next === "달성 실패" ? "text-red-500" : "text-violet-600 dark:text-violet-400"}`}>
                           {week3Next}
                         </span>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                        <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: `${week3Progress}%` }}></div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-violet-500 dark:bg-violet-400 h-2 rounded-full transition-[width] duration-300" style={{ width: `${week3Progress}%` }} />
                       </div>
                     </div>
-                    <div className="border-t border-gray-100 dark:border-gray-700 pt-2 flex justify-between items-center">
-                      <span className="text-xs text-gray-500">예상 시상금</span>
-                      <span className="text-base font-bold text-purple-600 dark:text-purple-400">{Math.round(week3Prize / 10000).toLocaleString()}만원</span>
+                    <div className="border-t border-gray-100 dark:border-gray-700 pt-2.5 flex justify-between items-center pl-1">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">예상 시상금</span>
+                      <span className="text-base font-bold text-violet-600 dark:text-violet-400">{Math.round(week3Prize / 10000).toLocaleString()}만원</span>
                     </div>
                   </div>
                 )}
 
                 {/* 월간 현금시상 */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-blue-500 p-3 md:p-4 hover:shadow-lg transition-shadow">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-1.5 rounded-lg">
-                      <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">emoji_events</span>
+                <div className="group rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-4 hover:shadow-md hover:border-sky-400/40 dark:hover:border-sky-500/40 transition-all duration-200 relative overflow-hidden bg-sky-500/5 dark:bg-sky-400/5">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-sky-500 dark:bg-sky-400 rounded-l-xl" aria-hidden />
+                  <div className="flex justify-between items-start mb-3 pl-1">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md bg-sky-500 dark:bg-sky-400 text-white text-xs font-bold shadow-sm whitespace-nowrap">월간</span>
+                      <div className="w-10 h-10 rounded-xl bg-sky-500/10 dark:bg-sky-400/10 flex items-center justify-center border border-sky-500/20 dark:border-sky-400/20">
+                        <span className="material-symbols-outlined text-sky-600 dark:text-sky-400 text-xl" aria-hidden>workspace_premium</span>
+                      </div>
                     </div>
                     {monthlyPrize > 0 ? (
-                      <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 text-xs px-2 py-1 rounded font-bold">달성완료</span>
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-500/20 whitespace-nowrap">달성완료</span>
                     ) : (
-                      <span className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 text-xs px-2 py-1 rounded font-bold">도전중</span>
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 whitespace-nowrap">도전중</span>
                     )}
                   </div>
-                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-0.5">월간 현금시상</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">당월 누적 실적</p>
-                  <div className="mb-3">
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-0.5 pl-1">월간 현금시상</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 pl-1">당월 누적 실적</p>
+                  <div className="mb-3 pl-1">
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-600 dark:text-gray-300">현재 {Math.round(currentMonthPerf / 10000)}만</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-bold">다음 구간 {monthlyNext}</span>
+                      <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(currentMonthPerf / 10000)}만</span>
+                      <span className="text-sky-600 dark:text-sky-400 font-semibold">다음 구간 {monthlyNext}</span>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                      <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${monthlyProgress}%` }}></div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className="bg-sky-500 dark:bg-sky-400 h-2 rounded-full transition-[width] duration-300" style={{ width: `${monthlyProgress}%` }} />
                     </div>
                   </div>
-                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2 flex justify-between items-center">
-                    <span className="text-xs text-gray-500">예상 시상금</span>
-                    <span className="text-base font-bold text-blue-600 dark:text-blue-400">{Math.round(monthlyPrize / 10000).toLocaleString()}만원</span>
+                  <div className="border-t border-gray-100 dark:border-gray-700 pt-2.5 flex justify-between items-center pl-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">예상 시상금</span>
+                    <span className="text-base font-bold text-sky-600 dark:text-sky-400">{Math.round(monthlyPrize / 10000).toLocaleString()}만원</span>
                   </div>
                 </div>
 
                 {/* 2줄: 2배 메리츠클럽, 메리츠클럽+ */}
                 {/* 2배 메리츠클럽 */}
                 <div className="bg-gradient-to-br from-amber-950 via-amber-900/95 to-gray-900 dark:from-gray-900 dark:via-amber-950/80 dark:to-gray-950 rounded-xl shadow-lg border border-amber-500/30 p-3 md:p-4 text-white relative overflow-hidden hover:shadow-xl transition-all">
-                  <div className="absolute top-0 right-0 p-3 opacity-10 z-0 pointer-events-none">
-                    <span className="material-symbols-outlined text-5xl">autorenew</span>
-                  </div>
+                  <div className="absolute top-0 right-0 p-3 opacity-10 z-0 pointer-events-none font-extrabold text-2xl text-amber-400" style={{ fontFamily: "var(--font-nunito), sans-serif" }}>X2</div>
                   <div className="relative z-20">
                   <div className="flex justify-between items-start mb-3">
-                    <div className="bg-amber-500/20 p-2 rounded-xl border border-amber-400/20">
-                      <span className="material-symbols-outlined text-amber-400 text-xl">autorenew</span>
+                    <div className="bg-amber-500/20 p-1.5 rounded-lg border border-amber-400/20 flex items-center justify-center w-10 h-10">
+                      <svg viewBox="0 0 20 14" className="w-5 h-4 flex-shrink-0 text-amber-400" aria-hidden>
+                        <text x="0" y="11" fill="currentColor" fontSize="12" fontWeight="800" fontFamily="var(--font-nunito), sans-serif">X2</text>
+                      </svg>
                     </div>
                     {doubleMeritzPrize > 0 ? (
-                      <span className="bg-amber-500/30 text-amber-200 text-xs px-2.5 py-1 rounded-lg font-bold border border-amber-400/20">달성완료</span>
+                      <span className="bg-amber-500/30 text-amber-200 text-xs px-2.5 py-1 rounded-lg font-bold border border-amber-400/20 whitespace-nowrap">달성완료</span>
                     ) : (
-                      <span className="bg-white/10 text-gray-300 text-xs px-2.5 py-1 rounded-lg font-bold border border-white/10">도전중</span>
+                      <span className="bg-white/10 text-gray-300 text-xs px-2.5 py-1 rounded-lg font-bold border border-white/10 whitespace-nowrap">도전중</span>
                     )}
                   </div>
                   <h4 className="text-base font-bold text-white mb-0.5">2배 메리츠클럽</h4>
@@ -1078,9 +1185,9 @@ export default function Dashboard() {
                       <span className="material-symbols-outlined text-meritz-gold text-lg">diamond</span>
                     </div>
                     {meritzClubPlusPrize > 0 ? (
-                      <span className="bg-meritz-gold text-white text-xs px-2 py-1 rounded font-bold shadow-sm">조건 충족</span>
+                      <span className="bg-meritz-gold text-white text-xs px-2 py-1 rounded font-bold shadow-sm whitespace-nowrap">조건 충족</span>
                     ) : (
-                      <span className="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded font-bold shadow-sm">도전중</span>
+                      <span className="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded font-bold shadow-sm whitespace-nowrap">도전중</span>
                     )}
                   </div>
                   <h4 className="text-base font-bold text-meritz-gold mb-0.5">메리츠 클럽+</h4>
@@ -1120,10 +1227,10 @@ export default function Dashboard() {
                     <span className="material-symbols-outlined text-5xl">verified</span>
                   </div>
                   <div className="flex justify-between items-start mb-3 relative z-10">
-                    <div className="bg-white/10 p-2 rounded-xl border border-white/10">
-                      <span className="material-symbols-outlined text-slate-300 text-lg">receipt_long</span>
+                    <div className="bg-white/10 px-2.5 py-1.5 rounded-xl border border-white/10 flex items-center justify-center">
+                      <span className="text-slate-300 text-sm font-extrabold" style={{ fontFamily: "var(--font-nunito), sans-serif" }}>￦</span>
                     </div>
-                    <span className="bg-emerald-500/20 text-emerald-300 text-xs px-2.5 py-1 rounded-lg font-bold border border-emerald-400/20">실적 100%</span>
+                    <span className="bg-emerald-500/20 text-emerald-300 text-xs px-2.5 py-1 rounded-lg font-bold border border-emerald-400/20 whitespace-nowrap">실적 100%</span>
                   </div>
                   <h4 className="text-base font-bold text-slate-100 mb-0.5 relative z-10">{selectedViewMonth}월 정규시상</h4>
                   <p className="text-xs text-slate-300/80 mb-3 relative z-10">실적의 100% · 1:1 비율</p>
@@ -1310,6 +1417,7 @@ export default function Dashboard() {
                   </ResponsiveContainer>
                 </div>
               </div>
+            </div>
             </div>
 
             {/* 고정 하단 바: 면책문구(왼쪽) + 업데이트 날짜(오른쪽). 모바일에서만 2줄·작은 폰트 */}
