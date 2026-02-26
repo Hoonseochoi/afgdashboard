@@ -28,22 +28,18 @@ function getServiceAccount(): admin.ServiceAccount {
     privateKey = privateKey.replace(/\\n/g, '\n');
     privateKey = privateKey.replace(/\\r\\n/g, '\n');
 
-    // 만약 여전히 실제 줄바꿈(\n)이 포함되어 있지 않다면 강제로 복원 시도
-    if (!privateKey.includes('\n')) {
-        // BEGIN과 END 태그 사이에 있는 문자열 추출
-        const keyMatch = privateKey.match(/-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----/);
-        if (keyMatch && keyMatch[1]) {
-            // 안의 띄어쓰기/공백 전부 제거
-            const body = keyMatch[1].replace(/\s+/g, '');
-            // 64글자 단위로 줄바꿈 추가
-            const formattedBody = body.match(/.{1,64}/g)?.join('\n') || body;
-            privateKey = `-----BEGIN PRIVATE KEY-----\n${formattedBody}\n-----END PRIVATE KEY-----\n`;
-        } else {
-            // 정규식이 안먹히면, 띄어쓰기를 줄바꿈으로 변경하는 꼼수 (간혹 환경변수에 띄어쓰기로 들어오는 경우)
-            privateKey = privateKey.replace(/-----BEGIN PRIVATE KEY-----/g, '-----BEGIN PRIVATE KEY-----\n');
-            privateKey = privateKey.replace(/-----END PRIVATE KEY-----/g, '\n-----END PRIVATE KEY-----\n');
-            privateKey = privateKey.replace(/ ([a-zA-Z0-9+/=]{64}) /g, '\n$1\n');
-        }
+    // Vercel 환경 변수가 여러 줄의 텍스트를 그대로 가져오면서 공백이 생길 수 있음
+    // PEM 포맷은 정확히 "-----BEGIN PRIVATE KEY-----" 와 "-----END PRIVATE KEY-----" 
+    // 사이의 base64 텍스트가 줄바꿈과 함께 존재해야 함.
+    // 그래서 강제로 전체를 파싱해 다시 올바른 포맷으로 만드는 가장 확실한 방법 사용
+    const keyMatch = privateKey.match(/(-----BEGIN PRIVATE KEY-----)([\s\S]*?)(-----END PRIVATE KEY-----)/);
+    if (keyMatch && keyMatch[2]) {
+      // 1. 헤더와 푸터 사이의 모든 내용에서 공백, 탭, 줄바꿈 제거 (순수 base64 문자열만 남김)
+      const base64Body = keyMatch[2].replace(/\s+/g, '');
+      // 2. 64글자마다 줄바꿈 추가
+      const formattedBody = base64Body.match(/.{1,64}/g)?.join('\n') || base64Body;
+      // 3. 올바른 형식으로 재조립
+      privateKey = `-----BEGIN PRIVATE KEY-----\n${formattedBody}\n-----END PRIVATE KEY-----\n`;
     }
   }
 
