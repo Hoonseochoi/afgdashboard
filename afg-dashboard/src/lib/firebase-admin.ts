@@ -21,7 +21,22 @@ function getServiceAccount(): admin.ServiceAccount {
   // 또한 앞뒤 따옴표가 있다면 제거
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (privateKey) {
+    // Vercel 환경변수 콘솔에서 입력 시 다양한 형태로 개행문자가 들어갈 수 있으므로 정규식으로 처리
     privateKey = privateKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
+    
+    // 간혹 \r\n으로 들어오는 경우도 대비
+    privateKey = privateKey.replace(/\\r\\n/g, '\n');
+
+    // 만약 BEGIN PRIVATE KEY와 END PRIVATE KEY 사이에 실제 줄바꿈이 하나도 없다면 (단일 문자열로 들어온 경우)
+    // 공백을 기준으로 줄바꿈을 다시 넣어줍니다. (BEGIN/END 태그 내부의 공백 제외)
+    if (!privateKey.includes('\n') && privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        const keyMatch = privateKey.match(/-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----/);
+        if (keyMatch && keyMatch[1]) {
+            const body = keyMatch[1].replace(/\s+/g, '');
+            const formattedBody = body.match(/.{1,64}/g)?.join('\n') || body;
+            privateKey = `-----BEGIN PRIVATE KEY-----\n${formattedBody}\n-----END PRIVATE KEY-----\n`;
+        }
+    }
   }
 
   if (projectId && clientEmail && privateKey) {
