@@ -1,7 +1,7 @@
 const admin = require('firebase-admin');
 const path = require('path');
 const fs = require('fs');
-const serviceAccount = require('../afgdashboard-3189a-firebase-adminsdk-fbsvc-4d964fb5b2.json');
+const serviceAccount = require('../firebase-admin-key.json');
 const data = require('../src/data/data.json');
 
 if (!admin.apps.length) {

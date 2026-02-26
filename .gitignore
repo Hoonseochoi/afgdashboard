@@ -16,6 +16,7 @@ secrets.json
 config.local.json
 serviceAccountKey.json
 afgdashboard-*.json
+firebase-admin-key.json
 
 # Node / Next.js
 node_modules/
