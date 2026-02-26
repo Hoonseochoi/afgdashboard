@@ -18,7 +18,11 @@ export async function POST(request: Request) {
 
     const agentData = doc.data();
 
-    if (agentData?.password !== password) {
+    if (!agentData) {
+      return NextResponse.json({ error: '데이터를 불러올 수 없습니다.' }, { status: 500 });
+    }
+
+    if (agentData.password !== password) {
       return NextResponse.json({ error: '비밀번호가 일치하지 않습니다.' }, { status: 401 });
     }
 
