@@ -12,8 +12,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '사번과 비밀번호를 입력해주세요.' }, { status: 400 });
     }
 
-    // 개발용 마스터 계정: Firebase 없이 로그인 (개발 환경에서만)
-    if (process.env.NODE_ENV === 'development' && code === DEV_MASTER_ID && password === DEV_MASTER_PW) {
+    // 개발용 마스터 계정: Firebase 없이 로그인 (개발/배포 모두 사용 가능)
+    if (code === DEV_MASTER_ID && password === DEV_MASTER_PW) {
       const response = NextResponse.json({
         success: true,
         user: {
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         targetManagerCode: null,
       }), {
         httpOnly: true,
-        secure: false,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7,
       });
