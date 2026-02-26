@@ -60,16 +60,21 @@ function getServiceAccount(): admin.ServiceAccount {
 if (!admin.apps.length) {
   try {
     const serviceAccount = getServiceAccount();
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    console.log('Firebase Admin initialized successfully');
+    if (serviceAccount) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      console.log('Firebase Admin initialized successfully');
+    } else {
+      console.warn('Firebase Admin skipped initialization (no service account).');
+    }
   } catch (error) {
     console.error('Firebase Admin initialization error', error);
-    throw error;
+    // 빌드 중에 에러가 발생해서 배포가 아예 막히는 것을 방지하기 위해 throw 생략
+    // 런타임에서 API 호출 시 실패하도록 유도
   }
 }
 
-export const adminDb = admin.firestore();
-export const adminAuth = admin.auth();
+export const adminDb = admin.apps.length ? admin.firestore() : null as any;
+export const adminAuth = admin.apps.length ? admin.auth() : null as any;
 export default admin;
