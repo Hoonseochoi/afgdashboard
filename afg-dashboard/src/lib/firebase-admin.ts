@@ -21,19 +21,11 @@ function getServiceAccount(): admin.ServiceAccount {
   // 또한 앞뒤 따옴표가 있다면 제거
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (privateKey) {
-    // 무조건 가장 확실한 방법으로 포맷팅을 강제 재조립 (Vercel 환경변수 입력 시 생길 수 있는 모든 공백/개행 이슈 원천 차단)
-    let rawKey = privateKey.replace(/^"|"$/g, ''); // 앞뒤 따옴표 제거
-    rawKey = rawKey.replace(/\\n/g, '\n'); // 이스케이프된 개행문자 변환
-    rawKey = rawKey.replace(/\\r\\n/g, '\n');
+    // Vercel 환경변수 콘솔에서 입력 시 다양한 형태로 개행문자가 들어갈 수 있으므로 정규식으로 처리
+    privateKey = privateKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
     
-    // PEM 헤더와 푸터 제거하고 순수 base64 데이터만 남긴 뒤, 모든 공백(\s, \n 등) 완전 제거
-    rawKey = rawKey.replace(/-----BEGIN PRIVATE KEY-----/g, '');
-    rawKey = rawKey.replace(/-----END PRIVATE KEY-----/g, '');
-    rawKey = rawKey.replace(/\s+/g, ''); 
-    
-    // 정확히 64글자마다 줄바꿈을 넣어 표준 PEM 포맷으로 재구성
-    const formattedKey = rawKey.match(/.{1,64}/g)?.join('\n') || rawKey;
-    privateKey = `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----\n`;
+    // 간혹 \r\n으로 들어오는 경우도 대비
+    privateKey = privateKey.replace(/\\r\\n/g, '\n');
   }
 
   if (projectId && clientEmail && privateKey) {
