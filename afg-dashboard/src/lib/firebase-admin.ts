@@ -52,9 +52,32 @@ function getServiceAccount(): admin.ServiceAccount {
   // 로컬: JSON 파일 사용 (require 대신 fs로 런타임 로드 - 번들러 해석 방지)
   const fs = require('fs');
   const path = require('path');
-  const filePath = path.join(process.cwd(), 'firebase-admin-key.json');
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(content) as admin.ServiceAccount;
+  const cwd = process.cwd();
+  const candidates = [
+    path.join(cwd, 'firebase-admin-key.json'),
+    path.join(cwd, 'afg-dashboard', 'firebase-admin-key.json'),
+  ];
+  let content: string | null = null;
+  let usedPath = '';
+  for (const filePath of candidates) {
+    try {
+      content = fs.readFileSync(filePath, 'utf-8');
+      usedPath = filePath;
+      break;
+    } catch {
+      continue;
+    }
+  }
+  if (!content) {
+    console.error('Firebase: key file not found. Tried:', candidates.join(', '));
+    throw new Error(`Firebase key file not found. Tried: ${candidates.join(', ')}`);
+  }
+  const parsed = JSON.parse(content) as admin.ServiceAccount;
+  if (!parsed.project_id || !parsed.client_email || !parsed.private_key) {
+    console.error('Firebase: key file missing project_id, client_email, or private_key.');
+    throw new Error('Firebase key file must contain project_id, client_email, and private_key.');
+  }
+  return parsed;
 }
 
 if (!admin.apps.length) {

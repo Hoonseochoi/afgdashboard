@@ -3,14 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
   Line,
 } from "recharts";
 import januaryClosedData from "@/data/january_closed.json";
@@ -27,6 +26,8 @@ export default function Dashboard() {
   const [selectedViewMonth, setSelectedViewMonth] = useState<1 | 2>(2); // 1월 | 2월
   const [agentSearchOpen, setAgentSearchOpen] = useState(false);
   const [agentSearchQuery, setAgentSearchQuery] = useState("");
+  const [agentsError, setAgentsError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   // 비밀번호 변경 모달 상태
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -57,12 +58,16 @@ export default function Dashboard() {
         }
 
         // 2. 에이전트 데이터 가져오기
+        setAgentsError(null);
         const agentsRes = await fetch("/api/agents");
         const agentsData = await agentsRes.json();
 
         if (agentsData.error) {
-          console.error(agentsData.error);
-          router.push("/login");
+          if (agentsRes.status === 401) {
+            router.push("/login");
+            return;
+          }
+          setAgentsError(agentsData.error);
           return;
         }
 
@@ -86,7 +91,7 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, [router]);
+  }, [router, retryKey]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,6 +145,19 @@ export default function Dashboard() {
 
   if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
 
+  if (agentsError) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center gap-4 px-4">
+        <p className="text-red-600 dark:text-red-400 text-center">{agentsError}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">서버 또는 Firebase 설정을 확인해 주세요.</p>
+        <div className="flex gap-3">
+          <button onClick={() => { setAgentsError(null); setLoading(true); setRetryKey((k) => k + 1); }} className="px-4 py-2 bg-primary text-white rounded-md">다시 시도</button>
+          <button onClick={handleLogout} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md">로그아웃</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!selectedAgent && !loading && !user?.isFirstLogin) {
     return <div className="flex flex-col h-screen items-center justify-center">
       <p>조회 가능한 데이터가 없습니다.</p>
@@ -162,6 +180,13 @@ export default function Dashboard() {
   let targetRankDisplay: number | null = null; // RANK N위 목표일 때 N (null이면 금액 목표)
   let isRank1 = false;        // 1등 여부 (전국TOP)
   let progress = 0;
+  // 2026 MY HOT (1~10월 합산 연도시상)
+  let myHotSum = 0;
+  let myHotRank = 0;
+  let myHotIsChamp = false;
+  let myHotNextTier: number | null = null;
+  let myHotProgress = 0;
+  let myHotLabel = "meritz 500";
   
   // 시상금 계산 변수들
   let week1Prize = 0;
@@ -210,18 +235,46 @@ export default function Dashboard() {
 
   if (selectedAgent && selectedAgent.performance) {
     performanceData = [
-      { name: "8월", value: selectedAgent.performance["2025-08"] || 0 },
-      { name: "9월", value: selectedAgent.performance["2025-09"] || 0 },
-      { name: "10월", value: selectedAgent.performance["2025-10"] || 0 },
-      { name: "11월", value: selectedAgent.performance["2025-11"] || 0 },
-      { name: "12월", value: selectedAgent.performance["2025-12"] || 0 },
-      { name: "1월", value: selectedAgent.performance["2026-01"] || 0 },
-      { name: "2월", value: selectedAgent.performance["2026-02"] || 0 },
+      { name: "8월", value: selectedAgent.performance["2025-08"] || 0, prize: 0 },
+      { name: "9월", value: selectedAgent.performance["2025-09"] || 0, prize: 0 },
+      { name: "10월", value: selectedAgent.performance["2025-10"] || 0, prize: 0 },
+      { name: "11월", value: selectedAgent.performance["2025-11"] || 0, prize: 0 },
+      { name: "12월", value: selectedAgent.performance["2025-12"] || 0, prize: 0 },
+      { name: "1월", value: selectedAgent.performance["2026-01"] || 0, prize: 0 },
+      { name: "2월", value: selectedAgent.performance["2026-02"] || 0, prize: 0 },
     ];
 
-    // 선택 월에 따른 데이터 소스 (1월=마감데이터, 2월=현재)
+    // 1·2월 시상금 (실적 추이 차트 막대용)
     const code = String(selectedAgent.code || "");
     const janData = januaryClosed[code];
+    const jData = janData ?? { performance: { "2026-01": selectedAgent.performance["2026-01"] ?? 0, "2025-12": selectedAgent.performance["2025-12"] ?? 0 }, weekly: { week1: 0, week2: 0, week3: 0 } };
+    const jW1 = jData.weekly?.week1 ?? 0, jW2 = jData.weekly?.week2 ?? 0, jW3 = jData.weekly?.week3 ?? 0;
+    const jCur = jData.performance["2026-01"] ?? 0, jPrev = jData.performance["2025-12"] ?? 0;
+    const getWeekPrizeChart = (perf: number, tiers: [number, number][]) => { for (const [thresh, prize] of tiers) { if (perf >= thresh) return prize; } return 0; };
+    let prizeJan = getWeekPrizeChart(jW1, JAN_W1_PRIZES) + getWeekPrizeChart(jW2, JAN_W2_PRIZES) + getWeekPrizeChart(jW3, JAN_W3_PRIZES);
+    let jMonthly = 0;
+    if (jCur >= 2500000) jMonthly = 5000000; else if (jCur >= 2000000) jMonthly = 4000000; else if (jCur >= 1800000) jMonthly = 3600000; else if (jCur >= 1500000) jMonthly = 3000000; else if (jCur >= 1200000) jMonthly = 2000000; else if (jCur >= 1000000) jMonthly = 1500000;
+    let jDouble = 0;
+    if (jPrev >= 200000 && jCur >= 200000) { let bt = Math.floor(jCur / 100000) * 100000; if (bt > 1000000) bt = 1000000; jDouble = bt * 2; }
+    const jMin = Math.min(jPrev, jCur);
+    let jPlus = 0;
+    if (jMin >= 1000000) jPlus = 3000000; else if (jMin >= 800000) jPlus = 2400000; else if (jMin >= 600000) jPlus = 1800000; else if (jMin >= 400000) jPlus = 1200000; else if (jMin >= 200000) jPlus = 600000;
+    prizeJan += jMonthly + jDouble + jPlus + jCur;
+    const fW1 = selectedAgent.weekly?.week1 || 0, fW2 = selectedAgent.weekly?.week2 || 0;
+    const fCur = selectedAgent.performance["2026-02"] ?? 0, fPrev = jCur;
+    let prizeFeb = getWeekPrizeChart(fW1, FEB_W1_PRIZES) + getWeekPrizeChart(fW2, FEB_W2_PRIZES);
+    let fMonthly = 0;
+    if (fCur >= 2500000) fMonthly = 5000000; else if (fCur >= 2000000) fMonthly = 4000000; else if (fCur >= 1800000) fMonthly = 3600000; else if (fCur >= 1500000) fMonthly = 3000000; else if (fCur >= 1200000) fMonthly = 2000000; else if (fCur >= 1000000) fMonthly = 1500000;
+    let fDouble = 0;
+    if (fPrev >= 200000 && fCur >= 200000) { let bt = Math.floor(fCur / 100000) * 100000; if (bt > 1000000) bt = 1000000; fDouble = bt * 2; }
+    const fMin = Math.min(fPrev, fCur);
+    let fPlus = 0;
+    if (fMin >= 1000000) fPlus = 3000000; else if (fMin >= 800000) fPlus = 2400000; else if (fMin >= 600000) fPlus = 1800000; else if (fMin >= 400000) fPlus = 1200000; else if (fMin >= 200000) fPlus = 600000;
+    prizeFeb += fMonthly + fDouble + fPlus + fCur;
+    const nameToPrize: Record<string, number> = { "1월": prizeJan, "2월": prizeFeb };
+    performanceData = performanceData.map((d) => ({ ...d, prize: nameToPrize[d.name] ?? 0 }));
+
+    // 선택 월에 따른 데이터 소스 (1월=마감데이터, 2월=현재)
     const isJanuaryView = selectedViewMonth === 1;
 
     currentMonthPerf = isJanuaryView
@@ -411,7 +464,41 @@ export default function Dashboard() {
         ? `3월에도 ${Math.round((plusTarget || 200000) / 10000)}만원달성시 완성`
         : (nextPlus ? `${Math.round(nextPlus / 10000)}만원` : "최대구간");
     }
+
+    // 2026 MY HOT: 선택한 월까지 누적 합산 (1월→1월만, 2월→1+2월, 3월→1+2+3월 …), 테스터 712345678 랭킹 제외
+    const MY_HOT_TIERS = [5000000, 6500000, 8000000, 10000000];
+    const RANK_EXCLUDE_CODE = "712345678";
+    const yearMonths = Array.from({ length: selectedViewMonth }, (_, i) => `2026-${String(i + 1).padStart(2, "0")}`);
+    myHotSum = 0;
+    for (const m of yearMonths) {
+      myHotSum += selectedAgent.performance?.[m] ?? 0;
+    }
+    const agentSums = agents
+      .filter((a: any) => a.code !== RANK_EXCLUDE_CODE)
+      .map((a: any) => {
+        let s = 0;
+        for (const m of yearMonths) s += a.performance?.[m] ?? 0;
+        return { code: a.code, sum: s };
+      });
+    agentSums.sort((a, b) => b.sum - a.sum);
+    myHotRank = agentSums.findIndex((a) => a.code === selectedAgent.code) + 1;
+    if (myHotRank === 0) myHotRank = 999;
+    myHotIsChamp = myHotRank === 1;
+    myHotNextTier = MY_HOT_TIERS.find((t) => t > myHotSum) ?? null;
+    myHotProgress = myHotNextTier ? Math.min(100, Math.round((myHotSum / myHotNextTier) * 100)) : (myHotIsChamp ? 100 : 100);
+    myHotLabel = myHotIsChamp ? "CHAMP" : myHotNextTier ? `meritz ${myHotNextTier / 10000}` : "CHAMP (1위)";
   }
+
+  // 당월실적 순위 (상단 타이틀 섹션 TOP30/TOP3 스타일용, 테스터 제외)
+  const rankKeyMonth = selectedViewMonth === 1 ? "2026-01" : "2026-02";
+  const sortedByMonth = [...(agents || [])]
+    .filter((a: any) => a.code !== "712345678")
+    .sort((a: any, b: any) => (b.performance?.[rankKeyMonth] ?? 0) - (a.performance?.[rankKeyMonth] ?? 0));
+  const rankInMonth = sortedByMonth.findIndex((a: any) => a.code === selectedAgent?.code) + 1;
+  const isTop30 = rankInMonth >= 1 && rankInMonth <= 30;
+  const isTop3 = rankInMonth >= 1 && rankInMonth <= 3;
+  const profileImageSrc =
+    rankInMonth >= 1 && rankInMonth <= 30 ? "/top30.png" : rankInMonth >= 31 && rankInMonth <= 100 ? "/top100.png" : "/etc.png";
 
   // 월간·MC플러스 다음구간까지 남은 금액 (배너 표시용)
   const getTier = (p: number) => {
@@ -446,9 +533,37 @@ export default function Dashboard() {
       }
     }
   }
-  const remainToShow = selectedViewMonth === 2 && [remainingMonthly, remainingPlus].filter(r => r > 0).length > 0
-    ? Math.min(...[remainingMonthly, remainingPlus].filter(r => r > 0))
-    : 0;
+  // 해당월 기준 "더 채우세요" 배너: 구간 남은 금액 vs (해당월 모든 구간 채운 경우) 랭크 한 단계 올리기/2위와의 격차
+  const currentMonthPerfForBanner = selectedAgent?.performance?.[rankKeyMonth] ?? 0;
+  const allTiersFilledThisMonth = remainingMonthly === 0;
+  let remainToShow = 0;
+  let remainLabel: "more" | "gap" = "more"; // "more" = N만원 더 채우세요, "gap" = 2위와의 격차
+  if (selectedViewMonth === 2) {
+    if (allTiersFilledThisMonth) {
+      // 해당월 모든 구간 채움 → 랭크 1단계 올리기 또는 1위면 2위와의 격차
+      if (rankInMonth === 1 && sortedByMonth.length >= 2) {
+        const secondPerf = sortedByMonth[1]?.performance?.[rankKeyMonth] ?? 0;
+        const gap = Math.max(0, currentMonthPerfForBanner - secondPerf);
+        if (gap > 0) {
+          remainToShow = gap;
+          remainLabel = "gap";
+        }
+      } else if (rankInMonth >= 2) {
+        const nextRankPerf = sortedByMonth[rankInMonth - 2]?.performance?.[rankKeyMonth] ?? 0;
+        const gapToNext = Math.max(0, nextRankPerf - currentMonthPerfForBanner);
+        if (gapToNext > 0) {
+          remainToShow = gapToNext;
+          remainLabel = "more";
+        }
+      }
+    } else {
+      const candidates = [remainingMonthly, remainingPlus].filter((r) => r > 0);
+      if (candidates.length > 0) {
+        remainToShow = Math.min(...candidates);
+        remainLabel = "more";
+      }
+    }
+  }
 
   return (
     <>
@@ -511,12 +626,7 @@ export default function Dashboard() {
               {/* 1줄(모바일) / 좌측(데스크톱): 로고 + 우측 유저/로그아웃 */}
               <div className="flex items-center justify-between w-full md:w-auto">
                 <div className="flex items-center shrink-0">
-                  <span className="text-xl md:text-2xl font-bold tracking-tight text-primary">
-                    meritz
-                  </span>
-                  <span className="ml-1.5 md:ml-2 text-base md:text-lg font-medium text-meritz-gray dark:text-gray-300">
-                    메리츠화재
-                  </span>
+                  <img src="/ci.png" alt="CI" className="h-[1.6rem] md:h-[1.8rem] object-contain" />
                 </div>
                 <div className="flex items-center gap-2 md:gap-4 md:pl-4 md:border-l border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-2">
@@ -525,7 +635,7 @@ export default function Dashboard() {
                     </div>
                     <div className="hidden lg:block text-sm text-right">
                       <p className="font-bold text-gray-800 dark:text-gray-100">
-                        {user?.name} {user?.role === 'admin' ? '관리자' : user?.role === 'manager' ? '매니저' : 'FP'}
+                        {user?.name}{user?.role === 'admin' ? ' 관리자' : user?.role === 'manager' ? ' 매니저' : '님'}
                       </p>
                     </div>
                   </div>
@@ -617,34 +727,76 @@ export default function Dashboard() {
             </div>
           </header>
           <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-14">
-            <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-4 md:p-6 mb-6 md:mb-8 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-meritz-gold/10 rounded-full -mr-16 -mt-16 z-0"></div>
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full -ml-12 -mb-12 z-0"></div>
+            <div
+              className={`rounded-2xl shadow-lg p-4 md:p-6 mb-6 md:mb-8 relative overflow-hidden ${
+                isTop3
+                  ? "bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black border-2 border-meritz-gold/50"
+                  : isTop30
+                    ? "bg-gradient-to-br from-gray-800/95 to-gray-900/95 dark:from-gray-900 dark:to-black border border-meritz-gold/30 bg-surface-light dark:bg-surface-dark"
+                    : "bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-gray-700"
+              }`}
+            >
+              {isTop30 && (
+                <>
+                  <div className="absolute top-0 right-0 w-72 h-72 bg-meritz-gold/10 rounded-full -mr-24 -mt-24 z-0" />
+                  <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/10 rounded-full -ml-20 -mb-20 z-0" />
+                </>
+              )}
+              {!isTop30 && (
+                <>
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-meritz-gold/10 rounded-full -mr-16 -mt-16 z-0" />
+                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full -ml-12 -mb-12 z-0" />
+                </>
+              )}
               <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
                 <div className="flex items-center gap-6 w-full md:w-auto">
                   <div className="relative">
-                    <div className="w-24 h-24 rounded-full border-4 border-meritz-gold shadow-lg flex items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-100 text-3xl font-bold text-meritz-gold overflow-hidden">
-                      <span className="material-symbols-outlined text-5xl">
-                        person
-                      </span>
+                    <div
+                      className={`w-24 h-24 rounded-full border-4 shadow-lg flex items-center justify-center overflow-hidden bg-gray-200 dark:bg-gray-700 ${
+                        isTop3
+                          ? "border-meritz-gold"
+                          : isTop30
+                            ? "border-meritz-gold/80"
+                            : "border-meritz-gold"
+                      }`}
+                    >
+                      <img src={profileImageSrc} alt="" className="w-[77%] h-[77%] object-contain" />
                     </div>
-                    <div className="absolute -bottom-2 -right-2 bg-meritz-gold text-white text-xs font-bold px-3 py-1 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center">
-                      <span className="material-symbols-outlined text-sm mr-1">
-                        military_tech
-                      </span>{" "}
-                      VIP
-                    </div>
+                    {isTop3 ? (
+                      <div className="absolute -top-4 -right-1 bg-gradient-to-br from-meritz-gold to-amber-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg border border-amber-200/50 flex items-center gap-0.5 scale-[0.8] origin-top-right">
+                        <span className="material-symbols-outlined text-xs">workspace_premium</span>
+                        TOP {rankInMonth}
+                      </div>
+                    ) : isTop30 ? (
+                      <div className="absolute -bottom-4 -right-2 bg-meritz-gold text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center scale-[0.8] origin-bottom-right">
+                        <span className="material-symbols-outlined text-xs mr-0.5">military_tech</span>
+                        TOP {rankInMonth}
+                      </div>
+                    ) : (
+                      <div className="absolute -bottom-2 -right-2 bg-meritz-gold text-white text-xs font-bold px-3 py-1 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center">
+                        <span className="material-symbols-outlined text-sm mr-1">military_tech</span> VIP
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h2
+                        className={`text-2xl md:text-3xl font-bold ${
+                          isTop3 || isTop30 ? "text-white" : "text-gray-900 dark:text-white"
+                        }`}
+                      >
                         {selectedAgent.name}{" "}
-                        <span className="text-base md:text-lg font-normal text-gray-500 dark:text-gray-400">
-                          FP님
+                        <span className={`text-base md:text-lg font-normal ${isTop3 ? "text-meritz-gold/90" : isTop30 ? "text-meritz-gold dark:text-meritz-gold/90" : "text-gray-500 dark:text-gray-400"}`}>
+                          님
                         </span>
                       </h2>
+                      {isTop30 && (
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${isTop3 ? "bg-meritz-gold/20 text-meritz-gold border border-meritz-gold/40" : "bg-primary/10 text-primary border border-primary/30"}`}>
+                          당월실적 {rankInMonth}위
+                        </span>
+                      )}
                     </div>
-                    <p className="text-gray-600 dark:text-gray-300 mb-2">
+                    <p className={`mb-2 ${isTop3 ? "text-gray-400" : isTop30 ? "text-gray-500 dark:text-gray-400" : "text-gray-600 dark:text-gray-300"}`}>
                       {selectedAgent.branch}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -660,16 +812,22 @@ export default function Dashboard() {
                       )}
                     </div>
                     {remainToShow > 0 && (
-                      <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 border border-primary/30 animate-shake">
+                      <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 border border-primary/30 animate-sway">
                         <span className="text-sm font-bold text-primary">
-                          {Math.round(remainToShow / 10000).toLocaleString()}만원 더 채우세요 !
+                          {remainLabel === "gap"
+                            ? `2위와의 격차 ${Math.round(remainToShow / 10000).toLocaleString()}만원`
+                            : `${Math.round(remainToShow / 10000).toLocaleString()}만원 더 채우세요 !`}
                         </span>
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0">
-                  <div className="bg-gradient-to-br from-primary to-red-600 rounded-xl p-4 md:p-5 text-white shadow-lg min-w-0 md:min-w-[200px] flex-1">
+                  <div
+                    className={`rounded-xl p-4 md:p-5 text-white shadow-lg min-w-0 md:min-w-[200px] flex-1 ${
+                      isTop3 ? "bg-gradient-to-br from-primary via-red-600 to-red-700 border border-meritz-gold/30" : isTop30 ? "bg-gradient-to-br from-primary to-red-600 border border-meritz-gold/20" : "bg-gradient-to-br from-primary to-red-600"
+                    }`}
+                  >
                     <p className="text-sm opacity-90 mb-1">이번달 총 예상 시상금</p>
                     <div className="flex items-baseline gap-1">
                       <h3 className="text-2xl md:text-3xl font-extrabold">
@@ -688,23 +846,27 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
-                  <div className="bg-surface-light dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5 shadow-sm min-w-0 md:min-w-[200px] flex-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  <div
+                    className={`rounded-xl p-4 md:p-5 shadow-sm min-w-0 md:min-w-[200px] flex-1 border ${
+                      isTop3 ? "bg-gray-800/80 dark:bg-gray-800 border-meritz-gold/30" : isTop30 ? "bg-surface-light dark:bg-gray-800 border-meritz-gold/20" : "bg-surface-light dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                    }`}
+                  >
+                    <p className={`text-sm mb-1 ${isTop3 ? "text-gray-400" : "text-gray-500 dark:text-gray-400"}`}>
                       현재 인보험 누적 실적
                     </p>
                     <div className="flex items-baseline gap-1">
-                      <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                      <h3 className={`text-2xl md:text-3xl font-bold ${isTop3 ? "text-white" : "text-gray-900 dark:text-white"}`}>
                         {Math.round(currentMonthPerf / 10000).toLocaleString()}
-                        <span className="text-lg font-medium text-gray-500">
+                        <span className={isTop3 ? "text-lg font-medium text-meritz-gold/90" : "text-lg font-medium text-gray-500"}>
                           만원
                         </span>
                       </h3>
                     </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-3">
+                    <div className={`w-full rounded-full h-1.5 mt-3 ${isTop3 ? "bg-gray-700" : "bg-gray-200 dark:bg-gray-700"}`}>
                       <div
-                        className="bg-primary h-1.5 rounded-full"
+                        className={isTop3 ? "bg-gradient-to-r from-meritz-gold to-primary h-1.5 rounded-full" : "bg-primary h-1.5 rounded-full"}
                         style={{ width: `${progress}%` }}
-                      ></div>
+                      />
                     </div>
                     <p className="text-xs text-right mt-1 text-gray-400 whitespace-normal md:whitespace-nowrap">
                       {isRank1 ? (
@@ -973,61 +1135,80 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 mb-6">
-              <div className="lg:col-span-1 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 flex flex-col items-center justify-center relative">
-                <h3 className="w-full text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                  <span className="material-symbols-outlined text-primary mr-2">
-                    flag
-                  </span>{" "}
-                  {selectedViewMonth}월 목표 달성률
-                </h3>
-                <div className="relative w-48 h-48">
-                  <svg
-                    className="w-full h-full transform -rotate-90"
-                    viewBox="0 0 100 100"
-                  >
-                    <circle
-                      className="dark:stroke-gray-700"
-                      cx="50"
-                      cy="50"
-                      fill="none"
-                      r="45"
-                      stroke="#E5E7EB"
-                      strokeWidth="8"
-                    ></circle>
-                    <circle
-                      cx="50"
-                      cy="50"
-                      fill="none"
-                      r="45"
-                      stroke="#EF3B24"
-                      strokeDasharray={`${progress * 2.83} 283`}
-                      strokeLinecap="round"
-                      strokeWidth="8"
-                    ></circle>
-                  </svg>
-                  <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center">
-                    {isRank1 ? (
-                      <>
-                        <span className="text-2xl font-black text-primary">전국TOP</span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">1위 달성</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-4xl font-black text-gray-900 dark:text-white">
-                          {progress}
-                          <span className="text-xl font-normal">%</span>
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          달성중 ({goalLabel})
-                        </span>
-                      </>
+            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 md:gap-5 mb-6 lg:items-stretch">
+              {/* 2026 MY HOT - 연도시상 (1~10월 합산), 실적 추이와 같은 라인/높이 */}
+              <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative max-w-[320px] lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
+                <div className="relative z-10 p-4 md:p-5 flex flex-col items-center flex-1">
+                  <div className="w-full flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-meritz-gold text-lg">military_tech</span>
+                    <h3 className="text-lg font-bold text-white tracking-tight">2026 MY HOT</h3>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mb-3 w-full text-left lg:text-center">1월~{selectedViewMonth}월 누적 · 연도시상</p>
+                  <div className="relative w-32 h-32 mb-3">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" fill="none" r="42" stroke="rgba(75,85,99,0.5)" strokeWidth="10" />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        fill="none"
+                        r="42"
+                        stroke={myHotIsChamp ? "url(#myhot-gold)" : "currentColor"}
+                        className={myHotIsChamp ? "text-meritz-gold" : "text-primary"}
+                        strokeDasharray={`${myHotProgress * 2.64} 264`}
+                        strokeLinecap="round"
+                        strokeWidth="10"
+                      />
+                      <defs>
+                        <linearGradient id="myhot-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#C5A065" />
+                          <stop offset="100%" stopColor="#E8C98C" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      {myHotIsChamp ? (
+                        <>
+                          <span className="text-2xl font-black bg-gradient-to-r from-meritz-gold to-amber-200 bg-clip-text text-transparent">CHAMP</span>
+                          <span className="text-xs text-gray-400 mt-0.5">합산 RANK 1위</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-3xl font-black text-white">
+                            {myHotProgress}
+                            <span className="text-lg font-normal text-gray-400">%</span>
+                          </span>
+                          <span className="text-xs text-gray-400 mt-0.5">{myHotLabel} 목표</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full rounded-lg bg-gray-800/50 border border-gray-700/50 p-2 text-center">
+                    <p className="text-[10px] text-gray-500 mb-0.5">현재 합산 실적</p>
+                    <p className="text-base font-bold text-white">{Math.round(myHotSum / 10000).toLocaleString()}만원</p>
+                    {!myHotIsChamp && myHotRank > 0 && (
+                      <p className="text-[10px] text-gray-400 mt-0.5">합산 순위 {myHotRank}위</p>
                     )}
                   </div>
+                  <p className="mt-2 w-full text-center text-[10px] text-gray-400 whitespace-nowrap">
+                    {[500, 650, 800, 1000].map((t, i) => {
+                      const tierWon = t * 10000;
+                      const achieved = myHotSum >= tierWon;
+                      return (
+                        <span key={t}>
+                          <span className={`font-medium ${achieved ? "text-meritz-gold" : "text-gray-500"}`}>
+                            meritz {t}
+                          </span>
+                          {i < 3 && <span className="text-gray-600 mx-0.5">·</span>}
+                        </span>
+                      );
+                    })}
+                  </p>
                 </div>
               </div>
-              <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6">
-                <div className="flex justify-between items-center mb-6">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0">
+                <div className="flex justify-between items-center mb-4 shrink-0">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
                       <span className="material-symbols-outlined text-meritz-gray mr-2">
@@ -1038,12 +1219,20 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">1월·2월 클릭 시 시상 현황 전환</p>
                   </div>
                 </div>
-                <div className="h-56 md:h-64 w-full">
+                <div className="flex-1 min-h-[200px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={performanceData}>
+                    <ComposedChart data={performanceData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} />
                       <YAxis
+                        yAxisId="left"
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(val) => `${Math.round(val / 10000)}만`}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
                         axisLine={false}
                         tickLine={false}
                         tickFormatter={(val) => `${Math.round(val / 10000)}만`}
@@ -1051,7 +1240,8 @@ export default function Dashboard() {
                       <Tooltip
                         content={({ active, payload, label }) => {
                           if (active && payload && payload.length) {
-                            const value = payload[0].value as number;
+                            const value = payload.find((p) => p.dataKey === "value")?.value as number | undefined;
+                            const prize = payload.find((p) => p.dataKey === "prize")?.value as number | undefined;
                             let rank = "-";
                             const monthMap: Record<string, string> = {
                               "8월": "2025-08",
@@ -1063,7 +1253,7 @@ export default function Dashboard() {
                               "2월": "2026-02",
                             };
                             const monthKey = label != null ? monthMap[label] : undefined;
-                            if (monthKey && globalRanks[monthKey]) {
+                            if (value != null && monthKey && globalRanks[monthKey]) {
                               const rankIndex = globalRanks[monthKey].indexOf(value);
                               if (rankIndex !== -1) {
                                 rank = (rankIndex + 1).toString();
@@ -1071,19 +1261,30 @@ export default function Dashboard() {
                             }
                             return (
                               <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-md">
-                                <p className="text-sm font-bold text-primary mb-1">
-                                  {Math.round(value / 10000).toLocaleString()}만원
-                                </p>
-                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                  RANK : {rank}위
-                                </p>
+                                {value != null && (
+                                  <p className="text-sm font-bold text-primary mb-1">
+                                    실적 {Math.round(value / 10000).toLocaleString()}만원
+                                  </p>
+                                )}
+                                {prize != null && prize > 0 && (
+                                  <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mb-1">
+                                    시상금 {Math.round(prize / 10000).toLocaleString()}만원
+                                  </p>
+                                )}
+                                {value != null && (
+                                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    RANK : {rank}위
+                                  </p>
+                                )}
                               </div>
                             );
                           }
                           return null;
                         }}
                       />
+                      <Bar yAxisId="right" dataKey="prize" fill="#D4A574" radius={[4, 4, 0, 0]} />
                       <Line
+                        yAxisId="left"
                         type="monotone"
                         dataKey="value"
                         stroke="#EF3B24"
@@ -1105,7 +1306,7 @@ export default function Dashboard() {
                         }}
                         activeDot={{ r: 6 }}
                       />
-                    </LineChart>
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </div>

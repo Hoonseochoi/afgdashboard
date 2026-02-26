@@ -57,3 +57,13 @@ body {
 .animate-shake {
   animation: shake 1.5s ease-in-out infinite;
 }
+
+/* 둥둥 천천히 흔들림 (더 채우세요 배너용) */
+@keyframes sway {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(2px) rotate(0.5deg); }
+  75% { transform: translateX(-2px) rotate(-0.5deg); }
+}
+.animate-sway {
+  animation: sway 3s ease-in-out infinite;
+}

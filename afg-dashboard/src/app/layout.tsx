@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
+import FirebaseInit from "@/components/FirebaseInit";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
@@ -27,6 +28,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background-light dark:bg-background-dark min-h-screen text-gray-800 dark:text-gray-200 transition-colors duration-200">
+        <FirebaseInit />
         {children}
       </body>
     </html>
