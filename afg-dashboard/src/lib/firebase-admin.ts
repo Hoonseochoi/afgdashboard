@@ -22,10 +22,21 @@ function getServiceAccount(): admin.ServiceAccount {
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (privateKey) {
     // Vercel 환경변수 콘솔에서 입력 시 다양한 형태로 개행문자가 들어갈 수 있으므로 정규식으로 처리
-    privateKey = privateKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
+    privateKey = privateKey.replace(/^"|"$/g, '');
+    
+    // 환경변수 값이 한 줄로 들어왔을 때 백슬래시 n을 실제 줄바꿈으로 변환
+    privateKey = privateKey.replace(/\\n/g, '\n');
     
     // 간혹 \r\n으로 들어오는 경우도 대비
     privateKey = privateKey.replace(/\\r\\n/g, '\n');
+  }
+
+  // Firebase Admin SDK 초기화 시점에 한 번 더 로깅을 통해 실제 어떤 값들이 누락되었는지 확인 가능하도록 (보안상 첫/마지막 10글자만)
+  if (process.env.NODE_ENV !== 'production' || process.env.VERCEL) {
+      console.log('Firebase Init Debug:');
+      console.log('- Project ID present:', !!projectId);
+      console.log('- Client Email present:', !!clientEmail);
+      console.log('- Private Key length:', privateKey ? privateKey.length : 0);
   }
 
   if (projectId && clientEmail && privateKey) {
