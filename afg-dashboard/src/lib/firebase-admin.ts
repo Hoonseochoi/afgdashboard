@@ -21,20 +21,28 @@ function getServiceAccount(): admin.ServiceAccount {
   // 또한 앞뒤 따옴표가 있다면 제거
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (privateKey) {
-    // Vercel 환경변수 콘솔에서 입력 시 다양한 형태로 개행문자가 들어갈 수 있으므로 정규식으로 처리
-    privateKey = privateKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
+    // 따옴표 제거
+    privateKey = privateKey.replace(/^"|"$/g, '');
     
-    // 간혹 \r\n으로 들어오는 경우도 대비
+    // 이스케이프된 백슬래시(\n)를 실제 줄바꿈으로 변환
+    privateKey = privateKey.replace(/\\n/g, '\n');
     privateKey = privateKey.replace(/\\r\\n/g, '\n');
 
-    // 만약 BEGIN PRIVATE KEY와 END PRIVATE KEY 사이에 실제 줄바꿈이 하나도 없다면 (단일 문자열로 들어온 경우)
-    // 공백을 기준으로 줄바꿈을 다시 넣어줍니다. (BEGIN/END 태그 내부의 공백 제외)
-    if (!privateKey.includes('\n') && privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+    // 만약 여전히 실제 줄바꿈(\n)이 포함되어 있지 않다면 강제로 복원 시도
+    if (!privateKey.includes('\n')) {
+        // BEGIN과 END 태그 사이에 있는 문자열 추출
         const keyMatch = privateKey.match(/-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----/);
         if (keyMatch && keyMatch[1]) {
+            // 안의 띄어쓰기/공백 전부 제거
             const body = keyMatch[1].replace(/\s+/g, '');
+            // 64글자 단위로 줄바꿈 추가
             const formattedBody = body.match(/.{1,64}/g)?.join('\n') || body;
             privateKey = `-----BEGIN PRIVATE KEY-----\n${formattedBody}\n-----END PRIVATE KEY-----\n`;
+        } else {
+            // 정규식이 안먹히면, 띄어쓰기를 줄바꿈으로 변경하는 꼼수 (간혹 환경변수에 띄어쓰기로 들어오는 경우)
+            privateKey = privateKey.replace(/-----BEGIN PRIVATE KEY-----/g, '-----BEGIN PRIVATE KEY-----\n');
+            privateKey = privateKey.replace(/-----END PRIVATE KEY-----/g, '\n-----END PRIVATE KEY-----\n');
+            privateKey = privateKey.replace(/ ([a-zA-Z0-9+/=]{64}) /g, '\n$1\n');
         }
     }
   }
