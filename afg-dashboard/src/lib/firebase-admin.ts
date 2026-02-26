@@ -17,7 +17,12 @@ function getServiceAccount(): admin.ServiceAccount {
   // 방식 2: 개별 환경 변수 (Vercel에서 더 안정적)
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  // Vercel 환경 변수에서 가져온 문자열의 이스케이프된 개행문자를 실제 개행문자로 변환
+  // 또한 앞뒤 따옴표가 있다면 제거
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  if (privateKey) {
+    privateKey = privateKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
+  }
 
   if (projectId && clientEmail && privateKey) {
     return { projectId, clientEmail, privateKey };
