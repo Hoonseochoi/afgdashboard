@@ -507,64 +507,78 @@ export default function Dashboard() {
       {selectedAgent && (
         <>
           <header className="bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm">
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center">
-                  <span className="text-2xl font-bold tracking-tight text-primary">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-0 md:h-16 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-0">
+              {/* 1줄(모바일) / 좌측(데스크톱): 로고 + 우측 유저/로그아웃 */}
+              <div className="flex items-center justify-between w-full md:w-auto">
+                <div className="flex items-center shrink-0">
+                  <span className="text-xl md:text-2xl font-bold tracking-tight text-primary">
                     meritz
                   </span>
-                  <span className="ml-2 text-lg font-medium text-meritz-gray dark:text-gray-300">
+                  <span className="ml-1.5 md:ml-2 text-base md:text-lg font-medium text-meritz-gray dark:text-gray-300">
                     메리츠화재
                   </span>
                 </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                {user?.role === 'admin' || user?.role === 'manager' ? (
-                  <div className="relative">
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        placeholder="이름 검색..."
-                        value={agentSearchOpen ? agentSearchQuery : (selectedAgent ? `${selectedAgent.name} (${selectedAgent.branch})` : "")}
-                        onChange={(e) => {
-                          setAgentSearchQuery(e.target.value);
-                          setAgentSearchOpen(true);
-                        }}
-                        onFocus={() => setAgentSearchOpen(true)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            const perfKey = "2026-02";
-                            const sorted = [...agents].sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
-                            const filtered = agentSearchQuery.trim()
-                              ? sorted.filter((a) => a.name?.toLowerCase().includes(agentSearchQuery.toLowerCase()))
-                              : sorted;
-                            setAgentSearchOpen(true);
-                            if (filtered.length === 1) {
-                              setSelectedAgent(filtered[0]);
-                              setAgentSearchOpen(false);
-                              setAgentSearchQuery("");
-                            }
-                          }
-                        }}
-                        className="form-input text-sm border border-gray-300 dark:border-gray-600 rounded-md py-1.5 pl-3 pr-4 w-64 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAgentSearchQuery("");
-                          setAgentSearchOpen(!agentSearchOpen);
-                        }}
-                        className="p-1.5 rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        title="리스트 보기"
-                      >
-                        <span className="material-symbols-outlined text-lg text-gray-600 dark:text-gray-400">format_list_bulleted</span>
-                      </button>
+                <div className="flex items-center gap-2 md:gap-4 md:pl-4 md:border-l border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 rounded-full bg-meritz-gold flex items-center justify-center text-white font-bold text-xs shadow-md">
+                      {user?.name?.charAt(0) || 'U'}
                     </div>
-                    {agentSearchOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setAgentSearchOpen(false)} />
-                        <div className="absolute top-full left-0 mt-1 w-80 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50">
+                    <div className="hidden lg:block text-sm text-right">
+                      <p className="font-bold text-gray-800 dark:text-gray-100">
+                        {user?.name} {user?.role === 'admin' ? '관리자' : user?.role === 'manager' ? '매니저' : 'FP'}
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-primary underline">
+                    로그아웃
+                  </button>
+                </div>
+              </div>
+              {/* 2줄(모바일) / 우측(데스크톱): 검색+리스트 (admin/manager만) */}
+              {(user?.role === 'admin' || user?.role === 'manager') && (
+                <div className="relative w-full md:w-auto flex items-center gap-1">
+                  <input
+                    type="text"
+                    placeholder="이름 검색..."
+                    value={agentSearchOpen ? agentSearchQuery : (selectedAgent ? `${selectedAgent.name} (${selectedAgent.branch})` : "")}
+                    onChange={(e) => {
+                      setAgentSearchQuery(e.target.value);
+                      setAgentSearchOpen(true);
+                    }}
+                    onFocus={() => setAgentSearchOpen(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const perfKey = "2026-02";
+                        const sorted = [...agents].sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
+                        const filtered = agentSearchQuery.trim()
+                          ? sorted.filter((a) => a.name?.toLowerCase().includes(agentSearchQuery.toLowerCase()))
+                          : sorted;
+                        setAgentSearchOpen(true);
+                        if (filtered.length === 1) {
+                          setSelectedAgent(filtered[0]);
+                          setAgentSearchOpen(false);
+                          setAgentSearchQuery("");
+                        }
+                      }
+                    }}
+                    className="form-input text-sm border border-gray-300 dark:border-gray-600 rounded-md py-1.5 pl-3 pr-4 flex-1 min-w-0 md:w-64 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAgentSearchQuery("");
+                      setAgentSearchOpen(!agentSearchOpen);
+                    }}
+                    className="p-1.5 rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
+                    title="리스트 보기"
+                  >
+                    <span className="material-symbols-outlined text-lg text-gray-600 dark:text-gray-400">format_list_bulleted</span>
+                  </button>
+                  {agentSearchOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setAgentSearchOpen(false)} />
+                      <div className="absolute top-full left-0 right-0 md:right-auto mt-1 w-full md:w-80 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50">
                           {(() => {
                             const perfKey = "2026-02";
                             const sorted = [...agents].sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
@@ -598,28 +612,12 @@ export default function Dashboard() {
                         </div>
                       </>
                     )}
-                  </div>
-                ) : null}
-                <div className="flex items-center space-x-4 pl-4 border-l border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 rounded-full bg-meritz-gold flex items-center justify-center text-white font-bold text-xs shadow-md">
-                      {user?.name?.charAt(0) || 'U'}
-                    </div>
-                    <div className="hidden lg:block text-sm text-right">
-                      <p className="font-bold text-gray-800 dark:text-gray-100">
-                        {user?.name} {user?.role === 'admin' ? '관리자' : user?.role === 'manager' ? '매니저' : 'FP'}
-                      </p>
-                    </div>
-                  </div>
-                  <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-primary underline">
-                    로그아웃
-                  </button>
                 </div>
-              </div>
+              )}
             </div>
           </header>
-          <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 mb-8 relative overflow-hidden">
+          <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-14">
+            <div className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-4 md:p-6 mb-6 md:mb-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-meritz-gold/10 rounded-full -mr-16 -mt-16 z-0"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full -ml-12 -mb-12 z-0"></div>
               <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
@@ -639,9 +637,9 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+                      <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                         {selectedAgent.name}{" "}
-                        <span className="text-lg font-normal text-gray-500 dark:text-gray-400">
+                        <span className="text-base md:text-lg font-normal text-gray-500 dark:text-gray-400">
                           FP님
                         </span>
                       </h2>
@@ -671,10 +669,10 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0">
-                  <div className="bg-gradient-to-br from-primary to-red-600 rounded-xl p-5 text-white shadow-lg min-w-[200px] flex-1">
+                  <div className="bg-gradient-to-br from-primary to-red-600 rounded-xl p-4 md:p-5 text-white shadow-lg min-w-0 md:min-w-[200px] flex-1">
                     <p className="text-sm opacity-90 mb-1">이번달 총 예상 시상금</p>
                     <div className="flex items-baseline gap-1">
-                      <h3 className="text-3xl font-extrabold">
+                      <h3 className="text-2xl md:text-3xl font-extrabold">
                         {Math.round(totalEstimatedPrize / 10000).toLocaleString()}
                         <span className="text-lg font-medium">만원</span>
                       </h3>
@@ -690,12 +688,12 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
-                  <div className="bg-surface-light dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm min-w-[200px] flex-1">
+                  <div className="bg-surface-light dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 md:p-5 shadow-sm min-w-0 md:min-w-[200px] flex-1">
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                       현재 인보험 누적 실적
                     </p>
                     <div className="flex items-baseline gap-1">
-                      <h3 className="text-3xl font-bold text-gray-900 dark:text-white">
+                      <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                         {Math.round(currentMonthPerf / 10000).toLocaleString()}
                         <span className="text-lg font-medium text-gray-500">
                           만원
@@ -708,7 +706,7 @@ export default function Dashboard() {
                         style={{ width: `${progress}%` }}
                       ></div>
                     </div>
-                    <p className="text-xs text-right mt-1 text-gray-400 whitespace-nowrap">
+                    <p className="text-xs text-right mt-1 text-gray-400 whitespace-normal md:whitespace-nowrap">
                       {isRank1 ? (
                         "전국 TOP 실적 달성!"
                       ) : (
@@ -743,10 +741,10 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
-              <div className={`grid grid-cols-1 gap-5 mb-6 ${selectedViewMonth === 1 ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+              <div className={`grid grid-cols-1 gap-4 md:gap-5 mb-6 ${selectedViewMonth === 1 ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
                 {/* 1줄: 1주차, 2주차, (3주차 1월만), 월간 */}
                 {/* 1주차 현금시상 */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-green-500 p-4 hover:shadow-lg transition-shadow">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-green-500 p-3 md:p-4 hover:shadow-lg transition-shadow">
                   <div className="flex justify-between items-start mb-3">
                     <div className="bg-green-100 dark:bg-green-900/30 p-1.5 rounded-lg">
                       <span className="material-symbols-outlined text-green-600 dark:text-green-400">payments</span>
@@ -777,7 +775,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* 2주차 현금시상 */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-primary p-4 hover:shadow-lg transition-shadow relative overflow-hidden">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-primary p-3 md:p-4 hover:shadow-lg transition-shadow relative overflow-hidden">
                   <div className="flex justify-between items-start mb-3 relative z-10">
                     <div className="bg-red-50 dark:bg-red-900/20 p-1.5 rounded-lg">
                       <span className="material-symbols-outlined text-primary">add_task</span>
@@ -811,7 +809,7 @@ export default function Dashboard() {
 
                 {/* 3주차 현금시상 (1월만) */}
                 {selectedViewMonth === 1 && (
-                  <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-purple-500 p-4 hover:shadow-lg transition-shadow">
+                  <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-purple-500 p-3 md:p-4 hover:shadow-lg transition-shadow">
                     <div className="flex justify-between items-start mb-3">
                       <div className="bg-purple-100 dark:bg-purple-900/30 p-1.5 rounded-lg">
                         <span className="material-symbols-outlined text-purple-600 dark:text-purple-400">calendar_month</span>
@@ -843,7 +841,7 @@ export default function Dashboard() {
                 )}
 
                 {/* 월간 현금시상 */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-blue-500 p-4 hover:shadow-lg transition-shadow">
+                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow border-l-4 border-blue-500 p-3 md:p-4 hover:shadow-lg transition-shadow">
                   <div className="flex justify-between items-start mb-3">
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-1.5 rounded-lg">
                       <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">emoji_events</span>
@@ -873,7 +871,7 @@ export default function Dashboard() {
 
                 {/* 2줄: 2배 메리츠클럽, 메리츠클럽+ */}
                 {/* 2배 메리츠클럽 */}
-                <div className="bg-gradient-to-br from-amber-950 via-amber-900/95 to-gray-900 dark:from-gray-900 dark:via-amber-950/80 dark:to-gray-950 rounded-xl shadow-lg border border-amber-500/30 p-4 text-white relative overflow-hidden hover:shadow-xl transition-all">
+                <div className="bg-gradient-to-br from-amber-950 via-amber-900/95 to-gray-900 dark:from-gray-900 dark:via-amber-950/80 dark:to-gray-950 rounded-xl shadow-lg border border-amber-500/30 p-3 md:p-4 text-white relative overflow-hidden hover:shadow-xl transition-all">
                   <div className="absolute top-0 right-0 p-3 opacity-10 z-0 pointer-events-none">
                     <span className="material-symbols-outlined text-5xl">autorenew</span>
                   </div>
@@ -909,7 +907,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* 메리츠클럽 PLUS */}
-                <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg border border-meritz-gold/30 p-4 text-white relative overflow-hidden">
+                <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg border border-meritz-gold/30 p-3 md:p-4 text-white relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-10">
                     <span className="material-symbols-outlined text-6xl">diamond</span>
                   </div>
@@ -955,7 +953,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* 2월 정규시상 */}
-                <div className="bg-gradient-to-br from-slate-800 via-slate-700/90 to-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-950 rounded-xl shadow-lg border border-slate-500/30 p-4 text-white relative overflow-hidden hover:shadow-xl transition-all">
+                <div className="bg-gradient-to-br from-slate-800 via-slate-700/90 to-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-950 rounded-xl shadow-lg border border-slate-500/30 p-3 md:p-4 text-white relative overflow-hidden hover:shadow-xl transition-all">
                   <div className="absolute top-0 right-0 p-3 opacity-10">
                     <span className="material-symbols-outlined text-5xl">verified</span>
                   </div>
@@ -975,8 +973,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
-              <div className="lg:col-span-1 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6 flex flex-col items-center justify-center relative">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5 mb-6">
+              <div className="lg:col-span-1 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 flex flex-col items-center justify-center relative">
                 <h3 className="w-full text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
                   <span className="material-symbols-outlined text-primary mr-2">
                     flag
@@ -1028,7 +1026,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
+              <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6">
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
@@ -1040,7 +1038,7 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">1월·2월 클릭 시 시상 현황 전환</p>
                   </div>
                 </div>
-                <div className="h-64 w-full">
+                <div className="h-56 md:h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={performanceData}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -1113,11 +1111,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {updateDate && (
-              <div className="fixed bottom-4 right-4 text-xs text-gray-500 dark:text-gray-400">
-                업데이트 날짜 : {updateDate.slice(0, 2)}.{updateDate.slice(2, 4)}
-              </div>
-            )}
+            {/* 고정 하단 바: 면책문구(왼쪽) + 업데이트 날짜(오른쪽). 모바일에서만 2줄·작은 폰트 */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col gap-0.5 md:flex-row md:items-center md:justify-between px-3 py-2 md:px-4 md:py-2.5 bg-white/95 dark:bg-gray-900/95 border-t border-gray-200 dark:border-gray-700 text-[10px] md:text-xs text-gray-500 dark:text-gray-400 backdrop-blur-sm">
+              <span className="text-left md:max-w-[60%]">*상기 시상내용은 예상값이며, 참고용으로만 활용하시기 바랍니다.</span>
+              {updateDate && (
+                <span className="text-right shrink-0 md:ml-4">업데이트 날짜 : {updateDate.slice(0, 2)}.{updateDate.slice(2, 4)}</span>
+              )}
+            </div>
           </main>
         </>
       )}
