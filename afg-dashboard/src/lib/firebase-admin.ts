@@ -29,10 +29,12 @@ function getServiceAccount(): admin.ServiceAccount {
     );
   }
 
-  // 로컬: JSON 파일 사용 (Vercel 빌드 시 이 경로 미실행)
-  const localPath = require('path').join(process.cwd(), 'firebase-admin-key.json');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require(localPath);
+  // 로컬: JSON 파일 사용 (require 대신 fs로 런타임 로드 - 번들러 해석 방지)
+  const fs = require('fs');
+  const path = require('path');
+  const filePath = path.join(process.cwd(), 'firebase-admin-key.json');
+  const content = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(content) as admin.ServiceAccount;
 }
 
 if (!admin.apps.length) {
