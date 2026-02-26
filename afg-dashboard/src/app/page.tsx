@@ -226,7 +226,7 @@ export default function Dashboard() {
 
     currentMonthPerf = isJanuaryView
       ? (janData?.performance["2026-01"] ?? selectedAgent.performance["2026-01"] ?? 0)
-      : (selectedAgent.performance["2026-02"] || 0);
+      : (selectedAgent.performance["2026-02"] ?? 0);
     prevMonthPerf = isJanuaryView
       ? (janData?.performance["2025-12"] ?? selectedAgent.performance["2025-12"] ?? 0)
       : (janData?.performance["2026-01"] ?? selectedAgent.performance["2026-01"] ?? 0); // 2월 전월대비: 1월 마감 데이터 우선
