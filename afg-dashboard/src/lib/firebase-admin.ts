@@ -72,12 +72,17 @@ function getServiceAccount(): admin.ServiceAccount {
     console.error('Firebase: key file not found. Tried:', candidates.join(', '));
     throw new Error(`Firebase key file not found. Tried: ${candidates.join(', ')}`);
   }
-  const parsed = JSON.parse(content) as admin.ServiceAccount;
+  // Firebase JSON 키 파일은 snake_case 필드 사용 (ServiceAccount 타입은 camelCase)
+  const parsed = JSON.parse(content) as { project_id?: string; client_email?: string; private_key?: string };
   if (!parsed.project_id || !parsed.client_email || !parsed.private_key) {
     console.error('Firebase: key file missing project_id, client_email, or private_key.');
     throw new Error('Firebase key file must contain project_id, client_email, and private_key.');
   }
-  return parsed;
+  return {
+    projectId: parsed.project_id,
+    clientEmail: parsed.client_email,
+    privateKey: parsed.private_key,
+  };
 }
 
 if (!admin.apps.length) {
