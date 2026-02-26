@@ -1064,7 +1064,7 @@ export default function Dashboard() {
                               "1월": "2026-01",
                               "2월": "2026-02",
                             };
-                            const monthKey = monthMap[label];
+                            const monthKey = label != null ? monthMap[label] : undefined;
                             if (monthKey && globalRanks[monthKey]) {
                               const rankIndex = globalRanks[monthKey].indexOf(value);
                               if (rankIndex !== -1) {
