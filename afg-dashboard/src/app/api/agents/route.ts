@@ -19,7 +19,7 @@ export async function GET() {
     if (session.role === 'admin') {
       // 관리자는 전체 설계사 조회 (role이 agent인 사람만)
       const snapshot = await agentsRef.where('role', '==', 'agent').get();
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc: any) => {
         const { password, ...safeData } = doc.data();
         agentsData.push(safeData);
       });
@@ -28,7 +28,7 @@ export async function GET() {
       // 테스트 매니저의 경우 targetManagerCode를 사용, 아니면 본인 코드 사용
       const mCode = session.targetManagerCode || session.code;
       const snapshot = await agentsRef.where('managerCode', '==', mCode).get();
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc: any) => {
         const { password, ...safeData } = doc.data();
         agentsData.push(safeData);
       });
