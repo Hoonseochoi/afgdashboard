@@ -42,9 +42,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <h2 className="text-3xl font-extrabold text-primary">meritz</h2>
+        <img src="/ci.png" alt="CI" className="h-12 mx-auto object-contain" />
         <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-          메리츠화재 대시보드 로그인
+          대시보드 로그인
         </h2>
       </div>
 
