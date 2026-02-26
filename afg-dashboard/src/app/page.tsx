@@ -834,17 +834,18 @@ export default function Dashboard() {
                     </div>
                     {isTop3 ? (
                       <div className="absolute -top-4 -right-1 bg-gradient-to-br from-meritz-gold to-amber-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg border border-amber-200/50 flex items-center gap-0.5 scale-[0.8] origin-top-right whitespace-nowrap">
-                        <span className="material-symbols-outlined text-xs">workspace_premium</span>
+                        <svg viewBox="0 0 24 24" className="w-3 h-3 flex-shrink-0 fill-current" aria-hidden><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6L5.7 21l2.3-7-6-4.6h7.6L12 2z"/></svg>
                         TOP {rankInMonth}
                       </div>
                     ) : isTop30 ? (
                       <div className="absolute -bottom-4 -right-2 bg-meritz-gold text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center scale-[0.8] origin-bottom-right whitespace-nowrap">
-                        <span className="material-symbols-outlined text-xs mr-0.5">military_tech</span>
+                        <svg viewBox="0 0 24 24" className="w-3 h-3 flex-shrink-0 mr-0.5 fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
                         TOP {rankInMonth}
                       </div>
                     ) : (
                       <div className="absolute -bottom-2 -right-2 bg-meritz-gold text-white text-xs font-bold px-3 py-1 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center whitespace-nowrap">
-                        <span className="material-symbols-outlined text-sm mr-1">military_tech</span> VIP
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 flex-shrink-0 mr-1 fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
+                        VIP
                       </div>
                     )}
                   </div>
@@ -963,7 +964,7 @@ export default function Dashboard() {
                     className="inline-flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-md bg-surface-light dark:bg-surface-dark px-3 py-1.5 whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     {selectedViewMonth}월
-                    <span className="material-symbols-outlined text-base text-gray-500">expand_more</span>
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0 fill-current text-gray-500" aria-hidden><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                   </button>
                   {prizeMonthDropdownOpen && (
                     <>
@@ -1112,7 +1113,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-md bg-sky-500 dark:bg-sky-400 text-white text-xs font-bold shadow-sm whitespace-nowrap">월간</span>
                       <div className="w-10 h-10 rounded-xl bg-sky-500/10 dark:bg-sky-400/10 flex items-center justify-center border border-sky-500/20 dark:border-sky-400/20">
-                        <span className="material-symbols-outlined text-sky-600 dark:text-sky-400 text-xl" aria-hidden>workspace_premium</span>
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-sky-600 dark:text-sky-400 fill-current" aria-hidden><path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6L5.7 21l2.3-7-6-4.6h7.6L12 2z"/></svg>
                       </div>
                     </div>
                     {monthlyPrize > 0 ? (
@@ -1177,12 +1178,12 @@ export default function Dashboard() {
 
                 {/* 메리츠클럽 PLUS */}
                 <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg border border-meritz-gold/30 p-3 md:p-4 text-white relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <span className="material-symbols-outlined text-6xl">diamond</span>
+                  <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                    <svg viewBox="0 0 24 24" className="w-14 h-14 fill-current text-meritz-gold/30" aria-hidden><path d="M12 2L2 12l10 10 10-10L12 2z"/></svg>
                   </div>
                   <div className="flex justify-between items-start mb-3 relative z-10">
                     <div className="bg-meritz-gold/20 p-1.5 rounded-lg">
-                      <span className="material-symbols-outlined text-meritz-gold text-lg">diamond</span>
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M12 2L2 12l10 10 10-10L12 2z"/></svg>
                     </div>
                     {meritzClubPlusPrize > 0 ? (
                       <span className="bg-meritz-gold text-white text-xs px-2 py-1 rounded font-bold shadow-sm whitespace-nowrap">조건 충족</span>
@@ -1223,8 +1224,8 @@ export default function Dashboard() {
 
                 {/* 2월 정규시상 */}
                 <div className="bg-gradient-to-br from-slate-800 via-slate-700/90 to-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-950 rounded-xl shadow-lg border border-slate-500/30 p-3 md:p-4 text-white relative overflow-hidden hover:shadow-xl transition-all">
-                  <div className="absolute top-0 right-0 p-3 opacity-10">
-                    <span className="material-symbols-outlined text-5xl">verified</span>
+                  <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                    <svg viewBox="0 0 24 24" className="w-12 h-12 fill-current text-slate-400/30" aria-hidden><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                   </div>
                   <div className="flex justify-between items-start mb-3 relative z-10">
                     <div className="bg-white/10 px-2.5 py-1.5 rounded-xl border border-white/10 flex items-center justify-center">
@@ -1249,7 +1250,7 @@ export default function Dashboard() {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
                 <div className="relative z-10 p-4 md:p-5 flex flex-col items-center flex-1">
                   <div className="w-full flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-meritz-gold text-lg">military_tech</span>
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
                     <h3 className="text-lg font-bold text-white tracking-tight">2026 MY HOT</h3>
                   </div>
                   <p className="text-[10px] text-gray-400 mb-3 w-full text-left lg:text-center">1월~{selectedViewMonth}월 누적 · 연도시상</p>
@@ -1318,9 +1319,7 @@ export default function Dashboard() {
                 <div className="flex justify-between items-center mb-4 shrink-0">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
-                      <span className="material-symbols-outlined text-meritz-gray mr-2">
-                        show_chart
-                      </span>{" "}
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gray fill-current mr-2" aria-hidden><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.07-4-4L2 16.99z"/></svg>
                       최근 7개월 실적 추이
                     </h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">1월·2월 클릭 시 시상 현황 전환</p>
