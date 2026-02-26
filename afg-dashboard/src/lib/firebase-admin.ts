@@ -21,23 +21,19 @@ function getServiceAccount(): admin.ServiceAccount {
   // 또한 앞뒤 따옴표가 있다면 제거
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (privateKey) {
-    // 따옴표 제거
-    privateKey = privateKey.replace(/^"|"$/g, '');
+    // 무조건 가장 확실한 방법으로 포맷팅을 강제 재조립 (Vercel 환경변수 입력 시 생길 수 있는 모든 공백/개행 이슈 원천 차단)
+    let rawKey = privateKey.replace(/^"|"$/g, ''); // 앞뒤 따옴표 제거
+    rawKey = rawKey.replace(/\\n/g, '\n'); // 이스케이프된 개행문자 변환
+    rawKey = rawKey.replace(/\\r\\n/g, '\n');
     
-    // 이스케이프된 백슬래시(\n)를 실제 줄바꿈으로 변환
-    privateKey = privateKey.replace(/\\n/g, '\n');
-    privateKey = privateKey.replace(/\\r\\n/g, '\n');
-
-    // 만약 여전히 실제 줄바꿈(\n)이 없다면
-    if (!privateKey.includes('\n')) {
-        // 공백을 전부 제거하고 64자마다 줄바꿈으로 변경하는 매우 원시적이고 확실한 방법
-        let rawKey = privateKey.replace(/-----BEGIN PRIVATE KEY-----/g, '');
-        rawKey = rawKey.replace(/-----END PRIVATE KEY-----/g, '');
-        rawKey = rawKey.replace(/\s+/g, ''); // 모든 공백 제거
-        
-        const formattedKey = rawKey.match(/.{1,64}/g)?.join('\n') || rawKey;
-        privateKey = `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----\n`;
-    }
+    // PEM 헤더와 푸터 제거하고 순수 base64 데이터만 남긴 뒤, 모든 공백(\s, \n 등) 완전 제거
+    rawKey = rawKey.replace(/-----BEGIN PRIVATE KEY-----/g, '');
+    rawKey = rawKey.replace(/-----END PRIVATE KEY-----/g, '');
+    rawKey = rawKey.replace(/\s+/g, ''); 
+    
+    // 정확히 64글자마다 줄바꿈을 넣어 표준 PEM 포맷으로 재구성
+    const formattedKey = rawKey.match(/.{1,64}/g)?.join('\n') || rawKey;
+    privateKey = `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----\n`;
   }
 
   if (projectId && clientEmail && privateKey) {
