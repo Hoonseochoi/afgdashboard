@@ -1,23 +1,43 @@
 import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK
-// Vercel: FIREBASE_SERVICE_ACCOUNT_KEY 환경 변수에 JSON 전체를 문자열로 설정
-// 로컬: FIREBASE_SERVICE_ACCOUNT_PATH 또는 .env 파일 사용
+// Vercel: FIREBASE_SERVICE_ACCOUNT_KEY (JSON 한 줄) 또는 개별 변수 사용
+// 로컬: .env.local에 동일하게 설정
+function getServiceAccount(): admin.ServiceAccount {
+  // 방식 1: JSON 전체 (한 줄, 줄바꿈 없이)
+  const keyJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (keyJson) {
+    try {
+      return JSON.parse(keyJson) as admin.ServiceAccount;
+    } catch {
+      // JSON 파싱 실패 시 개별 변수 시도
+    }
+  }
+
+  // 방식 2: 개별 환경 변수 (Vercel에서 더 안정적)
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+  if (projectId && clientEmail && privateKey) {
+    return { projectId, clientEmail, privateKey };
+  }
+
+  if (process.env.VERCEL) {
+    throw new Error(
+      'Vercel: FIREBASE_SERVICE_ACCOUNT_KEY 또는 FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY 설정 필요'
+    );
+  }
+
+  // 로컬: JSON 파일 사용 (Vercel 빌드 시 이 경로 미실행)
+  const localPath = require('path').join(process.cwd(), 'firebase-admin-key.json');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require(localPath);
+}
+
 if (!admin.apps.length) {
   try {
-    let serviceAccount: admin.ServiceAccount;
-
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      // Vercel/Production: 환경 변수 사용
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY) as admin.ServiceAccount;
-    } else if (process.env.VERCEL) {
-      throw new Error('Vercel 배포 시 FIREBASE_SERVICE_ACCOUNT_KEY 환경 변수를 설정해주세요.');
-    } else {
-      // 로컬: afg-dashboard/firebase-admin-key.json 사용 (실제 키 파일 복사 후 사용)
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      serviceAccount = require('../../firebase-admin-key.json');
-    }
-
+    const serviceAccount = getServiceAccount();
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
