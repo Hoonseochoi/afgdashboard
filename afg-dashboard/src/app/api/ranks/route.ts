@@ -16,17 +16,17 @@ export async function GET() {
       '2026-02': [],
     };
 
-    snapshot.forEach(doc => {
+    snapshot.forEach((doc: any) => {
       const data = doc.data();
       if (data.performance) {
-        Object.keys(allPerformances).forEach(month => {
+        Object.keys(allPerformances).forEach((month: string) => {
           allPerformances[month].push(data.performance[month] || 0);
         });
       }
     });
 
     // Sort all arrays descending
-    Object.keys(allPerformances).forEach(month => {
+    Object.keys(allPerformances).forEach((month: string) => {
       allPerformances[month].sort((a, b) => b - a);
     });
 
