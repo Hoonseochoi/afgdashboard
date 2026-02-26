@@ -1,0 +1,36 @@
+Tool: create_project
+Desc: Creates a new Stitch project. A project is a container for UI designs and frontend code.
+
+
+Tool: get_project
+Desc: Retrieves the details of a specific Stitch project using its project name.
+
+
+Tool: list_projects
+Desc: Lists all Stitch projects accessible to the user. By default, it lists projects owned by the user.
+
+
+Tool: list_screens
+Desc: Lists all screens within a given Stitch project.
+
+
+Tool: get_screen
+Desc: Retrieves the details of a specific screen within a project.
+
+
+Tool: generate_screen_from_text
+Desc: Generates a new screen within a project from a text prompt.
+
+**Instructions for Tool Call:**
+*  This
+
+Tool: edit_screens
+Desc: Edits existing screens within a project using a text prompt.
+
+**Instructions for Tool Call:**
+*  Thi
+
+Tool: generate_variants
+Desc: Generates variants of existing screens within a project using a text prompt.
+
+

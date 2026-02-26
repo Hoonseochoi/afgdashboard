@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          primary: "#EF3B24", // Meritz Orange Red
+          "meritz-gray": "#6D6E71", // Meritz Gray
+          "meritz-gold": "#C5A065", // Adjusted Gold for better visibility
+          "meritz-silver": "#9CA3AF", // Silver
+          "background-light": "#F3F4F6", // Light gray background
+          "background-dark": "#111827", // Dark gray background
+          "surface-light": "#FFFFFF",
+          "surface-dark": "#1F2937",
+        },
+        fontFamily: {
+          display: ["Noto Sans KR", "sans-serif"],
+          body: ["Noto Sans KR", "sans-serif"],
+        },
+        borderRadius: {
+          DEFAULT: "0.375rem",
+        },
+      },
+    },
+  };
+</script>
+<title>Meritz Individual Agent Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .dark .custom-scrollbar::-webkit-scrollbar-track {
+      background: #374151;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 4px;
+    }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #6b7280;
+    }
+    .radial-progress {
+        --value: 0;
+        --size: 10rem;
+        --thickness: 1rem;
+    }
+</style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-body min-h-screen text-gray-800 dark:text-gray-200 transition-colors duration-200">
+<header class="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm">
+<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+<div class="flex items-center space-x-4">
+<div class="flex items-center">
+<span class="text-2xl font-bold tracking-tight text-primary">meritz</span>
+<span class="ml-2 text-lg font-medium text-meritz-gray dark:text-gray-300">메리츠화재</span>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<button class="p-2 text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="flex items-center space-x-2 pl-4 border-l border-gray-200 dark:border-gray-700">
+<div class="w-8 h-8 rounded-full bg-meritz-gold flex items-center justify-center text-white font-bold text-xs shadow-md">
+                    JD
+                </div>
+<div class="hidden lg:block text-sm text-right">
+<p class="font-bold text-gray-800 dark:text-gray-100">이성공 FP</p>
+<p class="text-xs text-meritz-gray dark:text-gray-400">프라임에셋</p>
+</div>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="bg-white dark:bg-surface-dark rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 mb-8 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-meritz-gold/10 rounded-full -mr-16 -mt-16 z-0"></div>
+<div class="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full -ml-12 -mb-12 z-0"></div>
+<div class="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+<div class="flex items-center gap-6 w-full md:w-auto">
+<div class="relative">
+<div class="w-24 h-24 rounded-full border-4 border-meritz-gold shadow-lg flex items-center justify-center bg-gradient-to-br from-yellow-50 to-yellow-100 text-3xl font-bold text-meritz-gold overflow-hidden">
+<img alt="Agent" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDF2EmGc8YLQtTPwYdJey9keKc0Qad_8MlQDX66VzpbTioEXmCVJAv_cpZ_fyk8OkAH5TBSSNN9uP_wxEOgVncs6pmawrTqbytneT7HH08ISDHJFGSkaDD21q7cuna0ozWvYHUNs8q32SFpnyoUAbLkd47A2imy7FkOr7PH8huhzReDnKPmQaJhVCypESmr6TCqITAj9oi5ffJBA0cbRBa6z02UEmzjWkCe-m4Y2p84-FEkqsojbI4JZ1H4vtymU9LxKRIStXr6YOsS"/>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-meritz-gold text-white text-xs font-bold px-3 py-1 rounded-full shadow border-2 border-white dark:border-surface-dark flex items-center">
+<span class="material-symbols-outlined text-sm mr-1">military_tech</span> VIP
+                    </div>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h2 class="text-3xl font-bold text-gray-900 dark:text-white">이성공 <span class="text-lg font-normal text-gray-500 dark:text-gray-400">FP님</span></h2>
+</div>
+<p class="text-gray-600 dark:text-gray-300 mb-2">프라임에셋 강남본부</p>
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-meritz-gold/10 text-meritz-gold border border-meritz-gold/30">
+                            2월 VIP 달성
+                        </span>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                            연속가동 3개월차
+                        </span>
+</div>
+</div>
+</div>
+<div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0">
+<div class="bg-gradient-to-br from-primary to-red-600 rounded-xl p-5 text-white shadow-lg min-w-[200px] flex-1">
+<p class="text-sm opacity-90 mb-1">이번달 총 예상 시상금</p>
+<div class="flex items-baseline gap-1">
+<h3 class="text-3xl font-extrabold">620<span class="text-lg font-medium">만원</span></h3>
+</div>
+<div class="mt-2 text-xs bg-white/20 inline-block px-2 py-1 rounded">
+                        전월 대비 <span class="font-bold">+120만원</span> ▲
+                    </div>
+</div>
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 shadow-sm min-w-[200px] flex-1">
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-1">현재 인보험 누적 실적</p>
+<div class="flex items-baseline gap-1">
+<h3 class="text-3xl font-bold text-gray-900 dark:text-white">450<span class="text-lg font-medium text-gray-500">만원</span></h3>
+</div>
+<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-3">
+<div class="bg-primary h-1.5 rounded-full" style="width: 90%"></div>
+</div>
+<p class="text-xs text-right mt-1 text-gray-400">목표 500만원까지 50만원 남음</p>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+<div class="lg:col-span-1 bg-white dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6 flex flex-col items-center justify-center relative">
+<h3 class="w-full text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+<span class="material-symbols-outlined text-primary mr-2">flag</span> 2월 목표 달성률
+            </h3>
+<div class="relative w-48 h-48">
+<svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+<circle class="dark:stroke-gray-700" cx="50" cy="50" fill="none" r="45" stroke="#E5E7EB" stroke-width="8"></circle>
+<circle cx="50" cy="50" fill="none" r="45" stroke="#EF3B24" stroke-dasharray="283" stroke-dashoffset="28.3" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center">
+<span class="text-4xl font-black text-gray-900 dark:text-white">90<span class="text-xl font-normal">%</span></span>
+<span class="text-sm text-gray-500 dark:text-gray-400">달성중</span>
+</div>
+</div>
+<div class="w-full mt-6 space-y-3">
+<div class="flex justify-between text-sm">
+<span class="text-gray-500 dark:text-gray-400">현재 실적</span>
+<span class="font-bold text-gray-900 dark:text-white">450만원</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-gray-500 dark:text-gray-400">목표 실적</span>
+<span class="font-bold text-gray-900 dark:text-white">500만원</span>
+</div>
+<div class="p-3 bg-red-50 dark:bg-red-900/10 rounded-lg text-center">
+<p class="text-primary font-medium text-sm">💪 50만원만 더하면 VIP 유지!</p>
+</div>
+</div>
+</div>
+<div class="lg:col-span-2 bg-white dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+<span class="material-symbols-outlined text-meritz-gray mr-2">show_chart</span> 주간 실적 추이
+                </h3>
+<select class="form-select text-sm border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 dark:text-gray-300 py-1 pl-3 pr-8">
+<option>최근 4주</option>
+<option>최근 8주</option>
+</select>
+</div>
+<div class="flex items-end justify-between h-64 space-x-4 px-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+<div class="flex flex-col items-center w-full group">
+<div class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">120만</div>
+<div class="w-full max-w-[60px] bg-gray-200 dark:bg-gray-700 rounded-t-lg relative h-[40%] group-hover:bg-meritz-silver transition-colors"></div>
+<span class="text-sm text-gray-600 dark:text-gray-400 mt-3 font-medium">1주차</span>
+</div>
+<div class="flex flex-col items-center w-full group">
+<div class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">150만</div>
+<div class="w-full max-w-[60px] bg-gray-200 dark:bg-gray-700 rounded-t-lg relative h-[50%] group-hover:bg-meritz-silver transition-colors"></div>
+<span class="text-sm text-gray-600 dark:text-gray-400 mt-3 font-medium">2주차</span>
+</div>
+<div class="flex flex-col items-center w-full group">
+<div class="text-xs font-bold text-primary mb-2">180만</div>
+<div class="w-full max-w-[60px] bg-primary rounded-t-lg relative h-[60%] shadow-lg shadow-red-200 dark:shadow-red-900/20">
+<div class="absolute -top-1 right-0 left-0 flex justify-center">
+<span class="w-2 h-2 bg-white rounded-full"></span>
+</div>
+</div>
+<span class="text-sm text-primary mt-3 font-bold">3주차</span>
+</div>
+<div class="flex flex-col items-center w-full group opacity-50">
+<div class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">예상</div>
+<div class="w-full max-w-[60px] border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-t-lg relative h-[70%]"></div>
+<span class="text-sm text-gray-500 dark:text-gray-400 mt-3 font-medium">4주차</span>
+</div>
+</div>
+<div class="mt-4 flex justify-between items-center text-sm text-gray-500">
+<p>* 전주 대비 실적 <span class="text-primary font-bold">20% 상승</span> 중입니다. 훌륭합니다!</p>
+<button class="text-meritz-gray hover:text-primary underline text-xs">상세보기</button>
+</div>
+</div>
+</div>
+<div class="mb-8">
+<h2 class="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center">
+<span class="w-1.5 h-6 bg-meritz-gold rounded-sm mr-3"></span>
+            나의 시상 현황 (My Rewards)
+        </h2>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow border-l-4 border-green-500 p-5 hover:shadow-lg transition-shadow">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg">
+<span class="material-symbols-outlined text-green-600 dark:text-green-400">payments</span>
+</div>
+<span class="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 text-xs px-2 py-1 rounded font-bold">달성완료</span>
+</div>
+<h4 class="text-lg font-bold text-gray-900 dark:text-white mb-1">인보험 기본 시상</h4>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">100% 지급 구간</p>
+<div class="mb-4">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-gray-600 dark:text-gray-300">현재 450만</span>
+<span class="text-gray-600 dark:text-gray-300">목표 10만 이상</span>
+</div>
+<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+<div class="bg-green-500 h-2 rounded-full" style="width: 100%"></div>
+</div>
+</div>
+<div class="border-t border-gray-100 dark:border-gray-700 pt-3 flex justify-between items-center">
+<span class="text-sm text-gray-500">예상 시상금</span>
+<span class="text-lg font-bold text-green-600 dark:text-green-400">450만원</span>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow border-l-4 border-primary p-5 hover:shadow-lg transition-shadow relative overflow-hidden">
+<div class="flex justify-between items-start mb-4 relative z-10">
+<div class="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary">add_task</span>
+</div>
+<span class="bg-red-50 text-primary dark:bg-red-900/30 text-xs px-2 py-1 rounded font-bold">진행중</span>
+</div>
+<h4 class="text-lg font-bold text-gray-900 dark:text-white mb-1 relative z-10">인보험 추가 시상</h4>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-4 relative z-10">500만 구간 도전 중</p>
+<div class="mb-4 relative z-10">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-gray-600 dark:text-gray-300">현재 450만</span>
+<span class="text-primary font-bold">다음 구간 500만</span>
+</div>
+<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full relative" style="width: 90%">
+<span class="absolute right-0 -top-1 w-2 h-2 bg-white rounded-full animate-ping"></span>
+</div>
+</div>
+<p class="text-xs text-primary mt-1 font-medium">🔥 50만원만 더하면 +20만원 추가!</p>
+</div>
+<div class="border-t border-gray-100 dark:border-gray-700 pt-3 flex justify-between items-center relative z-10">
+<span class="text-sm text-gray-500">예상 시상금</span>
+<span class="text-lg font-bold text-primary">50만원</span>
+</div>
+</div>
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow border-l-4 border-blue-500 p-5 hover:shadow-lg transition-shadow">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-blue-600 dark:text-blue-400">repeat</span>
+</div>
+<span class="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 text-xs px-2 py-1 rounded font-bold">300% 달성</span>
+</div>
+<h4 class="text-lg font-bold text-gray-900 dark:text-white mb-1">2-3월 연속가동</h4>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">최대 구간 달성 완료</p>
+<div class="mb-4">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-gray-600 dark:text-gray-300">달성률</span>
+<span class="text-gray-600 dark:text-gray-300">MAX</span>
+</div>
+<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+<div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div>
+</div>
+<p class="text-xs text-blue-600 mt-1 font-medium">2개월 연속 가동 성공!</p>
+</div>
+<div class="border-t border-gray-100 dark:border-gray-700 pt-3 flex justify-between items-center">
+<span class="text-sm text-gray-500">예상 시상금</span>
+<span class="text-lg font-bold text-blue-600 dark:text-blue-400">120만원</span>
+</div>
+</div>
+<div class="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg border border-meritz-gold/30 p-5 text-white relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-6xl">diamond</span>
+</div>
+<div class="flex justify-between items-start mb-4 relative z-10">
+<div class="bg-meritz-gold/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-meritz-gold">diamond</span>
+</div>
+<span class="bg-meritz-gold text-white text-xs px-2 py-1 rounded font-bold shadow-sm">VIP 전용</span>
+</div>
+<h4 class="text-lg font-bold text-meritz-gold mb-1">메리츠 클럽+</h4>
+<p class="text-sm text-gray-300 mb-4">Q1 분기 시상</p>
+<div class="mb-4 relative z-10">
+<div class="flex justify-between text-xs mb-1 text-gray-300">
+<span>현재 달성</span>
+<span class="text-meritz-gold">조건 충족</span>
+</div>
+<div class="w-full bg-gray-700 rounded-full h-2 border border-gray-600">
+<div class="bg-meritz-gold h-2 rounded-full" style="width: 100%"></div>
+</div>
+<p class="text-xs text-meritz-gold mt-1 font-medium">특별 보너스 대상자입니다.</p>
+</div>
+<div class="border-t border-gray-700 pt-3 flex justify-between items-center relative z-10">
+<span class="text-sm text-gray-400">특별 시상금</span>
+<span class="text-lg font-bold text-white">지급 확정</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 rounded-xl border border-red-100 dark:border-red-900/30 p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="bg-white dark:bg-surface-dark p-2 rounded-full shadow-sm">
+<span class="material-symbols-outlined text-primary">campaign</span>
+</div>
+<div>
+<p class="text-sm font-bold text-gray-900 dark:text-white">이성공님, 2월 마감까지 <span class="text-primary">4일</span> 남았습니다!</p>
+<p class="text-xs text-gray-500 dark:text-gray-400">마지막까지 최선을 다해 VIP 혜택을 놓치지 마세요.</p>
+</div>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-red-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+            자세한 시상안 보기
+        </button>
+</div>
+</main>
+<footer class="bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 mt-12 py-8">
+<div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-gray-500 dark:text-gray-400">
+<p class="mb-2">Meritz Fire &amp; Marine Insurance Co., Ltd. All Rights Reserved.</p>
+<p>본 시스템은 메리츠화재 내부 업무용 시스템으로 무단 접속 및 배포를 금합니다.</p>
+</div>
+</footer>
+
+</body></html>
