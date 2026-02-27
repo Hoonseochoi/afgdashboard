@@ -25,14 +25,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${notoSansKr.variable} ${nunito.variable} font-sans`}>
+    <html lang="ko" className={`${notoSansKr.variable} ${nunito.variable} font-sans`} suppressHydrationWarning>
       <head>
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="bg-background-light dark:bg-background-dark min-h-screen text-gray-800 dark:text-gray-200 transition-colors duration-200">
+      <body className="bg-background-light dark:bg-background-dark min-h-screen text-gray-800 dark:text-gray-200 transition-colors duration-200" suppressHydrationWarning>
         {children}
       </body>
     </html>

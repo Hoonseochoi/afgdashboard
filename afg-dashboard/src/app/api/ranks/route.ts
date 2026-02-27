@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pbAdminAuth, pbCollectionGetAllWithAuth, type PbAgentRecord } from '@/lib/pocketbase';
+import { appwriteAgentsListAll, isAppwriteConfigured } from '@/lib/appwrite-server';
 import { cookies } from 'next/headers';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -27,7 +27,9 @@ function getRanksFromLocalJson(): Record<string, number[]> {
   return allPerformances;
 }
 
-function computeRanks(items: PbAgentRecord[]): Record<string, number[]> {
+function computeRanks(
+  items: { code?: string; performance?: Record<string, number> }[]
+): Record<string, number[]> {
   const allPerformances: Record<string, number[]> = Object.fromEntries(RANK_MONTHS.map((m) => [m, []]));
   items.forEach((data) => {
     if (data.code === RANK_EXCLUDE_CODE) return;
@@ -56,21 +58,18 @@ export async function GET() {
       }
     }
 
-    if (session?.code === DEV_MASTER_ID && (!process.env.POCKETBASE_ADMIN_EMAIL || !process.env.POCKETBASE_ADMIN_PASSWORD)) {
+    if (session?.code === DEV_MASTER_ID && !isAppwriteConfigured()) {
       return NextResponse.json({ ranks: getRanksFromLocalJson() });
     }
 
-    if (!process.env.POCKETBASE_ADMIN_EMAIL || !process.env.POCKETBASE_ADMIN_PASSWORD) {
+    if (!isAppwriteConfigured()) {
       return NextResponse.json(
-        { error: '서버 설정 오류: PocketBase가 설정되지 않았습니다.' },
+        { error: '서버 설정 오류: Appwrite가 설정되지 않았습니다.' },
         { status: 500 }
       );
     }
 
-    const token = await pbAdminAuth();
-    const items = await pbCollectionGetAllWithAuth<PbAgentRecord>('agents', token, {
-      filter: '(role = "agent")',
-    });
+    const items = await appwriteAgentsListAll({ filterRole: 'agent' });
     const ranks = computeRanks(items);
     return NextResponse.json({ ranks });
   } catch (error) {

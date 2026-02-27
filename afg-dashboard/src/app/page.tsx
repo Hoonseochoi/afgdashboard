@@ -15,7 +15,14 @@ import {
 } from "recharts";
 import januaryClosedData from "@/data/january_closed.json";
 
-const januaryClosed = januaryClosedData as Record<string, { code: string; performance: Record<string, number>; weekly: { week1: number; week2: number; week3?: number } }>;
+const januaryClosed = januaryClosedData as Record<
+  string,
+  {
+    code: string;
+    performance: Record<string, number>;
+    weekly: { week1: number; week2: number; week3?: number };
+  }
+>;
 const RANK_EXCLUDE_CODE = "712345678"; // 테스트용 노연지 계정 — 랭킹·실적 순위에서 제외
 
 export default function Dashboard() {
@@ -42,6 +49,16 @@ export default function Dashboard() {
   const exportAreaRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
+
+  // App 처음 열릴 때 백엔드 Appwrite 연결 확인 (브라우저 SDK 직접 호출 시 404 등 오류 방지)
+  useEffect(() => {
+    fetch("/api/appwrite-health")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.ok) console.log("[Appwrite] 연결 OK");
+      })
+      .catch(() => {});
+  }, []);
 
   const handleExportPng = async () => {
     const el = exportAreaRef.current;
@@ -99,53 +116,38 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    // 세션 및 에이전트 데이터 가져오기
+    // 대시보드 데이터 한 번에 로드 (요청 1회로 로딩 단축)
     const fetchData = async () => {
       try {
-        // 1. 세션 확인
-        const authRes = await fetch("/api/auth/me");
-        const authData = await authRes.json();
+        setAgentsError(null);
+        const res = await fetch("/api/dashboard");
+        const data = await res.json();
 
-        if (!authData.user) {
+        if (!res.ok) {
+          if (res.status === 401) {
+            router.push("/login");
+            return;
+          }
+          setAgentsError(data.error || "데이터를 불러올 수 없습니다.");
+          return;
+        }
+
+        if (!data.user) {
           router.push("/login");
           return;
         }
 
-        setUser(authData.user);
+        setUser(data.user);
+        if (data.user.isFirstLogin) setShowPasswordModal(true);
 
-        if (authData.user.isFirstLogin) {
-          setShowPasswordModal(true);
-        }
-
-        // 2. 에이전트 데이터 가져오기
-        setAgentsError(null);
-        const agentsRes = await fetch("/api/agents");
-        const agentsData = await agentsRes.json();
-
-        if (agentsData.error) {
-          if (agentsRes.status === 401) {
-            router.push("/login");
-            return;
-          }
-          setAgentsError(agentsData.error);
-          return;
-        }
-
-        setAgents(agentsData.agents);
-        setUpdateDate(agentsData.updateDate || "");
-        const excludeTest = (agentsData.agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
+        setAgents(data.agents || []);
+        setUpdateDate(data.updateDate || "");
+        const excludeTest = (data.agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
         if (excludeTest.length > 0) {
           const sorted = [...excludeTest].sort((a, b) => (b.performance?.["2026-02"] || 0) - (a.performance?.["2026-02"] || 0));
           setSelectedAgent(sorted[0]);
         }
-        // 3. 글로벌 순위 (관리자는 /api/agents에서 ranks 포함 반환 → 중복 읽기 방지)
-        if (agentsData.ranks) {
-          setGlobalRanks(agentsData.ranks);
-        } else {
-          const ranksRes = await fetch("/api/ranks");
-          const ranksData = await ranksRes.json();
-          if (ranksData.ranks) setGlobalRanks(ranksData.ranks);
-        }
+        if (data.ranks) setGlobalRanks(data.ranks);
       } catch (err) {
         console.error("데이터 로드 실패", err);
       } finally {

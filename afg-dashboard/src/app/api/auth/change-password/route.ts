@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { pbAdminAuth, pbAgentGetByCode, pbRecordUpdateWithAuth } from '@/lib/pocketbase';
+import { appwriteAgentGetByCode, appwriteAgentUpdate, isAppwriteConfigured } from '@/lib/appwrite-server';
 import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
@@ -18,19 +18,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '유효한 비밀번호를 입력해주세요.' }, { status: 400 });
     }
 
-    if (!process.env.POCKETBASE_ADMIN_EMAIL || !process.env.POCKETBASE_ADMIN_PASSWORD) {
+    if (!isAppwriteConfigured()) {
       return NextResponse.json(
-        { error: '서버 설정 오류: PocketBase가 설정되지 않았습니다.' },
+        { error: '서버 설정 오류: Appwrite가 설정되지 않았습니다.' },
         { status: 500 }
       );
     }
 
-    const agent = await pbAgentGetByCode(session.code);
+    const agent = await appwriteAgentGetByCode(session.code);
     if (!agent) {
       return NextResponse.json({ error: '계정을 찾을 수 없습니다.' }, { status: 404 });
     }
-    const token = await pbAdminAuth();
-    await pbRecordUpdateWithAuth('agents', agent.id, token, {
+    await appwriteAgentUpdate(agent.id, {
       password: newPassword,
       isFirstLogin: false,
     });

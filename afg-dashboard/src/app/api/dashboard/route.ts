@@ -1,3 +1,7 @@
+/**
+ * 대시보드 초기 로드용 - 세션 + agents + updateDate + ranks 를 한 번에 반환.
+ * 클라이언트 요청 1회, Appwrite listAll 1회로 로딩 시간 단축.
+ */
 import { NextResponse } from 'next/server';
 import {
   appwriteAgentGetByCode,
@@ -42,7 +46,6 @@ function computeRanks(items: AppwriteAgentRecord[]): Record<string, number[]> {
   return allPerformances;
 }
 
-/** MC_LIST 파일 순서(agent-order.json)로 정렬. 없으면 그대로 반환 */
 function sortByMcListOrder<T extends { code?: string }>(agents: T[]): T[] {
   try {
     const orderPath = join(process.cwd(), 'src', 'data', 'agent-order.json');
@@ -69,16 +72,24 @@ export async function GET() {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
 
-    let session: { role?: string; code?: string; targetManagerCode?: string };
+    let session: { role?: string; code?: string; targetManagerCode?: string; name?: string; isFirstLogin?: boolean };
     try {
       session = JSON.parse(sessionCookie.value);
     } catch {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
 
+    const user = {
+      code: session.code,
+      name: session.name,
+      isFirstLogin: session.isFirstLogin,
+      role: session.role,
+      targetManagerCode: session.targetManagerCode,
+    };
+
     if (session.code === DEV_MASTER_ID && !isAppwriteConfigured()) {
       const agentsData = getAgentsFromLocalJson();
-      return NextResponse.json({ agents: agentsData, updateDate: '0000' });
+      return NextResponse.json({ user, agents: agentsData, updateDate: '0000' });
     }
 
     if (!isAppwriteConfigured()) {
@@ -97,7 +108,7 @@ export async function GET() {
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
       const ranks = computeRanks(items);
-      return NextResponse.json({ agents: agentsData, updateDate, ranks });
+      return NextResponse.json({ user, agents: agentsData, updateDate, ranks });
     }
 
     if (session.role === 'manager') {
@@ -106,17 +117,17 @@ export async function GET() {
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
-      return NextResponse.json({ agents: agentsData, updateDate });
+      return NextResponse.json({ user, agents: agentsData, updateDate });
     }
 
     const agent = await appwriteAgentGetByCode(session.code!);
     if (agent && agent.code !== RANK_EXCLUDE_CODE) {
-      return NextResponse.json({ agents: [toSafeAgent(agent)], updateDate });
+      return NextResponse.json({ user, agents: [toSafeAgent(agent)], updateDate });
     }
-    return NextResponse.json({ agents: [], updateDate });
+    return NextResponse.json({ user, agents: [], updateDate });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('Get agents error:', message);
+    console.error('Dashboard GET error:', message);
     return NextResponse.json({ error: '데이터를 불러오는 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
