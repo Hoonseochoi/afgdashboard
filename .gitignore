@@ -23,3 +23,7 @@ node_modules/
 .next/
 out/
 
+# PocketBase DB (로컬 데이터)
+pocketbase/pb_data/*.db
+pocketbase/pb_data/*.db-journal
+
