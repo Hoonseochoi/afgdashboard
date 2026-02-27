@@ -39,13 +39,35 @@ const IDX_W3 = 22;
 const IDX_W4 = 23;
 const IDX_BRANCH = 37;
 
-function findLatestDailyFile() {
+function findLatestTwoDailyFiles() {
   const dailyDir = path.join(__dirname, '..', '..', 'data', 'daily');
-  if (!fs.existsSync(dailyDir)) return null;
-  const files = fs.readdirSync(dailyDir).filter((f) => /^\d{4}MC_LIST/i.test(f) && /\.xlsx?$/i.test(f));
-  if (files.length === 0) return null;
-  const sorted = files.sort();
-  return path.join(dailyDir, sorted[sorted.length - 1]);
+  if (!fs.existsSync(dailyDir)) return { latest: null, prev: null };
+
+  // NNNNMC_LIST*.xlsx 패턴만 대상으로 함
+  const files = fs
+    .readdirSync(dailyDir)
+    .filter((f) => /^\d{4}MC_LIST/i.test(f) && /\.xlsx?$/i.test(f))
+    .sort();
+
+  if (files.length === 0) return { latest: null, prev: null };
+
+  // 가장 최신 파일 (예: 0227MC_LIST...)
+  const latest = files[files.length - 1];
+  const latestPrefix = latest.slice(0, 4); // '0227'
+
+  // D-1 날짜(예: 0226)에 해당하는 파일을 찾는다.
+  const latestNum = parseInt(latestPrefix, 10);
+  const prevPrefix = Number.isFinite(latestNum) ? String(latestNum - 1).padStart(4, '0') : null;
+
+  let prev = null;
+  if (prevPrefix) {
+    prev = files.find((f) => f.startsWith(prevPrefix)) ?? null;
+  }
+
+  return {
+    latest: path.join(dailyDir, latest),
+    prev: prev ? path.join(dailyDir, prev) : null,
+  };
 }
 
 function parseMonthFromFilename(filename) {
@@ -113,7 +135,8 @@ async function main() {
     throw new Error('APPWRITE_API_KEY, APPWRITE_DATABASE_ID, APPWRITE_AGENTS_COLLECTION_ID, APPWRITE_CONFIG_COLLECTION_ID required');
   }
 
-  const filePath = findLatestDailyFile();
+  const files = findLatestTwoDailyFiles();
+  const filePath = files.latest;
   if (!filePath) {
     console.error('  data/daily 폴더에 NNNNMC_LIST*.xlsx 파일이 없습니다.');
     process.exit(1);
@@ -126,6 +149,17 @@ async function main() {
 
   const rows = parseDailyXlsx(filePath);
   console.log('  어센틱금융그룹 설계사', rows.length, '명 파싱됨');
+
+  // 전일 파일이 있으면 전일 인보험 누적 실적과의 차이(전일비)를 계산한다.
+  let prevMap = new Map();
+  if (files.prev) {
+    try {
+      const prevRows = parseDailyXlsx(files.prev);
+      prevMap = new Map(prevRows.map((r) => [r.code, r]));
+    } catch (e) {
+      console.error('  전일 파일 파싱 중 오류(무시):', e);
+    }
+  }
 
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_ENDPOINT || 'https://sgp.cloud.appwrite.io/v1')
@@ -145,12 +179,21 @@ async function main() {
   let updated = 0;
   let created = 0;
   const orderedCodes = [];
+  const dailyDiffKey = `${currentMonthKey}-diff`;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     orderedCodes.push(row.code);
+    const prevRow = prevMap.get(row.code);
+    const prevCurrent = prevRow ? prevRow.currentMonth : row.currentMonth;
+    const dailyDiff = row.currentMonth - prevCurrent;
+
     const agent = await getAgentByCode(db, databaseId, agentsCollId, row.code);
     if (!agent) {
-      const performance = { [currentMonthKey]: row.currentMonth, [prevMonthKey]: row.prevMonth };
+      const performance = {
+        [currentMonthKey]: row.currentMonth,
+        [prevMonthKey]: row.prevMonth,
+        [dailyDiffKey]: dailyDiff,
+      };
       const weekly = { week1: row.week1, week2: row.week2, week3: row.week3, week4: row.week4 };
       await db.createDocument(databaseId, agentsCollId, ID.unique(), {
         code: row.code,
@@ -167,7 +210,13 @@ async function main() {
       });
       created++;
     } else {
-      const performance = { ...(agent.performance ? JSON.parse(agent.performance) : {}), [currentMonthKey]: row.currentMonth, [prevMonthKey]: row.prevMonth };
+      const basePerf = agent.performance ? JSON.parse(agent.performance) : {};
+      const performance = {
+        ...basePerf,
+        [currentMonthKey]: row.currentMonth,
+        [prevMonthKey]: row.prevMonth,
+        [dailyDiffKey]: dailyDiff,
+      };
       const weekly = { week1: row.week1, week2: row.week2, week3: row.week3, week4: row.week4 };
       await db.updateDocument(databaseId, agentsCollId, agent.$id, {
         performance: JSON.stringify(performance),

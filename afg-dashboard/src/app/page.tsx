@@ -159,6 +159,8 @@ export default function Dashboard() {
   }, [router, retryKey]);
 
   const rankKeyMonth = selectedViewMonth === 1 ? "2026-01" : "2026-02";
+  const dailyDiffKey = `${rankKeyMonth}-diff`;
+  const dailyDiff = (selectedAgent?.performance?.[dailyDiffKey] ?? 0) as number;
   const sortedByMonth = useMemo(
     () =>
       [...(agents || [])]
@@ -957,7 +959,7 @@ export default function Dashboard() {
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <p className="text-[11px] text-right mt-0.5 text-gray-400 whitespace-nowrap">
+                    <p className="text-[10px] sm:text-[11px] text-right mt-0.5 text-gray-400 whitespace-normal break-keep">
                       {isRank1 ? (
                         "전국 TOP 실적 달성!"
                       ) : (
@@ -1256,6 +1258,19 @@ export default function Dashboard() {
                   <div className="border-t border-white/10 pt-2 flex justify-between items-center relative z-10">
                     <span className="text-xs text-slate-400">예상 시상금</span>
                     <span className="text-base font-bold text-white">{Math.round(regularPrize / 10000).toLocaleString()}만원</span>
+                  </div>
+                  <div className="mt-2 flex justify-end relative z-10">
+                    <span
+                      className={`inline-flex items-center text-[11px] font-medium rounded-md px-2 py-1 ${
+                        dailyDiff > 0
+                          ? "bg-red-500/15 text-red-300 border border-red-400/40"
+                          : "text-slate-300 bg-white/10 border border-white/20"
+                      }`}
+                    >
+                      {dailyDiff === 0
+                        ? "전일비 변화 없음"
+                        : `전일비 ${dailyDiff > 0 ? "+" : "-"}${Math.round(Math.abs(dailyDiff) / 10000).toLocaleString()}만원`}
+                    </span>
                   </div>
                 </div>
               </div>
