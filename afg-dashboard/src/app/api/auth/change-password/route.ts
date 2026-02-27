@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { pbAdminAuth, pbAgentGetByCode, pbRecordUpdateWithAuth } from '@/lib/pocketbase';
 import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('auth_session');
-    
+
     if (!sessionCookie) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
@@ -18,24 +18,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '유효한 비밀번호를 입력해주세요.' }, { status: 400 });
     }
 
-    // Firestore 문서 업데이트
-    const docRef = adminDb.collection('agents').doc(session.code);
-    await docRef.update({
-      password: newPassword,
-      isFirstLogin: false
-    });
+    if (!process.env.POCKETBASE_ADMIN_EMAIL || !process.env.POCKETBASE_ADMIN_PASSWORD) {
+      return NextResponse.json(
+        { error: '서버 설정 오류: PocketBase가 설정되지 않았습니다.' },
+        { status: 500 }
+      );
+    }
 
-    // 세션 쿠키 업데이트
+    const agent = await pbAgentGetByCode(session.code);
+    if (!agent) {
+      return NextResponse.json({ error: '계정을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    const token = await pbAdminAuth();
+    await pbRecordUpdateWithAuth('agents', agent.id, token, {
+      password: newPassword,
+      isFirstLogin: false,
+    });
     const newSession = { ...session, isFirstLogin: false };
     const response = NextResponse.json({ success: true });
-    
     response.cookies.set('auth_session', JSON.stringify(newSession), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7
+      maxAge: 60 * 60 * 24 * 7,
     });
-
     return response;
   } catch (error) {
     console.error('Password change error:', error);

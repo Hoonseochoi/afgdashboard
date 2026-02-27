@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
 import {
@@ -16,6 +16,7 @@ import {
 import januaryClosedData from "@/data/january_closed.json";
 
 const januaryClosed = januaryClosedData as Record<string, { code: string; performance: Record<string, number>; weekly: { week1: number; week2: number; week3?: number } }>;
+const RANK_EXCLUDE_CODE = "712345678"; // 테스트용 노연지 계정 — 랭킹·실적 순위에서 제외
 
 export default function Dashboard() {
   const [agents, setAgents] = useState<any[]>([]);
@@ -132,15 +133,18 @@ export default function Dashboard() {
 
         setAgents(agentsData.agents);
         setUpdateDate(agentsData.updateDate || "");
-        if (agentsData.agents.length > 0) {
-          const sorted = [...agentsData.agents].sort((a, b) => (b.performance?.["2026-02"] || 0) - (a.performance?.["2026-02"] || 0));
+        const excludeTest = (agentsData.agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
+        if (excludeTest.length > 0) {
+          const sorted = [...excludeTest].sort((a, b) => (b.performance?.["2026-02"] || 0) - (a.performance?.["2026-02"] || 0));
           setSelectedAgent(sorted[0]);
         }
-        // 3. 글로벌 순위 데이터 가져오기
-        const ranksRes = await fetch("/api/ranks");
-        const ranksData = await ranksRes.json();
-        if (ranksData.ranks) {
-          setGlobalRanks(ranksData.ranks);
+        // 3. 글로벌 순위 (관리자는 /api/agents에서 ranks 포함 반환 → 중복 읽기 방지)
+        if (agentsData.ranks) {
+          setGlobalRanks(agentsData.ranks);
+        } else {
+          const ranksRes = await fetch("/api/ranks");
+          const ranksData = await ranksRes.json();
+          if (ranksData.ranks) setGlobalRanks(ranksData.ranks);
         }
       } catch (err) {
         console.error("데이터 로드 실패", err);
@@ -151,6 +155,15 @@ export default function Dashboard() {
 
     fetchData();
   }, [router, retryKey]);
+
+  const rankKeyMonth = selectedViewMonth === 1 ? "2026-01" : "2026-02";
+  const sortedByMonth = useMemo(
+    () =>
+      [...(agents || [])]
+        .filter((a: any) => a.code !== RANK_EXCLUDE_CODE)
+        .sort((a: any, b: any) => (b.performance?.[rankKeyMonth] ?? 0) - (a.performance?.[rankKeyMonth] ?? 0)),
+    [agents, rankKeyMonth]
+  );
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -525,9 +538,8 @@ export default function Dashboard() {
         : (nextPlus ? `${Math.round(nextPlus / 10000)}만원` : "최대구간");
     }
 
-    // 2026 MY HOT: 선택한 월까지 누적 합산 (1월→1월만, 2월→1+2월, 3월→1+2+3월 …), 테스터 712345678 랭킹 제외
+    // 2026 MY HOT: 선택한 월까지 누적 합산 (1월→1월만, 2월→1+2월 …), 테스터 노연지 랭킹 제외
     const MY_HOT_TIERS = [5000000, 6500000, 8000000, 10000000];
-    const RANK_EXCLUDE_CODE = "712345678";
     const yearMonths = Array.from({ length: selectedViewMonth }, (_, i) => `2026-${String(i + 1).padStart(2, "0")}`);
     myHotSum = 0;
     for (const m of yearMonths) {
@@ -550,10 +562,6 @@ export default function Dashboard() {
   }
 
   // 당월실적 순위 (상단 타이틀 섹션 TOP30/TOP3 스타일용, 테스터 제외)
-  const rankKeyMonth = selectedViewMonth === 1 ? "2026-01" : "2026-02";
-  const sortedByMonth = [...(agents || [])]
-    .filter((a: any) => a.code !== "712345678")
-    .sort((a: any, b: any) => (b.performance?.[rankKeyMonth] ?? 0) - (a.performance?.[rankKeyMonth] ?? 0));
   const rankInMonth = sortedByMonth.findIndex((a: any) => a.code === selectedAgent?.code) + 1;
   const isTop30 = rankInMonth >= 1 && rankInMonth <= 30;
   const isTop3 = rankInMonth >= 1 && rankInMonth <= 3;
@@ -729,7 +737,7 @@ export default function Dashboard() {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const perfKey = "2026-02";
-                        const sorted = [...agents].sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
+                        const sorted = [...agents].filter((a: any) => a.code !== RANK_EXCLUDE_CODE).sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
                         const filtered = agentSearchQuery.trim()
                           ? sorted.filter((a) => a.name?.toLowerCase().includes(agentSearchQuery.toLowerCase()))
                           : sorted;
@@ -760,12 +768,14 @@ export default function Dashboard() {
                       <div className="absolute top-full left-0 right-0 md:right-auto mt-1 w-full md:w-80 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50">
                           {(() => {
                             const perfKey = "2026-02";
-                            const sorted = [...agents].sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
+                            const sorted = [...agents].filter((a: any) => a.code !== RANK_EXCLUDE_CODE).sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
                             const filtered = agentSearchQuery.trim()
                               ? sorted.filter((a) => a.name?.toLowerCase().includes(agentSearchQuery.toLowerCase()))
                               : sorted;
-                            return filtered.length > 0 ? (
-                              filtered.map((agent) => (
+                            const toShow = filtered.slice(0, 80);
+                            return toShow.length > 0 ? (
+                              <>
+                                {toShow.map((agent) => (
                                 <button
                                   key={agent.code}
                                   type="button"
@@ -783,7 +793,13 @@ export default function Dashboard() {
                                     {Math.round((agent.performance?.[perfKey] || 0) / 10000)}만
                                   </span>
                                 </button>
-                              ))
+                              ))}
+                                {filtered.length > 80 && (
+                                  <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 dark:border-gray-600">
+                                    상위 80명만 표시. 이름 검색으로 찾아주세요.
+                                  </div>
+                                )}
+                              </>
                             ) : (
                               <div className="px-3 py-4 text-sm text-gray-500 text-center">검색 결과 없음</div>
                             );
@@ -893,7 +909,7 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0">
+                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0 items-end">
                   <div
                     className={`rounded-xl p-4 md:p-5 text-white shadow-lg min-w-0 md:min-w-[200px] flex-1 ${
                       isTop3 ? "bg-gradient-to-br from-primary via-red-600 to-red-700 border border-meritz-gold/30" : isTop30 ? "bg-gradient-to-br from-primary to-red-600 border border-meritz-gold/20" : "bg-gradient-to-br from-primary to-red-600"
@@ -918,28 +934,28 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div
-                    className={`rounded-xl p-4 md:p-5 shadow-sm min-w-0 md:min-w-[200px] flex-1 border ${
+                    className={`rounded-xl px-2.5 md:px-3.5 py-2 md:py-2.5 shadow-sm min-w-0 md:min-w-[140px] flex-[0.54] border shrink-0 ${
                       isTop3 ? "bg-gray-800/80 dark:bg-gray-800 border-meritz-gold/30" : isTop30 ? "bg-surface-light dark:bg-gray-800 border-meritz-gold/20" : "bg-surface-light dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                     }`}
                   >
-                    <p className={`text-sm mb-1 ${isTop3 ? "text-gray-400" : "text-gray-500 dark:text-gray-400"}`}>
+                    <p className={`text-xs mb-0.5 ${isTop3 ? "text-gray-400" : "text-gray-500 dark:text-gray-400"}`}>
                       현재 인보험 누적 실적
                     </p>
                     <div className="flex items-baseline gap-1">
-                      <h3 className={`text-2xl md:text-3xl font-bold ${isTop3 ? "text-white" : "text-gray-900 dark:text-white"}`}>
+                      <h3 className={`text-xl md:text-2xl font-bold ${isTop3 ? "text-white" : "text-gray-900 dark:text-white"}`}>
                         {Math.round(currentMonthPerf / 10000).toLocaleString()}
-                        <span className={isTop3 ? "text-lg font-medium text-meritz-gold/90" : "text-lg font-medium text-gray-500"}>
+                        <span className={isTop3 ? "text-base font-medium text-meritz-gold/90" : "text-base font-medium text-gray-500"}>
                           만원
                         </span>
                       </h3>
                     </div>
-                    <div className={`w-full rounded-full h-1.5 mt-3 ${isTop3 ? "bg-gray-700" : "bg-gray-200 dark:bg-gray-700"}`}>
+                    <div className={`w-full rounded-full h-1 mt-1.5 ${isTop3 ? "bg-gray-700" : "bg-gray-200 dark:bg-gray-700"}`}>
                       <div
-                        className={isTop3 ? "bg-gradient-to-r from-meritz-gold to-primary h-1.5 rounded-full" : "bg-primary h-1.5 rounded-full"}
+                        className={isTop3 ? "bg-gradient-to-r from-meritz-gold to-primary h-1 rounded-full" : "bg-primary h-1 rounded-full"}
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <p className="text-xs text-right mt-1 text-gray-400 whitespace-nowrap">
+                    <p className="text-[11px] text-right mt-0.5 text-gray-400 whitespace-nowrap">
                       {isRank1 ? (
                         "전국 TOP 실적 달성!"
                       ) : (

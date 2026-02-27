@@ -1,18 +1,63 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import {
+  pbAdminAuth,
+  pbAgentGetByCode,
+  pbCollectionGetAllWithAuth,
+  pbConfigGetApp,
+  type PbAgentRecord,
+} from '@/lib/pocketbase';
 import { cookies } from 'next/headers';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const DEV_MASTER_ID = 'develope';
-/** 목록/랭킹에서 제외하는 테스트용 설계사 코드 (노연지 테스터) */
 const RANK_EXCLUDE_CODE = '712345678';
+const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02'];
 
 function getAgentsFromLocalJson(): any[] {
-  const path = join(process.cwd(), 'src', 'data', 'data.json');
-  const raw = readFileSync(path, 'utf-8');
+  const dataPath = join(process.cwd(), 'src', 'data', 'data.json');
+  const raw = readFileSync(dataPath, 'utf-8');
   const data = JSON.parse(raw) as any[];
   return data.filter((a) => a.code !== RANK_EXCLUDE_CODE).map((a) => ({ ...a, role: 'agent' }));
+}
+
+function toSafeAgent(d: PbAgentRecord) {
+  const { password, ...rest } = d;
+  return rest;
+}
+
+function computeRanks(items: PbAgentRecord[]): Record<string, number[]> {
+  const allPerformances: Record<string, number[]> = Object.fromEntries(RANK_MONTHS.map((m) => [m, []]));
+  items.forEach((data) => {
+    if (data.code === RANK_EXCLUDE_CODE) return;
+    if (data.performance) {
+      RANK_MONTHS.forEach((month) => {
+        allPerformances[month].push(data.performance![month] ?? 0);
+      });
+    }
+  });
+  RANK_MONTHS.forEach((month) => {
+    allPerformances[month].sort((a, b) => b - a);
+  });
+  return allPerformances;
+}
+
+/** MC_LIST 파일 순서(agent-order.json)로 정렬. 없으면 그대로 반환 */
+function sortByMcListOrder<T extends { code?: string }>(agents: T[]): T[] {
+  try {
+    const orderPath = join(process.cwd(), 'src', 'data', 'agent-order.json');
+    const raw = readFileSync(orderPath, 'utf-8');
+    const { codes } = JSON.parse(raw) as { codes?: string[] };
+    if (!Array.isArray(codes) || codes.length === 0) return agents;
+    const orderMap = new Map(codes.map((c, i) => [c, i]));
+    return [...agents].sort((a, b) => {
+      const ia = orderMap.get(a.code ?? '') ?? 999999;
+      const ib = orderMap.get(b.code ?? '') ?? 999999;
+      return ia - ib;
+    });
+  } catch {
+    return agents;
+  }
 }
 
 export async function GET() {
@@ -31,75 +76,52 @@ export async function GET() {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
 
-    // 개발용 마스터: Firebase 없이 로컬 data.json 사용
-    if (session.code === DEV_MASTER_ID) {
+    if (session.code === DEV_MASTER_ID && (!process.env.POCKETBASE_ADMIN_EMAIL || !process.env.POCKETBASE_ADMIN_PASSWORD)) {
       const agentsData = getAgentsFromLocalJson();
       return NextResponse.json({ agents: agentsData, updateDate: '0000' });
     }
 
-    if (!adminDb) {
-      console.error('Get agents: Firebase Admin not initialized. Check FIREBASE_SERVICE_ACCOUNT_KEY or firebase-admin-key.json');
+    if (!process.env.POCKETBASE_ADMIN_EMAIL || !process.env.POCKETBASE_ADMIN_PASSWORD) {
       return NextResponse.json(
-        { error: '서버 설정 오류: Firebase가 초기화되지 않았습니다. 환경 변수 또는 firebase-admin-key.json을 확인하세요.' },
+        { error: '서버 설정 오류: PocketBase가 설정되지 않았습니다.' },
         { status: 500 }
       );
     }
 
-    const agentsRef = adminDb.collection('agents');
+    const token = await pbAdminAuth();
+    const configApp = await pbConfigGetApp(token);
+    const updateDate = configApp?.updateDate ?? '0000';
 
-    let agentsData = [];
-
-    if (session.role === 'admin') {
-      // 관리자는 전체 설계사 조회 (role이 agent인 사람만, 테스터 712345678 제외)
-      const snapshot = await agentsRef.where('role', '==', 'agent').get();
-      snapshot.forEach((doc: any) => {
-        const data = doc.data();
-        if (data.code === RANK_EXCLUDE_CODE) return;
-        const { password, ...safeData } = data;
-        agentsData.push(safeData);
+    if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
+      const items = await pbCollectionGetAllWithAuth<PbAgentRecord>('agents', token, {
+        filter: '(role = "agent")',
       });
-    } else if (session.role === 'manager') {
-      // 매니저는 자신이 담당하는 설계사만 조회 (테스터 712345678 제외)
-      const mCode = session.targetManagerCode || session.code;
-      const snapshot = await agentsRef.where('managerCode', '==', mCode).get();
-      snapshot.forEach((doc: any) => {
-        const data = doc.data();
-        if (data.code === RANK_EXCLUDE_CODE) return;
-        const { password, ...safeData } = data;
-        agentsData.push(safeData);
-      });
-    } else {
-      // 일반 설계사는 본인 데이터만 조회
-      const doc = await agentsRef.doc(session.code).get();
-      if (doc.exists) {
-        const { password, ...safeData } = doc.data() as any;
-        agentsData.push(safeData);
-      }
+      const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
+      let agentsData = filtered.map(toSafeAgent);
+      agentsData = sortByMcListOrder(agentsData);
+      const ranks = computeRanks(items);
+      return NextResponse.json({ agents: agentsData, updateDate, ranks });
     }
 
-    // 업데이트 날짜 (daily MC_LIST 파일명 앞 4자리)
-    let updateDate = '0000';
-    try {
-      const configDoc = await adminDb.collection('config').doc('app').get();
-      if (configDoc.exists && configDoc.data()?.updateDate) {
-        updateDate = configDoc.data()!.updateDate;
-      }
-    } catch {
-      // ignore
+    if (session.role === 'manager') {
+      const mCode = session.targetManagerCode || session.code || '';
+      const items = await pbCollectionGetAllWithAuth<PbAgentRecord>('agents', token, {
+        filter: `(managerCode = "${String(mCode).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}")`,
+      });
+      const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
+      let agentsData = filtered.map(toSafeAgent);
+      agentsData = sortByMcListOrder(agentsData);
+      return NextResponse.json({ agents: agentsData, updateDate });
     }
 
-    return NextResponse.json({ agents: agentsData, updateDate });
+    const agent = await pbAgentGetByCode(session.code!);
+    if (agent && agent.code !== RANK_EXCLUDE_CODE) {
+      return NextResponse.json({ agents: [toSafeAgent(agent)], updateDate });
+    }
+    return NextResponse.json({ agents: [], updateDate });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    const stack = error instanceof Error ? error.stack : undefined;
-    const code = (error as { code?: number })?.code;
-    console.error('Get agents error:', message, stack ?? '');
-    if (code === 8 || String(message).includes('RESOURCE_EXHAUSTED') || String(message).includes('Quota exceeded')) {
-      return NextResponse.json(
-        { error: 'Firebase 일일 사용 한도를 초과했습니다. 내일 다시 시도하거나 Firebase 콘솔에서 사용량을 확인해 주세요.' },
-        { status: 503 }
-      );
-    }
+    console.error('Get agents error:', message);
     return NextResponse.json({ error: '데이터를 불러오는 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }
