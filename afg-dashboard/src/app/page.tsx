@@ -78,16 +78,26 @@ function PartnerPrizeCardFull({
   mcPlusProgress?: number;
 }) {
   const variantBg = {
-    green: "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800",
-    sky: "bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800",
-    purple: "bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800",
-    yellow: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800",
+    green:
+      "bg-gradient-to-br from-emerald-50 to-emerald-100/80 dark:from-emerald-950/40 dark:to-emerald-900/30 border border-emerald-200/80 dark:border-emerald-700/60 shadow-lg shadow-emerald-200/20 dark:shadow-emerald-900/20",
+    sky:
+      "bg-gradient-to-br from-sky-50 to-sky-100/80 dark:from-sky-950/40 dark:to-sky-900/30 border border-sky-200/80 dark:border-sky-700/60 shadow-lg shadow-sky-200/20 dark:shadow-sky-900/20",
+    purple:
+      "bg-gradient-to-br from-violet-50 to-violet-100/80 dark:from-violet-950/40 dark:to-violet-900/30 border border-violet-200/80 dark:border-violet-700/60 shadow-lg shadow-violet-200/20 dark:shadow-violet-900/20",
+    yellow:
+      "bg-gradient-to-br from-amber-50 to-amber-100/80 dark:from-amber-950/40 dark:to-amber-900/30 border border-amber-200/80 dark:border-amber-700/60 shadow-lg shadow-amber-200/20 dark:shadow-amber-900/20",
+  };
+  const variantAccent = {
+    green: "bg-emerald-500 dark:bg-emerald-500 text-white shadow-sm",
+    sky: "bg-sky-500 dark:bg-sky-500 text-white shadow-sm",
+    purple: "bg-violet-500 dark:bg-violet-500 text-white shadow-sm",
+    yellow: "bg-amber-500 dark:bg-amber-500 text-white shadow-sm",
   };
   const badgeStyle = {
-    green: "bg-emerald-100 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700",
-    sky: "bg-sky-100 dark:bg-sky-800/50 text-sky-800 dark:text-sky-200 border border-sky-300 dark:border-sky-700",
-    purple: "bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700",
-    yellow: "bg-amber-100 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700",
+    green: "bg-emerald-100 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 shadow-sm",
+    sky: "bg-sky-100 dark:bg-sky-800/50 text-sky-800 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-sm",
+    purple: "bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700 shadow-sm",
+    yellow: "bg-amber-100 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 shadow-sm",
   };
   const achieved = showTierButtons
     ? PARTNER_TIERS.filter((t) => (tierPerfB != null ? tierPerf >= t && tierPerfB >= t : tierPerf >= t))
@@ -95,35 +105,55 @@ function PartnerPrizeCardFull({
   const tierAreaHeight = "min-h-[52px] flex items-center";
 
   return (
-    <div className={`rounded-xl border p-4 flex flex-col ${variantBg[variant]}`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 shrink-0">
-          {index}. {title}
-        </p>
-        {badges && badges.length > 0 && (
-          <div className="flex flex-wrap gap-1 justify-end">
-            {badges.map((b) => (
-              <span key={b} className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${badgeStyle[variant]}`}>
-                {b}
-              </span>
-            ))}
-          </div>
-        )}
+    <div
+      className={`relative rounded-2xl border p-5 flex flex-col overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 ${variantBg[variant]}`}
+    >
+      {/* 상단 입체감 하이라이트 */}
+      <div
+        className={`absolute top-0 left-0 right-0 h-px opacity-60 ${
+          variant === "green"
+            ? "bg-gradient-to-r from-transparent via-emerald-300 to-transparent dark:via-emerald-600"
+            : variant === "sky"
+              ? "bg-gradient-to-r from-transparent via-sky-300 to-transparent dark:via-sky-600"
+              : variant === "purple"
+                ? "bg-gradient-to-r from-transparent via-violet-300 to-transparent dark:via-violet-600"
+                : "bg-gradient-to-r from-transparent via-amber-300 to-transparent dark:via-amber-600"
+            }`}
+        />
+      {/* 배지: 카드 최상단 한 줄 고정(11번 등 긴 타이틀 잘림 방지), 모든 카드 동일 세로 위치 */}
+      <div className="flex flex-wrap gap-1 justify-end min-h-[22px] mb-1">
+        {badges?.map((b) => (
+          <span key={b} className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold border ${badgeStyle[variant]}`}>
+            {b}
+          </span>
+        ))}
       </div>
-      {subtext && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-2">{subtext}</p>}
+      <div className="flex items-center gap-2.5 relative min-w-0">
+        <span
+          className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold ${variantAccent[variant]}`}
+        >
+          {index}
+        </span>
+        <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white tracking-tight break-words min-w-0">
+          {title}
+        </p>
+      </div>
+      {subtext && (
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 mb-2 pl-9 relative">{subtext}</p>
+      )}
       {/* 시상 구간 게이지바 영역 — 높이 통일로 카드 정렬 */}
       <div className={tierAreaHeight}>
         {showTierButtons && (
-          <div className="grid grid-cols-4 gap-1 w-full">
+          <div className="grid grid-cols-4 gap-1.5 w-full">
             {PARTNER_TIERS.map((t) => {
               const isAchieved = achieved.includes(t);
               return (
                 <span
                   key={t}
-                  className={`flex items-center justify-center py-1.5 rounded text-xs font-medium ${
+                  className={`flex items-center justify-center py-2 rounded-lg text-xs font-semibold transition-all ${
                     isAchieved
-                      ? "bg-primary text-white dark:bg-primary dark:text-gray-900"
-                      : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                      ? "bg-primary text-white dark:bg-primary dark:text-gray-900 shadow-md"
+                      : "bg-white/60 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 border border-gray-200/80 dark:border-gray-600"
                   }`}
                 >
                   {t / 10000}만
@@ -134,24 +164,24 @@ function PartnerPrizeCardFull({
         )}
         {isMCPlus && mcPlusTarget != null && (
           <div className="w-full">
-            <div className="h-2.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-white/60 dark:bg-gray-700 rounded-full overflow-hidden border border-gray-200/80 dark:border-gray-600">
               <div
-                className="h-full bg-primary dark:bg-meritz-gold rounded-full transition-all"
+                className="h-full bg-primary dark:bg-meritz-gold rounded-full transition-all shadow-sm"
                 style={{ width: `${Math.min(100, mcPlusProgress ?? 0)}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">
               {Math.round((mcPlusCurrent ?? 0) / 10000)}만 / 목표 {Math.round((mcPlusTarget ?? 0) / 10000)}만
             </p>
           </div>
         )}
       </div>
-      <div className="mt-auto pt-2 flex items-center justify-between gap-2 flex-wrap">
-        <p className={`font-bold text-primary ${emphasizePrize ? "text-xl sm:text-2xl" : "text-base"}`}>
+      <div className="mt-auto pt-3 flex items-center justify-between gap-2 flex-wrap border-t border-gray-200/60 dark:border-gray-600/50">
+        <p className={`font-bold text-primary ${emphasizePrize ? "text-xl sm:text-2xl" : "text-base"} drop-shadow-sm`}>
           {Math.round(expectedPrize / 10000).toLocaleString()}만원
         </p>
         {prizeBadge && (
-          <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap ${badgeStyle[variant]}`}>
+          <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-semibold whitespace-nowrap ${badgeStyle[variant]}`}>
             {prizeBadge}
           </span>
         )}

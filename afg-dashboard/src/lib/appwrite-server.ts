@@ -40,20 +40,31 @@ function getConfigCollectionId(): string {
   return id;
 }
 
-/** 파트너 시상 데이터 (PRIZE_SUM 엑셀 업로드로 채움) */
+/** 파트너 시상 데이터 (PRIZE_SUM 엑셀 업로드로 채움, §3.3 열 매핑 기준) */
 export type PartnerPrizeData = {
   productWeek1?: number;
+  productWeek1InsPrize?: number;
   productWeek1Prize?: number;
   productWeek2?: number;
+  productWeek2InsPrize?: number;
   productWeek2Prize?: number;
+  week3Prize?: number;
   week34Sum?: number;
+  week34Prize?: number;
   continuous12Jan?: number;
   continuous12Feb?: number;
   continuous12Prize?: number;
   continuous12ExtraJan?: number;
   continuous12ExtraFeb?: number;
   continuous12ExtraPrize?: number;
+  /** 2~3월 연속가동: 2월 구간 실적(2/19~2/28), 3월 구간, 시상금 */
   continuous23Feb?: number;
+  continuous23Mar?: number;
+  continuous23Prize?: number;
+  /** 2~3월 추가 연속가동 */
+  continuous23ExtraFeb?: number;
+  continuous23ExtraMar?: number;
+  continuous23ExtraPrize?: number;
   /** 1월 파일 전용: 12~1월 연속가동 */
   continuous121Dec?: number;
   continuous121Jan?: number;

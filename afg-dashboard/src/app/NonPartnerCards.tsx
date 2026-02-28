@@ -70,8 +70,8 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
   } = props;
 
   return (
-    <div style={{ display: "contents" }}>
-      {/* 1줄: 1주차, 2주차, (3주차 1월만), 월간 */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-6">
+      {/* 비파트너 전용: 3열 그리드. 2월 6장(3x2), 1월 7장(3+3+1). 2월과 동일 양식(1주→2주→월간→2배→MC+→정규), 1월만 3주차 추가 */}
       {/* 1주차 현금시상 */}
       <div className="group rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-4 hover:shadow-md hover:border-emerald-400/40 dark:hover:border-emerald-500/40 transition-all duration-200 relative overflow-hidden bg-emerald-500/5 dark:bg-emerald-400/5">
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 dark:bg-emerald-400 rounded-l-xl" aria-hidden />

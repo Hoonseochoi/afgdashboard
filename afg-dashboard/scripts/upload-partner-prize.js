@@ -5,7 +5,7 @@
  * - 202602 파일: data/daily/{MMDD}PRIZE_SUM_OUT_202602.xlsx → partner 전체 덮어쓰기
  * - 202601 파일: data/fix/1월마감PRIZE_SUM_OUT_202601.xlsx → partner에 1월 전용 필드만 병합
  *
- * 202602: K, AC/AD, AI/AJ, AM, BL/BM/BN, BR/BS/BT, BX
+ * 202602: K, R/S/T/U(실적1~4주), AB/AC/AD(1주), AG/AH/AI(2주), AL/AM/AN(3·3-4주), BL/BM/BN, BR/BS/BT, BX, CB (PARTNER_PRIZE_RULES.md §3.3)
  * 202601: K, AC/AD, AI/AJ, BJ/BK/BL(12~1월 연속가동)
  *
  * 필요: .env.local (APPWRITE_*), xlsx
@@ -34,24 +34,34 @@ require('dotenv').config({ path: envPath });
 
 const { Client, Databases, Query } = require('node-appwrite');
 
-// 엑셀 컬럼 인덱스 (0-based). PARTNER_PRIZE_RULES.md §3, PARTNER_PRIZE_JANUARY_MAPPING.md 참고
+// 엑셀 컬럼 인덱스 (0-based). PARTNER_PRIZE_RULES.md §3.3 (0227PRIZE_SUM_OUT_202602.xlsx 기준)
 const COL_CODE = 10;       // K: 설계사코드
-const COL_AC = 28;         // AC: 상품 1주차 실적
-const COL_AD = 29;         // AD: 상품 1주차 시상금
-const COL_AI = 34;         // AI: 상품 2주차 실적
-const COL_AJ = 35;         // AJ: 상품 2주차 시상금
-const COL_AM = 38;         // AM: 3-4주차 실적합
-const COL_BL = 63;         // BL: 1-2월 연속가동 1월 구간 (202602) / 12-1 연속가동 시상금 (202601)
-const COL_BM = 64;         // BM: 1-2월 연속가동 2월 구간
+// 2월 데이터
+const COL_R = 17;          // R: 실적 1주 (참고용)
+const COL_S = 18;          // S: 실적 2주 (참고용)
+const COL_T = 19;          // T: 실적 3주 (참고용)
+const COL_U = 20;          // U: 실적 4주 (참고용)
+const COL_AB = 27;         // AB: 1주차 인보험 시상금
+const COL_AC = 28;         // AC: 1주차 상품 실적
+const COL_AD = 29;         // AD: 1주차 상품 시상금
+const COL_AG = 32;         // AG: 2주차 인보험 시상금
+const COL_AH = 33;         // AH: 2주차 상품 실적
+const COL_AI = 34;         // AI: 2주차 상품 시상금
+const COL_AL = 37;         // AL: 3주차 인보험 시상금
+const COL_AM = 38;         // AM: 3-4주차 합산 실적
+const COL_AN = 39;         // AN: 3-4주차 인보험 시상금
+const COL_BL = 63;         // BL: 1-2월 연속가동 실적 (1월)
+const COL_BM = 64;         // BM: 1-2월 연속가동 실적 (2월)
 const COL_BN = 65;         // BN: 1-2월 연속가동 시상금
-const COL_BR = 69;         // BR: 1-2월 추가연속가동 1월 구간
-const COL_BS = 70;         // BS: 1-2월 추가연속가동 2월 구간
-const COL_BT = 71;         // BT: 1-2월 추가연속가동 시상금
-const COL_BX = 75;         // BX: 2-3월 연속가동 2월 구간
+const COL_BR = 69;         // BR: 1-2월 추가 연속가동 실적 (1월)
+const COL_BS = 70;         // BS: 1-2월 추가 연속가동 실적 (2월)
+const COL_BT = 71;         // BT: 1-2월 추가 연속가동 시상금
+const COL_BX = 75;         // BX: 2-3월 연속가동 실적 (2월)
+const COL_CB = 79;         // CB: 2-3월 추가 연속가동 실적 (2월)
 // 1월 파일 전용 (12~1월 연속가동, 2주차 인보험)
 const COL_BJ = 61;         // BJ: 12-1 연속가동 12월 구간
 const COL_BK = 62;         // BK: 12-1 연속가동 1월 실적
-const COL_AK = 36;         // AK: 1월 2주차 인보험 실적 (AI=2주차 상품 실적과 구분)
+const COL_AK = 36;         // AK: 1월 2주차 인보험 실적
 
 function toNum(val) {
   if (val == null || val === '') return undefined;
@@ -103,10 +113,14 @@ function parsePrizeSumXlsx(filePath) {
     if (!code) continue;
     const partner = {
       productWeek1: toNum(row[COL_AC]),
+      productWeek1InsPrize: toNum(row[COL_AB]),
       productWeek1Prize: toNum(row[COL_AD]),
-      productWeek2: toNum(row[COL_AI]),
-      productWeek2Prize: toNum(row[COL_AJ]),
+      productWeek2: toNum(row[COL_AH]),
+      productWeek2InsPrize: toNum(row[COL_AG]),
+      productWeek2Prize: toNum(row[COL_AI]),
+      week3Prize: toNum(row[COL_AL]),
       week34Sum: toNum(row[COL_AM]),
+      week34Prize: toNum(row[COL_AN]),
       continuous12Jan: toNum(row[COL_BL]),
       continuous12Feb: toNum(row[COL_BM]),
       continuous12Prize: toNum(row[COL_BN]),
@@ -114,6 +128,8 @@ function parsePrizeSumXlsx(filePath) {
       continuous12ExtraFeb: toNum(row[COL_BS]),
       continuous12ExtraPrize: toNum(row[COL_BT]),
       continuous23Feb: toNum(row[COL_BX]),
+      // 2~3월 추가는 동일 기간 동일 실적: CB 없으면 BX와 동일하게
+      continuous23ExtraFeb: toNum(row[COL_CB]) ?? toNum(row[COL_BX]),
     };
     result.push({ code, partner });
   }
