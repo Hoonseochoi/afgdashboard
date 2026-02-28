@@ -27,11 +27,135 @@ const januaryClosed = januaryClosedData as Record<
 >;
 const RANK_EXCLUDE_CODE = "712345678"; // 테스트용 노연지 계정 — 랭킹·실적 순위에서 제외
 
+const PARTNER_TIERS = [100000, 200000, 300000, 500000]; // 10만, 20만, 30만, 50만 (시상 구간)
+
 function PartnerPrizeCard({ title, value }: { title: string; value: number }) {
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white/5 dark:bg-gray-800/50">
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{title}</p>
       <p className="text-base font-bold text-primary">{Math.round(value / 10000).toLocaleString()}만원</p>
+    </div>
+  );
+}
+
+type PartnerCardVariant = "green" | "sky" | "purple" | "yellow";
+
+function PartnerPrizeCardFull({
+  index,
+  title,
+  badges,
+  subtext,
+  showTierButtons,
+  tierPerf,
+  tierPerfB,
+  expectedPrize,
+  variant,
+  emphasizePrize,
+  prizeBadge,
+  isMCPlus,
+  mcPlusCurrent,
+  mcPlusTarget,
+  mcPlusProgress,
+}: {
+  index: number;
+  title: string;
+  /** 타이틀 오른쪽 라인 배지: [익월], [13회차], [#%], [최대#%] 등 */
+  badges?: string[];
+  /** 타이틀 아래 해당 기간 달성 실적 서브텍스트 */
+  subtext?: string;
+  showTierButtons: boolean;
+  tierPerf: number;
+  tierPerfB?: number;
+  expectedPrize: number;
+  variant: PartnerCardVariant;
+  /** 1번 시상 등 시상금 강조(큰 글자) */
+  emphasizePrize?: boolean;
+  /** 시상금 라인 오른쪽 배지 (예: 3월 8일까지 10만 달성시 완성) */
+  prizeBadge?: string;
+  isMCPlus?: boolean;
+  mcPlusCurrent?: number;
+  mcPlusTarget?: number;
+  mcPlusProgress?: number;
+}) {
+  const variantBg = {
+    green: "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800",
+    sky: "bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800",
+    purple: "bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800",
+    yellow: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800",
+  };
+  const badgeStyle = {
+    green: "bg-emerald-100 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700",
+    sky: "bg-sky-100 dark:bg-sky-800/50 text-sky-800 dark:text-sky-200 border border-sky-300 dark:border-sky-700",
+    purple: "bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700",
+    yellow: "bg-amber-100 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700",
+  };
+  const achieved = showTierButtons
+    ? PARTNER_TIERS.filter((t) => (tierPerfB != null ? tierPerf >= t && tierPerfB >= t : tierPerf >= t))
+    : [];
+  const tierAreaHeight = "min-h-[52px] flex items-center";
+
+  return (
+    <div className={`rounded-xl border p-4 flex flex-col ${variantBg[variant]}`}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 shrink-0">
+          {index}. {title}
+        </p>
+        {badges && badges.length > 0 && (
+          <div className="flex flex-wrap gap-1 justify-end">
+            {badges.map((b) => (
+              <span key={b} className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${badgeStyle[variant]}`}>
+                {b}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      {subtext && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 mb-2">{subtext}</p>}
+      {/* 시상 구간 게이지바 영역 — 높이 통일로 카드 정렬 */}
+      <div className={tierAreaHeight}>
+        {showTierButtons && (
+          <div className="grid grid-cols-4 gap-1 w-full">
+            {PARTNER_TIERS.map((t) => {
+              const isAchieved = achieved.includes(t);
+              return (
+                <span
+                  key={t}
+                  className={`flex items-center justify-center py-1.5 rounded text-xs font-medium ${
+                    isAchieved
+                      ? "bg-primary text-white dark:bg-primary dark:text-gray-900"
+                      : "bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  {t / 10000}만
+                </span>
+              );
+            })}
+          </div>
+        )}
+        {isMCPlus && mcPlusTarget != null && (
+          <div className="w-full">
+            <div className="h-2.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary dark:bg-meritz-gold rounded-full transition-all"
+                style={{ width: `${Math.min(100, mcPlusProgress ?? 0)}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {Math.round((mcPlusCurrent ?? 0) / 10000)}만 / 목표 {Math.round((mcPlusTarget ?? 0) / 10000)}만
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="mt-auto pt-2 flex items-center justify-between gap-2 flex-wrap">
+        <p className={`font-bold text-primary ${emphasizePrize ? "text-xl sm:text-2xl" : "text-base"}`}>
+          {Math.round(expectedPrize / 10000).toLocaleString()}만원
+        </p>
+        {prizeBadge && (
+          <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium whitespace-nowrap ${badgeStyle[variant]}`}>
+            {prizeBadge}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -172,13 +296,27 @@ export default function Dashboard() {
   const rankKeyMonth = selectedViewMonth === 1 ? "2026-01" : "2026-02";
   const dailyDiffKey = `${rankKeyMonth}-diff`;
   const dailyDiff = (selectedAgent?.performance?.[dailyDiffKey] ?? 0) as number;
+  const isPartnerBranch = (selectedAgent?.branch || "").includes("파트너");
   const sortedByMonth = useMemo(
-    () =>
-      [...(agents || [])]
-        .filter((a: any) => a.code !== RANK_EXCLUDE_CODE)
-        .sort((a: any, b: any) => (b.performance?.[rankKeyMonth] ?? 0) - (a.performance?.[rankKeyMonth] ?? 0)),
-    [agents, rankKeyMonth]
+    () => {
+      const list = [...(agents || [])].filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
+      const partnerOnly = isPartnerBranch ? list.filter((a: any) => (a.branch || "").includes("파트너")) : list;
+      return partnerOnly.sort((a: any, b: any) => (b.performance?.[rankKeyMonth] ?? 0) - (a.performance?.[rankKeyMonth] ?? 0));
+    },
+    [agents, rankKeyMonth, isPartnerBranch]
   );
+  // 파트너일 때 월별 파트너 내 순위 (실적 추이 툴팁 RANK용)
+  const partnerRanksByMonth = useMemo(() => {
+    const o: Record<string, number> = {};
+    if (!selectedAgent || !(selectedAgent.branch || "").includes("파트너")) return o;
+    const list = (agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE && (a.branch || "").includes("파트너"));
+    for (const monthKey of ["2026-01", "2026-02"]) {
+      const sorted = [...list].sort((a: any, b: any) => (b.performance?.[monthKey] ?? 0) - (a.performance?.[monthKey] ?? 0));
+      const idx = sorted.findIndex((a: any) => a.code === selectedAgent.code);
+      if (idx !== -1) o[monthKey] = idx + 1;
+    }
+    return o;
+  }, [agents, selectedAgent]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,6 +453,7 @@ export default function Dashboard() {
   let viewW1 = 0;
   let viewW2 = 0;
   let viewW3 = 0;
+  let viewW3Feb = 0; // 2월 3주차 실적 (3주차 인보험용)
   let week1Past = false;
   let week2Past = false;
   // 주차 종료 여부는 '지금 시점'(오늘 날짜) 기준. 진행중/달성 실패 배지가 실제와 맞도록
@@ -322,9 +461,10 @@ export default function Dashboard() {
   const currentWeekNum = Math.min(4, Math.max(1, Math.ceil((todayDay || 1) / 7)));
   const dayFromUpdate = (updateDate && updateDate.length >= 4) ? parseInt(updateDate.slice(2, 4), 10) : todayDay;
 
-  const isPartnerBranch = (selectedAgent?.branch || "").includes("파트너");
   const p = selectedAgent?.partner as PartnerPrizeData | undefined;
   const getPartnerTierPrize = (perf: number) => { if (perf >= 500000) return 500000; if (perf >= 300000) return 300000; if (perf >= 200000) return 200000; if (perf >= 100000) return 100000; return 0; };
+  /** 연속가동 시상금: 선행 구간 10→20만, 20→60만, 30→80만, 50→180만 (3월 10만 달성 시) */
+  const getPartnerContinuousPrize = (perf: number) => { if (perf >= 500000) return 1800000; if (perf >= 300000) return 800000; if (perf >= 200000) return 600000; if (perf >= 100000) return 200000; return 0; };
 
   if (selectedAgent && selectedAgent.performance) {
     performanceData = [
@@ -378,14 +518,18 @@ export default function Dashboard() {
       : (janData?.performance["2026-01"] ?? selectedAgent.performance["2026-01"] ?? 0); // 2월 전월대비: 1월 마감 데이터 우선
     diff = currentMonthPerf - prevMonthPerf;
 
-    // 누적실적 목표 계산: 기본 40만, 40만 초과 시 다음구간, 전구간 초과 시 RANK-1 실적, 1등은 전국TOP
+    // 누적실적 목표 계산: 기본 40만, 40만 초과 시 다음구간, 전구간 초과 시 RANK-1 실적. 파트너는 파트너 내 RANK만 사용
     const rankKey = isJanuaryView ? "2026-01" : "2026-02";
-    const monthRanks = globalRanks[rankKey] || [];
-    const rankIndex = monthRanks.indexOf(currentMonthPerf); // -1이면 순위 미확인
+    const monthRanks = isPartnerBranch
+      ? sortedByMonth.map((a: any) => a.performance?.[rankKey] ?? 0)
+      : (globalRanks[rankKey] || []);
+    const rankIndex = isPartnerBranch
+      ? sortedByMonth.findIndex((a: any) => a.code === selectedAgent?.code)
+      : monthRanks.indexOf(currentMonthPerf); // -1이면 순위 미확인
 
     if (rankIndex === 0) {
       isRank1 = true;
-      goalLabel = "전국TOP";
+      goalLabel = isPartnerBranch ? "파트너 TOP" : "전국TOP";
       monthlyGoal = currentMonthPerf; // progress 100% 표시용
     } else if (currentMonthPerf >= MAX_TIER && rankIndex > 0) {
       monthlyGoal = monthRanks[rankIndex - 1];
@@ -405,6 +549,7 @@ export default function Dashboard() {
     viewW1 = isJanuaryView ? (janData?.weekly?.week1 ?? 0) : (selectedAgent.weekly?.week1 || 0);
     viewW2 = isJanuaryView ? (janData?.weekly?.week2 ?? 0) : (selectedAgent.weekly?.week2 || 0);
     viewW3 = isJanuaryView ? (janData?.weekly?.week3 ?? 0) : 0;
+    viewW3Feb = isJanuaryView ? 0 : (selectedAgent.weekly?.week3 ?? 0);
     const w1 = viewW1;
     const w2 = viewW2;
     const w3 = viewW3;
@@ -448,8 +593,9 @@ export default function Dashboard() {
     else if (minPerf >= 400000) meritzClubPlusPrize = 1200000;
     else if (minPerf >= 200000) meritzClubPlusPrize = 600000;
     
-    // 정규시상 (100%)
+    // 정규시상 (100%). 파트너 지사는 1번 시상이 실적 정률 450%
     regularPrize = currentMonthPerf;
+    if (isPartnerBranch) regularPrize = Math.round(currentMonthPerf * 4.5);
     
     // 총 예상 시상금
     totalEstimatedPrize = week1Prize + week2Prize + week3Prize + monthlyPrize + doubleMeritzPrize + meritzClubPlusPrize + regularPrize;
@@ -457,8 +603,15 @@ export default function Dashboard() {
       if (isJanuaryView) {
         totalEstimatedPrize = (p.productWeek1PrizeJan ?? 0) + (p.productWeek2PrizeJan ?? 0) + (p.continuous121Prize ?? 0) + (p.week3PrizeJan ?? 0) + (p.week4PrizeJan ?? 0) + (p.continuous12Prize ?? 0) + (p.continuous12ExtraPrize ?? 0) + meritzClubPlusPrize + regularPrize;
       } else {
-        const pw1 = p.productWeek1Prize ?? 0; const pw2 = getPartnerTierPrize(viewW2); const w34 = getPartnerTierPrize(p.week34Sum ?? 0);
-        totalEstimatedPrize = pw1 + pw2 + w34 + (p.continuous12Prize ?? 0) + (p.continuous12ExtraPrize ?? 0) + meritzClubPlusPrize + regularPrize;
+        const pw1 = p.productWeek1Prize ?? 0;
+        const pw2 = getPartnerTierPrize(viewW2);
+        const w3 = p?.week3Prize ?? getPartnerTierPrize(viewW3Feb);
+        const w34 = p?.week34Prize ?? getPartnerTierPrize(p?.week34Sum ?? 0);
+        const c23Feb = p?.continuous23Feb ?? 0;
+        const c23ExtraFeb = p?.continuous23ExtraFeb ?? c23Feb;
+        const w23 = p?.continuous23Prize ?? getPartnerContinuousPrize(c23Feb);
+        const w23Extra = p?.continuous23ExtraPrize ?? getPartnerContinuousPrize(c23ExtraFeb);
+        totalEstimatedPrize = pw1 + pw2 + (p.continuous12Prize ?? 0) + (p.continuous12ExtraPrize ?? 0) + w3 + w34 + w23 + w23Extra + meritzClubPlusPrize + regularPrize;
       }
     }
 
@@ -659,6 +812,8 @@ export default function Dashboard() {
         remainLabel = "more";
       }
     }
+  }
+  // 비파트너 시상 카드: 1월·2월 모두 표시 (위의 selectedViewMonth === 2 배너 로직과 분리)
   if (!isPartnerBranch) {
     nonPartnerCardsEl = (
       <NonPartnerCards
@@ -694,7 +849,6 @@ export default function Dashboard() {
         dailyDiff={dailyDiff}
       />
     );
-  }
   }
 
   return (
@@ -1074,111 +1228,120 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className={`grid grid-cols-1 gap-4 md:gap-5 mb-6 ${selectedViewMonth === 1 ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
-                {isPartnerBranch && selectedViewMonth === 1 && (
-                  <>
-                    <PartnerPrizeCard title="정규+파트너" value={regularPrize} />
-                    <PartnerPrizeCard title="1주 인보험" value={p?.productWeek1PrizeJan ?? 0} />
-                    <PartnerPrizeCard title="1주 상품" value={p?.productWeek1PrizeJan ?? 0} />
-                    <PartnerPrizeCard title="2주 인보험" value={p?.productWeek2PrizeJan ?? 0} />
-                    <PartnerPrizeCard title="2주 상품" value={p?.productWeek2PrizeJan ?? 0} />
-                    <PartnerPrizeCard title="12~1월 연속가동" value={p?.continuous121Prize ?? 0} />
-                    <PartnerPrizeCard title="3주 인보험" value={p?.week3PrizeJan ?? 0} />
-                    <PartnerPrizeCard title="4주 인보험" value={p?.week4PrizeJan ?? 0} />
-                    <PartnerPrizeCard title="1~2월 연속가동" value={p?.continuous12Prize ?? 0} />
-                    <PartnerPrizeCard title="1~2월 추가 연속가동" value={p?.continuous12ExtraPrize ?? 0} />
-                    <PartnerPrizeCard title="메리츠클럽+" value={meritzClubPlusPrize} />
-                  </>
-                )}
-                {isPartnerBranch && selectedViewMonth === 2 && (
-                  <>
-                    <PartnerPrizeCard title="정규+파트너" value={regularPrize} />
-                    <PartnerPrizeCard title="1주 인보험" value={p?.productWeek1Prize ?? 0} />
-                    <PartnerPrizeCard title="1주 상품" value={p?.productWeek1Prize ?? 0} />
-                    <PartnerPrizeCard title="2주 인보험" value={getPartnerTierPrize(viewW2)} />
-                    <PartnerPrizeCard title="2주 상품" value={getPartnerTierPrize(viewW2)} />
-                    <PartnerPrizeCard title="1~2월 연속가동" value={p?.continuous12Prize ?? 0} />
-                    <PartnerPrizeCard title="3~4주 인보험" value={getPartnerTierPrize(p?.week34Sum ?? 0)} />
-                    <PartnerPrizeCard title="1~2월 추가 연속가동" value={p?.continuous12ExtraPrize ?? 0} />
-                    <PartnerPrizeCard title="메리츠클럽+" value={meritzClubPlusPrize} />
-                  </>
-                )}
-                {!isPartnerBranch && nonPartnerCardsEl}
-              </div>
+              {/* 파트너 시상: 4열 그리드 (1월 11장, 2월 12장) — 비파트너와 완전 분리 */}
+              {isPartnerBranch && (
+                <div className="grid grid-cols-1 gap-4 md:gap-5 mb-6 md:grid-cols-4">
+                  {selectedViewMonth === 1 && (
+                    <>
+                      <PartnerPrizeCardFull index={1} title="정규+파트너 추가" badges={["익월", "450%"]} subtext={`1월 실적 ${Math.round(currentMonthPerf / 10000)}만`} showTierButtons={false} tierPerf={0} expectedPrize={regularPrize} variant="green" emphasizePrize />
+                      <PartnerPrizeCardFull index={2} title="1주차 인보험" badges={["13회차", "100%"]} subtext={`1주차 실적 ${Math.round(viewW1 / 10000)}만`} showTierButtons tierPerf={viewW1} expectedPrize={p?.productWeek1PrizeJan ?? 0} variant="sky" />
+                      <PartnerPrizeCardFull index={3} title="1주차 상품" badges={["13회차", "100%"]} subtext={`1주차 실적 ${Math.round(viewW1 / 10000)}만`} showTierButtons tierPerf={viewW1} expectedPrize={p?.productWeek1PrizeJan ?? 0} variant="green" />
+                      <PartnerPrizeCardFull index={4} title="2주차 인보험" badges={["13회차", "100%"]} subtext={`2주차 실적 ${Math.round(viewW2 / 10000)}만`} showTierButtons tierPerf={viewW2} expectedPrize={p?.productWeek2PrizeJan ?? 0} variant="sky" />
+                      <PartnerPrizeCardFull index={5} title="2주차 상품" badges={["13회차", "100%"]} subtext={`2주차 실적 ${Math.round(viewW2 / 10000)}만`} showTierButtons tierPerf={viewW2} expectedPrize={p?.productWeek2PrizeJan ?? 0} variant="green" />
+                      <PartnerPrizeCardFull index={6} title="12~1월 연속가동" badges={["13회차", "최대300%"]} subtext={`12월 구간 ${Math.round((p?.continuous121Dec ?? 0) / 10000)}만 · 1월 구간 ${Math.round((p?.continuous121Jan ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.continuous121Dec ?? 0} tierPerfB={p?.continuous121Jan ?? 0} expectedPrize={p?.continuous121Prize ?? 0} variant="purple" />
+                      <PartnerPrizeCardFull index={7} title="3주차 인보험" badges={["13회차", "100%"]} subtext={`3주차 실적 ${Math.round(viewW3 / 10000)}만`} showTierButtons tierPerf={viewW3} expectedPrize={p?.week3PrizeJan ?? 0} variant="sky" />
+                      <PartnerPrizeCardFull index={8} title="4주차 인보험" badges={["13회차", "100%"]} subtext={`4주차 실적 ${Math.round((p?.week4Jan ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.week4Jan ?? 0} expectedPrize={p?.week4PrizeJan ?? 0} variant="green" />
+                      <PartnerPrizeCardFull index={9} title="1~2월 연속가동" badges={["13회차", "최대300%"]} subtext={`1월 구간 실적 ${Math.round((p?.continuous12Jan ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.continuous12Jan ?? 0} expectedPrize={p?.continuous12Prize ?? 0} variant="purple" />
+                      <PartnerPrizeCardFull index={10} title="1~2월 추가 연속가동" badges={["13회차", "최대300%"]} subtext={`1월 구간 실적 ${Math.round((p?.continuous12ExtraJan ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.continuous12ExtraJan ?? 0} expectedPrize={p?.continuous12ExtraPrize ?? 0} variant="purple" />
+                      <PartnerPrizeCardFull index={11} title="메리츠클럽 플러스" badges={["13회차"]} subtext={`1월 실적 ${Math.round(febPerf / 10000)}만 / 목표 ${Math.round((plusTarget || 200000) / 10000)}만`} showTierButtons={false} tierPerf={0} expectedPrize={meritzClubPlusPrize} variant="yellow" isMCPlus mcPlusCurrent={febPerf} mcPlusTarget={plusTarget || 200000} mcPlusProgress={plusProgress} />
+                    </>
+                  )}
+                  {selectedViewMonth === 2 && (
+                    <>
+                      <PartnerPrizeCardFull index={1} title="정규+파트너 추가" badges={["익월", "450%"]} subtext={`2월 실적 ${Math.round(currentMonthPerf / 10000)}만`} showTierButtons={false} tierPerf={0} expectedPrize={regularPrize} variant="green" emphasizePrize />
+                      <PartnerPrizeCardFull index={2} title="1주차 인보험" badges={["13회차", "200%"]} subtext={`1주차 실적 ${Math.round(viewW1 / 10000)}만`} showTierButtons tierPerf={viewW1} expectedPrize={p?.productWeek1InsPrize ?? p?.productWeek1Prize ?? 0} variant="sky" />
+                      <PartnerPrizeCardFull index={3} title="1주차 상품" badges={["13회차", "100%"]} subtext={`1주차 실적 ${Math.round(viewW1 / 10000)}만`} showTierButtons tierPerf={viewW1} expectedPrize={p?.productWeek1Prize ?? 0} variant="green" />
+                      <PartnerPrizeCardFull index={4} title="2주차 인보험" badges={["13회차", "100%"]} subtext={`2주차 실적 ${Math.round(viewW2 / 10000)}만`} showTierButtons tierPerf={viewW2} expectedPrize={p?.productWeek2InsPrize ?? getPartnerTierPrize(viewW2)} variant="sky" />
+                      <PartnerPrizeCardFull index={5} title="2주차 상품" badges={["13회차", "100%"]} subtext={`2주차 실적 ${Math.round(viewW2 / 10000)}만`} showTierButtons tierPerf={viewW2} expectedPrize={p?.productWeek2Prize ?? getPartnerTierPrize(viewW2)} variant="green" />
+                      <PartnerPrizeCardFull index={6} title="1~2월 연속가동" badges={["13회차", "최대300%"]} subtext={`1월 구간 실적 ${Math.round((p?.continuous12Jan ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.continuous12Jan ?? 0} expectedPrize={p?.continuous12Prize ?? 0} variant="purple" />
+                      <PartnerPrizeCardFull index={7} title="1~2월 추가 연속가동" badges={["13회차", "최대300%"]} subtext={`1월 구간 실적 ${Math.round((p?.continuous12ExtraJan ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.continuous12ExtraJan ?? 0} expectedPrize={p?.continuous12ExtraPrize ?? 0} variant="purple" />
+                      <PartnerPrizeCardFull index={8} title="3주차 인보험" badges={["13회차", "100%"]} subtext={`3주차 실적 ${Math.round(viewW3Feb / 10000)}만`} showTierButtons tierPerf={viewW3Feb} expectedPrize={p?.week3Prize ?? getPartnerTierPrize(viewW3Feb)} variant="sky" />
+                      <PartnerPrizeCardFull index={9} title="3~4주 인보험" badges={["13회차", "100%"]} subtext={`3~4주 실적 ${Math.round((p?.week34Sum ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.week34Sum ?? 0} expectedPrize={p?.week34Prize ?? getPartnerTierPrize(p?.week34Sum ?? 0)} variant="sky" />
+                    <PartnerPrizeCardFull index={10} title="2~3월 연속가동" badges={["13회차", "300%"]} subtext={`2월 구간 실적 ${Math.round((p?.continuous23Feb ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.continuous23Feb ?? 0} expectedPrize={p?.continuous23Prize ?? getPartnerContinuousPrize(p?.continuous23Feb ?? 0)} variant="purple" prizeBadge="3월 15일까지 10만 달성시 완성" />
+                    <PartnerPrizeCardFull index={11} title="2~3월 추가 연속가동" badges={["13회차", "최대300%"]} subtext={`2월 구간 실적 ${Math.round((p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? 0) / 10000)}만`} showTierButtons tierPerf={p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? 0} expectedPrize={p?.continuous23ExtraPrize ?? getPartnerContinuousPrize(p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? 0)} variant="purple" prizeBadge="3월 8일까지 10만 달성시 완성" />
+                      <PartnerPrizeCardFull index={12} title="메리츠클럽 플러스" badges={["13회차"]} subtext={`2월 실적 ${Math.round(currentMonthPerf / 10000)}만 / 목표 ${Math.round((plusTarget || 200000) / 10000)}만`} showTierButtons={false} tierPerf={0} expectedPrize={meritzClubPlusPrize} variant="yellow" isMCPlus mcPlusCurrent={currentMonthPerf} mcPlusTarget={plusTarget || 200000} mcPlusProgress={plusProgress} />
+                    </>
+                  )}
+                </div>
+              )}
+              {/* 비파트너 시상: 3x2 그리드 (1월 7장·2월 6장) — 파트너 코드와 완전 분리, 그리드는 NonPartnerCards 내부 */}
+              {!isPartnerBranch && nonPartnerCardsEl}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 md:gap-5 mb-6 lg:items-stretch">
-              {/* 2026 MY HOT - 연도시상 (1~10월 합산), 실적 추이와 같은 라인/높이 */}
-              <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative max-w-[320px] lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
-                <div className="relative z-10 p-4 md:p-5 flex flex-col items-center flex-1">
-                  <div className="w-full flex items-center gap-2 mb-2">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
-                    <h3 className="text-lg font-bold text-white tracking-tight">2026 MY HOT</h3>
-                  </div>
-                  <p className="text-[10px] text-gray-400 mb-3 w-full text-left lg:text-center">1월~{selectedViewMonth}월 누적 · 연도시상</p>
-                  <div className="relative w-32 h-32 mb-3">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                      <circle cx="50" cy="50" fill="none" r="42" stroke="rgba(75,85,99,0.5)" strokeWidth="10" />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        fill="none"
-                        r="42"
-                        stroke={myHotIsChamp ? "url(#myhot-gold)" : "currentColor"}
-                        className={myHotIsChamp ? "text-meritz-gold" : "text-primary"}
-                        strokeDasharray={`${myHotProgress * 2.64} 264`}
-                        strokeLinecap="round"
-                        strokeWidth="10"
-                      />
-                      <defs>
-                        <linearGradient id="myhot-gold" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#C5A065" />
-                          <stop offset="100%" stopColor="#E8C98C" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      {myHotIsChamp ? (
-                        <>
-                          <span className="text-2xl font-black bg-gradient-to-r from-meritz-gold to-amber-200 bg-clip-text text-transparent">CHAMP</span>
-                          <span className="text-xs text-gray-400 mt-0.5">합산 RANK 1위</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-3xl font-black text-white">
-                            {myHotProgress}
-                            <span className="text-lg font-normal text-gray-400">%</span>
-                          </span>
-                          <span className="text-xs text-gray-400 mt-0.5">{myHotLabel} 목표</span>
-                        </>
+            <div className={`grid grid-cols-1 gap-4 md:gap-5 mb-6 lg:items-stretch ${isPartnerBranch ? "" : "lg:grid-cols-[280px_1fr]"}`}>
+              {/* 2026 MY HOT - 비파트너만 표시 (파트너는 MY HOT 없음) */}
+              {!isPartnerBranch && (
+                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative max-w-[320px] lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
+                  <div className="relative z-10 p-4 md:p-5 flex flex-col items-center flex-1">
+                    <div className="w-full flex items-center gap-2 mb-2">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
+                      <h3 className="text-lg font-bold text-white tracking-tight">2026 MY HOT</h3>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mb-3 w-full text-left lg:text-center">1월~{selectedViewMonth}월 누적 · 연도시상</p>
+                    <div className="relative w-32 h-32 mb-3">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" fill="none" r="42" stroke="rgba(75,85,99,0.5)" strokeWidth="10" />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          fill="none"
+                          r="42"
+                          stroke={myHotIsChamp ? "url(#myhot-gold)" : "currentColor"}
+                          className={myHotIsChamp ? "text-meritz-gold" : "text-primary"}
+                          strokeDasharray={`${myHotProgress * 2.64} 264`}
+                          strokeLinecap="round"
+                          strokeWidth="10"
+                        />
+                        <defs>
+                          <linearGradient id="myhot-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#C5A065" />
+                            <stop offset="100%" stopColor="#E8C98C" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        {myHotIsChamp ? (
+                          <>
+                            <span className="text-2xl font-black bg-gradient-to-r from-meritz-gold to-amber-200 bg-clip-text text-transparent">CHAMP</span>
+                            <span className="text-xs text-gray-400 mt-0.5">합산 RANK 1위</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-3xl font-black text-white">
+                              {myHotProgress}
+                              <span className="text-lg font-normal text-gray-400">%</span>
+                            </span>
+                            <span className="text-xs text-gray-400 mt-0.5">{myHotLabel} 목표</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full rounded-lg bg-gray-800/50 border border-gray-700/50 p-2 text-center">
+                      <p className="text-[10px] text-gray-500 mb-0.5">현재 합산 실적</p>
+                      <p className="text-base font-bold text-white">{Math.round(myHotSum / 10000).toLocaleString()}만원</p>
+                      {!myHotIsChamp && myHotRank > 0 && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">합산 순위 {myHotRank}위</p>
                       )}
                     </div>
-                  </div>
-                  <div className="w-full rounded-lg bg-gray-800/50 border border-gray-700/50 p-2 text-center">
-                    <p className="text-[10px] text-gray-500 mb-0.5">현재 합산 실적</p>
-                    <p className="text-base font-bold text-white">{Math.round(myHotSum / 10000).toLocaleString()}만원</p>
-                    {!myHotIsChamp && myHotRank > 0 && (
-                      <p className="text-[10px] text-gray-400 mt-0.5">합산 순위 {myHotRank}위</p>
-                    )}
-                  </div>
-                  <p className="mt-2 w-full text-center text-[10px] text-gray-400 whitespace-nowrap">
-                    {[500, 650, 800, 1000].map((t, i) => {
-                      const tierWon = t * 10000;
-                      const achieved = myHotSum >= tierWon;
-                      return (
-                        <span key={t}>
-                          <span className={`font-medium ${achieved ? "text-meritz-gold" : "text-gray-500"}`}>
-                            meritz {t}
+                    <p className="mt-2 w-full text-center text-[10px] text-gray-400 whitespace-nowrap">
+                      {[500, 650, 800, 1000].map((t, i) => {
+                        const tierWon = t * 10000;
+                        const achieved = myHotSum >= tierWon;
+                        return (
+                          <span key={t}>
+                            <span className={`font-medium ${achieved ? "text-meritz-gold" : "text-gray-500"}`}>
+                              meritz {t}
+                            </span>
+                            {i < 3 && <span className="text-gray-600 mx-0.5">·</span>}
                           </span>
-                          {i < 3 && <span className="text-gray-600 mx-0.5">·</span>}
-                        </span>
-                      );
-                    })}
-                  </p>
+                        );
+                      })}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0">
                 <div className="flex justify-between items-center mb-4 shrink-0">
                   <div>
@@ -1223,10 +1386,12 @@ export default function Dashboard() {
                               "2월": "2026-02",
                             };
                             const monthKey = label != null ? monthMap[label] : undefined;
-                            if (value != null && monthKey && globalRanks[monthKey]) {
-                              const rankIndex = globalRanks[monthKey].indexOf(value);
-                              if (rankIndex !== -1) {
-                                rank = (rankIndex + 1).toString();
+                            if (value != null && monthKey) {
+                              if (isPartnerBranch && partnerRanksByMonth[monthKey] != null) {
+                                rank = String(partnerRanksByMonth[monthKey]);
+                              } else if (globalRanks[monthKey]) {
+                                const rankIndex = globalRanks[monthKey].indexOf(value);
+                                if (rankIndex !== -1) rank = (rankIndex + 1).toString();
                               }
                             }
                             return (
