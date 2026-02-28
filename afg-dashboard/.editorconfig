@@ -1,0 +1,14 @@
+# EditorConfig: 프로젝트 전역 UTF-8 강제 (한글 깨짐 방지)
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+
+[*.{js,jsx,ts,tsx,json,md}]
+charset = utf-8

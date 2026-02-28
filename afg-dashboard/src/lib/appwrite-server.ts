@@ -40,7 +40,36 @@ function getConfigCollectionId(): string {
   return id;
 }
 
-/** Appwrite 문서에서 읽는 Agent 필드 (performance, weekly는 JSON 문자열로 저장 가정) */
+/** 파트너 시상 데이터 (PRIZE_SUM 엑셀 업로드로 채움) */
+export type PartnerPrizeData = {
+  productWeek1?: number;
+  productWeek1Prize?: number;
+  productWeek2?: number;
+  productWeek2Prize?: number;
+  week34Sum?: number;
+  continuous12Jan?: number;
+  continuous12Feb?: number;
+  continuous12Prize?: number;
+  continuous12ExtraJan?: number;
+  continuous12ExtraFeb?: number;
+  continuous12ExtraPrize?: number;
+  continuous23Feb?: number;
+  /** 1월 파일 전용: 12~1월 연속가동 */
+  continuous121Dec?: number;
+  continuous121Jan?: number;
+  continuous121Prize?: number;
+  /** 1월 1·2주차 시상금 (1월 파일 AD, AJ) */
+  productWeek1PrizeJan?: number;
+  productWeek2PrizeJan?: number;
+  /** 1월 2주차 인보험 실적 (1월 파일, 열 확인) */
+  productWeek2InsJan?: number;
+  /** 1월 3·4주차 (열 확인 후 추가) */
+  week3PrizeJan?: number;
+  week4Jan?: number;
+  week4PrizeJan?: number;
+};
+
+/** Appwrite 문서에서 읽는 Agent 필드 (performance, weekly, partner는 JSON 문자열로 저장 가정) */
 type AgentDocFields = {
   $id: string;
   code: string;
@@ -49,6 +78,7 @@ type AgentDocFields = {
   role?: string;
   performance?: string;
   weekly?: string;
+  partner?: string;
   managerCode?: string;
   managerName?: string;
   branch?: string;
@@ -64,6 +94,7 @@ export type AppwriteAgentRecord = {
   role?: string;
   performance?: Record<string, number>;
   weekly?: Record<string, number>;
+  partner?: PartnerPrizeData;
   managerCode?: string;
   managerName?: string;
   branch?: string;
@@ -78,6 +109,10 @@ function docToRecord(doc: AgentDocFields): AppwriteAgentRecord {
       : undefined;
   const weekly =
     typeof doc.weekly === 'string' && doc.weekly ? (JSON.parse(doc.weekly) as Record<string, number>) : undefined;
+  const partner =
+    typeof doc.partner === 'string' && doc.partner
+      ? (JSON.parse(doc.partner) as PartnerPrizeData)
+      : undefined;
   return {
     id: doc.$id,
     code: doc.code,
@@ -86,6 +121,7 @@ function docToRecord(doc: AgentDocFields): AppwriteAgentRecord {
     role: doc.role,
     performance,
     weekly,
+    partner,
     managerCode: doc.managerCode,
     managerName: doc.managerName,
     branch: doc.branch,

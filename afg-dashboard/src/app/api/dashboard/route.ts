@@ -108,7 +108,8 @@ export async function GET() {
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
       const ranks = computeRanks(items);
-      return NextResponse.json({ user, agents: agentsData, updateDate, ranks });
+      const partnerAgents = agentsData.filter((a) => a.branch && String(a.branch).includes('파트너'));
+      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, partnerAgents });
     }
 
     if (session.role === 'manager') {
@@ -117,17 +118,34 @@ export async function GET() {
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
-      return NextResponse.json({ user, agents: agentsData, updateDate });
+      const allForRanks = await appwriteAgentsListAll({ filterRole: 'agent' });
+      const ranks = computeRanks(allForRanks);
+      const partnerAgents = allForRanks
+        .filter((a) => a.code !== RANK_EXCLUDE_CODE && a.branch && String(a.branch).includes('파트너'))
+        .map(toSafeAgent);
+      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, partnerAgents });
     }
 
     const agent = await appwriteAgentGetByCode(session.code!);
     if (agent && agent.code !== RANK_EXCLUDE_CODE) {
-      return NextResponse.json({ user, agents: [toSafeAgent(agent)], updateDate });
+      const allForRanks = await appwriteAgentsListAll({ filterRole: 'agent' });
+      const ranks = computeRanks(allForRanks);
+      const partnerAgents = allForRanks
+        .filter((a) => a.code !== RANK_EXCLUDE_CODE && a.branch && String(a.branch).includes('파트너'))
+        .map(toSafeAgent);
+      return NextResponse.json({ user, agents: [toSafeAgent(agent)], updateDate, ranks, partnerAgents });
     }
-    return NextResponse.json({ user, agents: [], updateDate });
+    return NextResponse.json({ user, agents: [], updateDate, partnerAgents: [] });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('Dashboard GET error:', message);
-    return NextResponse.json({ error: '데이터를 불러오는 중 오류가 발생했습니다.' }, { status: 500 });
+    const isDev = process.env.NODE_ENV === 'development';
+    return NextResponse.json(
+      {
+        error: '데이터를 불러오는 중 오류가 발생했습니다.',
+        ...(isDev && { detail: message }),
+      },
+      { status: 500 }
+    );
   }
 }

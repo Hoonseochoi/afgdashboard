@@ -19,11 +19,16 @@
      - `branch` (string)
      - `isFirstLogin` (boolean)
      - `targetManagerCode` (string)
+     - `partner` (string, 선택) — 파트너 시상용 JSON. 파트너 지사만 사용 시 추가. docs/PARTNER_PRIZE_RULES.md 참고.
 4. 같은 데이터베이스에 **Create collection** → 이름: `config` → **Collection ID** 복사.
    - **Attributes**:
      - `key` (string, required)
      - `updateDate` (string)
-5. **Settings** → **API Keys** → **Create API Key** → Scopes에 `databases.read`, `databases.write` 등 필요한 권한 부여 → **Secret** 복사(한 번만 표시됨).
+5. **Settings** → **API Keys** → **Create API Key** → Scopes에 다음 권한을 **반드시** 부여 후 **Secret** 복사(한 번만 표시됨).
+   - `databases.read`, `databases.write`
+   - `collections.read`, `documents.read`, `documents.write`
+   - *(오류: "The current user is not authorized to perform the requested action" → API Key에 위 Scope가 없거나, 컬렉션 권한에서 Read/Write가 막혀 있을 수 있음)*
+6. **Databases** → 해당 DB → **agents** / **config** 컬렉션 각각 → **Settings** → **Permissions**: 서버(API Key)로 접근하려면 **Read** 권한에 `any` 또는 해당 API Key 역할 추가.
 
 ## 2. 환경 변수
 
@@ -43,6 +48,7 @@
 
 - **최초 한 번**: `node scripts/appwrite-upload-agents.js` — `src/data/data.json` 설계사/매니저/관리자 업로드 + config 한 건 생성.
 - **일일 실적 반영**: `node scripts/appwrite-upload-daily.js` — `data/daily/` 폴더의 최신 MC_LIST xlsx 파싱 후 실적·updateDate·agent-order.json 반영.
+- **파트너 시상 반영**: `node scripts/upload-partner-prize.js` — `data/daily/` 내 PRIZE_SUM 엑셀 파싱 후 agents.partner 업데이트. (지사명에 "파트너" 포함 시 대시보드에 파트너 시상 블록 표시)
 
 ## 4. 연결 확인
 

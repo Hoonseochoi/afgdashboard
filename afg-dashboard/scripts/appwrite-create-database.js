@@ -118,6 +118,7 @@ async function main() {
     ['role', 32, false],
     ['performance', 16384, false],
     ['weekly', 8192, false],
+    ['partner', 65535, false],
     ['managerCode', 64, false],
     ['managerName', 256, false],
     ['branch', 512, false],
