@@ -127,12 +127,11 @@ export async function GET() {
       const allowedBranches = ['송도스튜디오', '에이스스튜디오', '엔타스2스튜디오'];
       let allItems = await appwriteAgentsListAll({ filterRole: 'agent' });
       allItems = mergeFebruaryFix(allItems);
-      const filtered = allItems.filter(
-        (a) =>
-          a.code !== RANK_EXCLUDE_CODE &&
-          a.branch &&
-          allowedBranches.includes(String(a.branch)),
-      );
+      const filtered = allItems.filter((a) => {
+        if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
+        const branchName = String(a.branch);
+        return allowedBranches.some((b) => branchName.includes(b));
+      });
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
 
