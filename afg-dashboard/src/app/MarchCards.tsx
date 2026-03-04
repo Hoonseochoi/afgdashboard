@@ -49,6 +49,7 @@ export interface MarchCardsProps {
   plusTargetMinPerf: number;
   plusNext: string;
   plusProgress: number;
+  janPerf: number;
   febPerf: number;
   marchPerf: number;
   currentMonthNum: number;
@@ -66,6 +67,8 @@ export function MarchCards(props: MarchCardsProps) {
     plusTarget,
     plusTargetMinPerf,
     plusProgress,
+    janPerf,
+    febPerf,
     marchPerf,
     currentMonthNum,
   } = props;
@@ -233,20 +236,21 @@ export function MarchCards(props: MarchCardsProps) {
           const target = plusTarget ?? 0;
           const tierMan = target >= 1000000 ? 100 : target > 0 ? target / 10000 : 20;
           const goalLabel = tierMan >= 100 ? "100만원" : `${tierMan}만원`;
-          const is100Man = plusTargetMinPerf >= 1000000;
+          const hasTarget = target > 0;
+          const plusBadge = hasTarget ? `${tierMan}만구간도전` : "미대상";
           return (
             <>
               <div className="flex items-center justify-between mb-1.5">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">메리츠 클럽+</h3>
-                <span className={is100Man
+                <span className={hasTarget
                   ? "text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded-full"
                   : "text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-white/[0.06] px-2 py-0.5 rounded-full"
                 }>
-                  {is100Man ? "100만구간도전" : "미대상"}
+                  {plusBadge}
                 </span>
               </div>
               <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5">
-                {currentMonthNum >= 3 ? `달성목표 : ${goalLabel}` : "2월 실적 · 목표"}
+                {currentMonthNum >= 3 ? `1월 : ${Math.round(janPerf / 10000)}만원 / 2월 : ${Math.round(febPerf / 10000)}만원` : "2월 실적 · 목표"}
               </p>
               <div className="w-full bg-gray-200 dark:bg-white/[0.08] rounded-full h-1.5 mb-auto overflow-hidden">
                 <motion.div

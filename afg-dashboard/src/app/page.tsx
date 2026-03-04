@@ -936,6 +936,7 @@ export default function Dashboard() {
           plusTargetMinPerf={plusTargetMinPerf}
           plusNext={plusNext}
           plusProgress={plusProgress}
+          janPerf={selectedAgent?.performance?.["2026-01"] ?? 0}
           febPerf={febPerf}
           marchPerf={marchPerf}
           currentMonthNum={currentMonthNum}
