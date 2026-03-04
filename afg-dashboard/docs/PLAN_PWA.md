@@ -1,147 +1,134 @@
-# PWA(Progressive Web App) 전환 플랜
+# PWA 플랜: 코드로 설치 유도 (beforeinstallprompt + 커스텀 버튼)
 
-> 웹 대시보드를 **앱처럼 설치·실행**할 수 있게 만드는 계획입니다.  
-> 휴대폰 홈 화면에 추가, 독립 창으로 실행, (선택) 오프라인 캐시까지 지원합니다.
-
-**✅ 안드로이드용 구현 완료**: `manifest.json`, 레이아웃 연동, Service Worker 등록까지 적용됨.  
-배포 후 Android Chrome에서 "앱 설치" 또는 "홈 화면에 추가"로 설치 가능.
+> 크롬 "홈 화면에 추가"를 **우리 버튼 클릭으로** 띄우는 방식입니다.  
+> 브라우저 기본 설치 플로우를 그대로 쓰기 때문에, 휴대폰 보안/권한과 무관하게 설치가 가능합니다.
 
 ---
 
-## 1. PWA가 되는 원리 (핵심 2가지)
+## 1. 핵심 로직
 
-| 요소 | 역할 |
+| 단계 | 동작 |
 |------|------|
-| **Manifest (manifest.json)** | 앱 이름, 아이콘, 배경색, 실행 시 **화면 모드**(전체화면/독립 창) 등을 정의. 이 파일이 있어야 브라우저/OS가 "설치 가능한 앱"으로 인식합니다. |
-| **Service Worker (JS)** | 브라우저 **백그라운드**에서 동작. 정적 자원·페이지를 **캐싱**해 오프라인에서도 동작하게 하고, (선택) 푸시 알림을 처리하는 '일꾼' 역할을 합니다. |
+| 1 | 브라우저가 "설치 가능"하다고 판단하면 `beforeinstallprompt` 이벤트를 발생시킴 |
+| 2 | 우리는 `e.preventDefault()`로 **기본 배너/팝업을 막고**, `e`를 변수(`deferredPrompt`)에 저장 |
+| 3 | 화면에 **우리가 만든 "앱 설치" 버튼**을 노출 |
+| 4 | 사용자가 **그 버튼을 누르면** `deferredPrompt.prompt()` 호출 → **크롬의 "홈 화면에 추가" UI**가 뜸 |
+| 5 | 사용자가 확인하면 설치 완료. `userChoice`로 승인/거절 처리 가능 |
 
-이 두 가지가 있고, **HTTPS**로 서비스되면 "앱으로 설치" 버튼이 뜨고, 홈 화면에 추가 시 앱처럼 실행됩니다.
-
----
-
-## 2. 현재 프로젝트 기준 정리
-
-- **프레임워크**: Next.js 16 (App Router)
-- **배포**: Vercel 등 (HTTPS 만족)
-- **앱 이름**: Meritz Individual Agent Dashboard (또는 짧게 "AFG 대시보드")
-- **아이콘 후보**: `public/meritzair.png` 등 → PWA용 크기로 재생성 필요
+**요약**: "버튼 클릭 → 크롬의 홈 화면에 추가가 눌리게 한다"가 전부. 우리가 만드는 건 **설치 창을 띄우는 트리거**뿐이고, 실제 설치 플로우는 브라우저가 처리합니다.
 
 ---
 
-## 3. 구현 단계
+## 2. 참고 코드 (바닐라 JS)
 
-### 3.1 Manifest 파일 (`manifest.json`)
+```js
+let deferredPrompt;
 
-**위치**: `public/manifest.json` (또는 `public/manifest.webmanifest`)
+// 1. 브라우저가 설치 가능함을 감지했을 때
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();      // 기본 팝업을 막고
+  deferredPrompt = e;      // 이벤트를 변수에 저장
 
-**필수/권장 필드**:
+  // 우리가 만든 '설치 버튼'을 화면에 보이게 함
+  const installBtn = document.getElementById("install-button");
+  installBtn.style.display = "block";
 
-```json
-{
-  "name": "AFG 대시보드",
-  "short_name": "AFG대시보드",
-  "description": "Meritz GA 실적 대시보드",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1e40af",
-  "orientation": "any",
-  "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
-}
+  installBtn.addEventListener(
+    "click",
+    async () => {
+      // 2. 버튼 클릭 시 설치 창 띄우기 (= 크롬 홈 화면에 추가)
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        console.log("사용자가 앱 설치를 승인했습니다.");
+      }
+      deferredPrompt = null;
+    },
+    { once: true }
+  );
+});
 ```
 
-- **display**: `standalone` → 주소창 없이 앱처럼 전체 화면에 가깝게 실행.
-- **theme_color**: 상단 상태바 색 (OS/브라우저가 사용).
-- **icons**: 최소 **192x192**, **512x512** 필요. `maskable`은 안전 영역을 두고 잘리는 아이콘용.
+- `deferredPrompt.prompt()` 한 번이 **크롬의 "홈 화면에 추가" 다이얼로그**를 띄우는 동작입니다.
+- `userChoice`: 사용자가 "추가" / "취소" 중 무엇을 눌렀는지 알 수 있습니다.
 
-**Next.js 연동**: `app/layout.tsx`의 `<head>`에 manifest 링크 추가.
+---
 
-```html
-<link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#1e40af" />
+## 3. React/Next.js에 옮길 때
+
+### 3.1 상태와 리스너
+
+- **클라이언트 전용**: `beforeinstallprompt`는 브라우저 API이므로 `"use client"` 컴포넌트에서만 사용합니다.
+- 상태 예:
+  - `deferredPrompt`: `BeforeInstallPromptEvent | null` (이벤트 객체 저장)
+  - `showInstallButton`: `boolean` (버튼 표시 여부)
+- `beforeinstallprompt` 리스너에서:
+  - `e.preventDefault()`
+  - `setDeferredPrompt(e)`, `setShowInstallButton(true)`
+
+### 3.2 버튼 클릭 핸들러
+
+```ts
+const handleInstallClick = async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === "accepted") {
+    // 설치 승인 시 버튼 숨기기 등
+    setShowInstallButton(false);
+  }
+  setDeferredPrompt(null);
+};
+```
+
+### 3.3 버튼을 숨겨야 할 때
+
+- **이미 앱으로 실행 중일 때** (standalone): 설치 버튼 노출하지 않음.
+- **beforeinstallprompt를 지원하지 않는 환경** (예: iOS Safari): 버튼 자체를 안 보이게 하거나, 안내 문구만 표시.
+- **설치 완료 후**: `appinstalled` 이벤트로 감지 후 버튼 숨김.
+
+```js
+window.addEventListener("appinstalled", () => {
+  deferredPrompt = null;
+  setShowInstallButton?.(false);
+});
 ```
 
 ---
 
-### 3.2 아이콘 준비
+## 4. 구현 플로우 제안
 
-| 크기 | 용도 |
-|------|------|
-| 192×192 | Android "홈 화면에 추가", 일부 브라우저 |
-| 512×512 | 스플래시/스플래시 화면, 설치 UI |
-| 180×180 (선택) | iOS `apple-touch-icon` |
-
-**작업**:
-1. `public/meritzair.png` 또는 로고를 기준으로 192, 512 픽셀 PNG 생성.
-2. `public/icons/` 폴더에 `icon-192.png`, `icon-512.png` 저장.
-3. (선택) iOS용: `public/apple-touch-icon.png` (180×180) 및 layout에 `<link rel="apple-touch-icon" href="/apple-touch-icon.png" />` 추가.
-
----
-
-### 3.3 Service Worker
-
-**역할**:
-- **캐싱**: HTML/JS/CSS/이미지 등 정적 자원을 캐시 → 오프라인에서도 앱 껍데기(UI) 표시.
-- **API/데이터**: 대시보드 데이터는 **실시간성이 중요**하므로 보통 **네트워크 우선**(online일 때만 최신 데이터). 오프라인 시 "연결 없음" 메시지 또는 마지막 캐시 응답 선택 가능.
-
-**구현 방식 (택 1)**:
-
-| 방식 | 설명 |
-|------|------|
-| **next-pwa** | Next.js 플러그인. 빌드 시 Workbox로 Service Worker 자동 생성. 설정만으로 캐시 전략 적용. (Next.js 16 호환 여부 확인 필요) |
-| **직접 작성** | `public/sw.js` 또는 별도 경로에 Service Worker 작성 후, 클라이언트에서 `navigator.serviceWorker.register('/sw.js')` 호출. 캐시 전략을 완전히 직접 제어. |
-
-**권장 (단순화)**:
-1. **1단계**: Manifest + 아이콘만 구현 → **설치 가능 + 앱처럼 실행**까지 달성.
-2. **2단계**: Service Worker는 "정적 자원만 캐시"(캐시 우선), `/api/*`는 네트워크 우선으로 두어, 오프라인에서는 "데이터를 불러올 수 없습니다"만 보여 주는 수준으로 구현.
-
----
-
-### 3.4 Next.js 레이아웃 반영
-
-**수정 대상**: `src/app/layout.tsx`
-
-- `metadata`에 PWA 관련 추가 (선택):
-  - `applicationName`, `appleWebApp: { capable: true, title: "AFG대시보드" }` 등.
-- `<head>` 내부에:
-  - `<link rel="manifest" href="/manifest.json" />`
-  - `<meta name="theme-color" content="…" />`
-  - `<link rel="apple-touch-icon" href="/apple-touch-icon.png" />` (iOS)
-
-이렇게 하면 배포된 URL에서 "앱으로 설치" / "홈 화면에 추가"가 동작합니다.
-
----
-
-## 4. 설치 가능 조건 (체크리스트)
-
-- [ ] **HTTPS**로 서비스 (Vercel/배포 환경은 기본 만족)
-- [ ] **manifest.json** 접근 가능 (`/manifest.json` 200 응답)
-- [ ] **Service Worker** 등록 (선택이지만, 있으면 오프라인·설치 경험 향상)
-- [ ] **아이콘** 최소 192×192, 512×512 제공
-- [ ] **start_url**이 실제 동작하는 경로 (`/`)
-
----
-
-## 5. 구현 순서 제안
-
-| 순서 | 작업 | 결과 |
+| 순서 | 작업 | 비고 |
 |------|------|------|
-| 1 | `public/manifest.json` 생성 및 `layout.tsx`에 manifest + theme-color 링크 | 설치 가능 인식 |
-| 2 | PWA용 아이콘 192/512 생성 → `public/icons/` 배치 | 설치/스플래시 아이콘 표시 |
-| 3 | (선택) `layout.tsx`에 apple-touch-icon 등 iOS 메타 추가 | iOS 홈 화면 추가 시 아이콘 정상 |
-| 4 | (선택) Service Worker 도입 (next-pwa 또는 직접 sw.js) | 오프라인 캐시, 더 나은 "앱" 경험 |
+| 1 | **InstallPrompt 컴포넌트** 추가 (`"use client"`) | `beforeinstallprompt` 수신, `deferredPrompt`·`showInstallButton` 상태 관리 |
+| 2 | **설치 버튼 UI** | 로그인 후 보이는 헤더/푸터 또는 플로팅 버튼. `showInstallButton && !isStandalone` 일 때만 표시 |
+| 3 | **클릭 시** `deferredPrompt.prompt()` 호출 후 `userChoice` 처리 | 승인 시 버튼 숨김, `deferredPrompt` null 처리 |
+| 4 | **appinstalled** 리스너로 설치 완료 감지 | 설치 후 버튼 제거 |
+| 5 | (선택) **iOS** | `beforeinstallprompt` 없음 → "홈 화면에 추가는 메뉴(⋮) → 홈 화면에 추가를 이용해 주세요" 문구만 표시 가능 |
 
 ---
 
-## 6. 참고
+## 5. 배치 위치
 
-- [web.dev - Install criteria (PWA)](https://web.dev/install-criteria/)
-- [MDN - Web app manifests](https://developer.mozilla.org/en-US/docs/Web/Manifest)
-- [next-pwa](https://github.com/shadowwalker/next-pwa) (Next.js + Workbox)
+- **layout.tsx**: `<body>` 안에 `<InstallPrompt />`를 두면 모든 페이지에서 설치 버튼 노출 가능.
+- **page.tsx**: 로그인된 대시보드 상단/하단에만 설치 버튼을 두고 싶다면, `page.tsx`에서 `isStandalone`과 함께 조건부 렌더링.
 
-이 플랜대로 진행하면 **웹사이트를 앱처럼 설치·실행**할 수 있는 PWA로 전환할 수 있습니다.  
-원하면 1단계(Manifest + 아이콘 + layout 연동)부터 구체적인 코드 단위로 이어서 작성해 줄 수 있습니다.
+둘 중 한 곳에만 두면 됩니다. (전역이면 layout, 대시보드 전용이면 page)
+
+---
+
+## 6. 기존 PWA 요소 (유지)
+
+- **manifest.json**: 그대로 유지. `display: standalone`, 아이콘, `theme_color` 등.
+- **Service Worker** (`/sw.js`, `RegisterSW`): 유지. 설치 가능 조건·오프라인 동작에 필요.
+- **standalone 감지**: 이미 `page.tsx`에서 `display-mode: standalone` / `navigator.standalone` 체크 중이면, 그 값을 InstallPrompt에 전달해 "이미 앱으로 실행 중"일 때 버튼을 숨기면 됩니다.
+
+---
+
+## 7. 정리
+
+- **목표**: 우리 버튼 클릭 → **크롬의 "홈 화면에 추가"가 실행되게** 하는 것.
+- **방법**: `beforeinstallprompt`로 이벤트를 받아 두고, 버튼 클릭 시 `deferredPrompt.prompt()`만 호출.
+- **보안/권한**: 브라우저 기본 설치 플로우를 쓰므로, 휴대폰 보안과 무관하게 동일하게 동작합니다.
+
+이 플랜대로 구현하면 "코드로 설치를 유도하는 PWA"가 됩니다.

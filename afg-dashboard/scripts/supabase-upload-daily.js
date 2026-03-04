@@ -44,7 +44,7 @@ function findLatestTwoDailyFiles() {
   const latest = files[files.length - 1];
   const latestNum = parseInt(latest.slice(0, 4), 10);
   const prevPrefix = Number.isFinite(latestNum) ? String(latestNum - 1).padStart(4, '0') : null;
-  const prev = prevPrefix ? files.find((f) => f.startsWith(prevPrefix)) ?? null;
+  const prev = prevPrefix ? (files.find((f) => f.startsWith(prevPrefix)) || null) : null;
   return {
     latest: path.join(dailyDir, latest),
     prev: prev ? path.join(dailyDir, prev) : null,

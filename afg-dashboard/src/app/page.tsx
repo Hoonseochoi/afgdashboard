@@ -226,6 +226,9 @@ function Dashboard() {
   const exportAreaRef = useRef<HTMLDivElement>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallHint, setShowInstallHint] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showPWAInstallPrompt, setShowPWAInstallPrompt] = useState(false);
+  const deferredPromptRef = useRef<{ prompt: () => void; userChoice: Promise<{ outcome: string }> } | null>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -260,6 +263,48 @@ function Dashboard() {
       mql?.removeEventListener?.("change", updateStandalone);
     };
   }, []);
+
+  // 모바일 여부 (스마트폰에서만 앱 설치 버튼 노출용)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const check = () => setIsMobile(window.matchMedia?.("(max-width: 768px)")?.matches ?? false);
+    check();
+    const mq = window.matchMedia?.("(max-width: 768px)");
+    mq?.addEventListener?.("change", check);
+    return () => mq?.removeEventListener?.("change", check);
+  }, []);
+
+  // PWA: beforeinstallprompt → 우리 버튼 클릭 시 크롬 "홈 화면에 추가" 띄우기
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      deferredPromptRef.current = e as unknown as { prompt: () => void; userChoice: Promise<{ outcome: string }> };
+      setShowPWAInstallPrompt(true);
+    };
+    const onInstalled = () => {
+      deferredPromptRef.current = null;
+      setShowPWAInstallPrompt(false);
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const handlePWAInstallClick = async () => {
+    const ev = deferredPromptRef.current;
+    if (ev) {
+      ev.prompt();
+      const { outcome } = await ev.userChoice;
+      if (outcome === "accepted") setShowPWAInstallPrompt(false);
+      deferredPromptRef.current = null;
+    } else {
+      setShowInstallHint((v) => !v);
+    }
+  };
 
   const handleExportPng = async () => {
     const el = exportAreaRef.current;
@@ -1202,22 +1247,14 @@ function Dashboard() {
                     로그아웃
                   </button>
 
-                  {!isCaptureMode && !isStandalone && (
+                  {/* 웹(데스크톱): 내보내기만. 스마트폰: 앱 설치만(버튼 클릭 시 beforeinstallprompt 또는 안내) */}
+                  {!isCaptureMode && !isStandalone && isMobile && (
                     <div className="flex items-center gap-1 relative">
                       <button
                         type="button"
-                        onClick={handleExportPng}
-                        disabled={exportLoading}
-                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        <span className="material-symbols-outlined text-sm sm:text-base">download</span>
-                        {exportLoading ? "내보내는 중..." : "내보내기"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowInstallHint((v) => !v)}
+                        onClick={handlePWAInstallClick}
                         className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-primary border border-primary/60 dark:border-primary shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                        title="앱 설치 방법"
+                        title="앱 설치"
                       >
                         <span className="material-symbols-outlined text-sm sm:text-base">get_app</span>
                         앱 설치
@@ -1226,9 +1263,7 @@ function Dashboard() {
                         <div className="absolute top-full right-0 mt-1 z-50 w-64 sm:w-72 p-2.5 rounded-lg bg-gray-900 text-white text-[11px] shadow-lg border border-gray-700">
                           <p className="font-medium mb-1">앱 설치 방법</p>
                           <p className="text-gray-300">
-                            대부분 기기에서 보안 정책 때문에 자동 설치 배너가 뜨지 않을 수 있습니다.
-                            <br />
-                            <strong>우측 상단 ⋮ 메뉴</strong> → <strong>홈 화면에 추가</strong> 또는 <strong>앱 설치</strong>를 눌러 홈 화면에 직접 추가해 주세요.
+                            <strong>우측 상단 ⋮ 메뉴</strong> → <strong>홈 화면에 추가</strong> 또는 <strong>앱 설치</strong>를 눌러 홈 화면에 추가해 주세요.
                           </p>
                           <button
                             type="button"
@@ -1240,6 +1275,17 @@ function Dashboard() {
                         </div>
                       )}
                     </div>
+                  )}
+                  {!isCaptureMode && !isStandalone && !isMobile && (
+                    <button
+                      type="button"
+                      onClick={handleExportPng}
+                      disabled={exportLoading}
+                      className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <span className="material-symbols-outlined text-sm sm:text-base">download</span>
+                      {exportLoading ? "내보내는 중..." : "내보내기"}
+                    </button>
                   )}
 
                   <button
