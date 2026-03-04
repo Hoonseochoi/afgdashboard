@@ -122,6 +122,41 @@ export async function GET() {
     const configApp = await appwriteConfigGetApp();
     const updateDate = configApp?.updateDate ?? '0000';
 
+    // 특수 코드: 105203241 → 지정된 지사만 조회
+    if (session.code === '105203241') {
+      const allowedBranches = ['송도스튜디오', '에이스스튜디오', '엔타스2스튜디오'];
+      let allItems = await appwriteAgentsListAll({ filterRole: 'agent' });
+      allItems = mergeFebruaryFix(allItems);
+      const filtered = allItems.filter(
+        (a) =>
+          a.code !== RANK_EXCLUDE_CODE &&
+          a.branch &&
+          allowedBranches.includes(String(a.branch)),
+      );
+      let agentsData = filtered.map(toSafeAgent);
+      agentsData = sortByMcListOrder(agentsData);
+
+      let allForRanks = await appwriteAgentsListAll({ filterRole: 'agent' });
+      allForRanks = mergeFebruaryFix(allForRanks);
+      const ranks = computeRanks(allForRanks);
+      const partnerAgents = allForRanks
+        .filter(
+          (a) =>
+            a.code !== RANK_EXCLUDE_CODE &&
+            a.branch &&
+            String(a.branch).includes('파트너'),
+        )
+        .map(toSafeAgent);
+
+      return NextResponse.json({
+        user,
+        agents: agentsData,
+        updateDate,
+        ranks,
+        partnerAgents,
+      });
+    }
+
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
       let items = await appwriteAgentsListAll({ filterRole: 'agent' });
       items = mergeFebruaryFix(items);
