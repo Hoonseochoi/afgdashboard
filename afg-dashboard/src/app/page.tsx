@@ -1069,7 +1069,7 @@ export default function Dashboard() {
                 <div className="flex items-center shrink-0">
                   <img src="/ci.png" alt="CI" className="h-[1.6rem] md:h-[1.8rem] object-contain" />
                 </div>
-                <div className="flex items-center gap-2 md:gap-4 md:pl-4 md:border-l border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-1.5 md:gap-4 md:pl-4 md:border-l border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-2">
                     <div className="w-8 h-8 rounded-full bg-meritz-gold flex items-center justify-center text-white font-bold text-xs shadow-md">
                       {user?.name?.charAt(0) || 'U'}
@@ -1083,23 +1083,25 @@ export default function Dashboard() {
                   <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-primary underline">
                     로그아웃
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleExportPng}
-                    disabled={exportLoading}
-                    className="flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <span className="material-symbols-outlined text-base">download</span>
-                    {exportLoading ? "내보내는 중..." : "내보내기"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPrizeGuide(true)}
-                    className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-base">visibility</span>
-                    시상안보기
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={handleExportPng}
+                      disabled={exportLoading}
+                      className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <span className="material-symbols-outlined text-sm sm:text-base">download</span>
+                      {exportLoading ? "내보내는 중..." : "내보내기"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPrizeGuide(true)}
+                      className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm sm:text-base">visibility</span>
+                      시상안보기
+                    </button>
+                  </div>
                 </div>
               </div>
               {/* 2줄(모바일) / 우측(데스크톱): 검색+리스트 (admin/manager만) */}
