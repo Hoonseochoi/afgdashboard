@@ -225,9 +225,7 @@ function Dashboard() {
   const [showPrizeGuide, setShowPrizeGuide] = useState(false);
   const exportAreaRef = useRef<HTMLDivElement>(null);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [canInstall, setCanInstall] = useState(false);
-  const [installInProgress, setInstallInProgress] = useState(false);
-  const deferredPromptRef = useRef<any>(null);
+  const [showInstallHint, setShowInstallHint] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -262,42 +260,6 @@ function Dashboard() {
       mql?.removeEventListener?.("change", updateStandalone);
     };
   }, []);
-
-  // PWA: 설치 가능 여부 감지 (beforeinstallprompt)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handler = (event: Event) => {
-      const e = event as any;
-      e.preventDefault();
-      deferredPromptRef.current = e;
-      setCanInstall(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-    };
-  }, []);
-
-  const handleInstallApp = async () => {
-    const promptEvent = deferredPromptRef.current;
-    if (!promptEvent || installInProgress) return;
-    setInstallInProgress(true);
-    promptEvent.prompt();
-    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 15000));
-    try {
-      const choice = await Promise.race([promptEvent.userChoice, timeout.then(() => null)]);
-      if (choice) console.log("[PWA] install choice:", choice.outcome);
-    } catch {
-      // ignore
-    } finally {
-      deferredPromptRef.current = null;
-      setCanInstall(false);
-      setInstallInProgress(false);
-    }
-  };
 
   const handleExportPng = async () => {
     const el = exportAreaRef.current;
@@ -1211,8 +1173,12 @@ function Dashboard() {
       )}
 
       {selectedAgent && (
-        <>
-          <header className={`bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm ${isCaptureMode ? "hidden" : ""}`}>
+        <div>
+          <header
+            className={`bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm ${
+              isCaptureMode ? "hidden" : ""
+            }`}
+          >
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-0 md:h-16 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-0">
               {/* 1줄(모바일) / 좌측(데스크톱): 로고 + 우측 유저/로그아웃 */}
               <div className="flex items-center justify-between w-full md:w-auto">
@@ -1222,30 +1188,22 @@ function Dashboard() {
                 <div className="flex items-center gap-1.5 md:gap-4 md:pl-4 md:border-l border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-2">
                     <div className="w-8 h-8 rounded-full bg-meritz-gold flex items-center justify-center text-white font-bold text-xs shadow-md">
-                      {user?.name?.charAt(0) || 'U'}
+                      {user?.name?.charAt(0) || "U"}
                     </div>
                     <div className="hidden lg:block text-sm text-right">
                       <p className="font-bold text-gray-800 dark:text-gray-100">
-                        {user?.name}{user?.role === 'admin' ? ' 관리자' : user?.role === 'manager' ? ' 매니저' : '님'}
+                        {user?.name}
+                        {user?.role === "admin" ? " 관리자" : user?.role === "manager" ? " 매니저" : "님"}
                       </p>
                     </div>
                   </div>
+
                   <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-primary underline">
                     로그아웃
                   </button>
-                  <div className="flex items-center gap-1">
-                    {!isCaptureMode && !isStandalone && canInstall && (
-                      <button
-                        type="button"
-                        onClick={handleInstallApp}
-                        disabled={installInProgress}
-                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-primary border border-primary/60 dark:border-primary shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-wait"
-                      >
-                        <span className="material-symbols-outlined text-sm sm:text-base">download</span>
-                        {installInProgress ? "설치 중..." : "앱 설치"}
-                      </button>
-                    )}
-                    {!isCaptureMode && !isStandalone && !canInstall && (
+
+                  {!isCaptureMode && !isStandalone && (
+                    <div className="flex items-center gap-1 relative">
                       <button
                         type="button"
                         onClick={handleExportPng}
@@ -1255,25 +1213,59 @@ function Dashboard() {
                         <span className="material-symbols-outlined text-sm sm:text-base">download</span>
                         {exportLoading ? "내보내는 중..." : "내보내기"}
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setShowPrizeGuide(true)}
-                      className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-sm sm:text-base">visibility</span>
-                      시상안보기
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowInstallHint((v) => !v)}
+                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-primary border border-primary/60 dark:border-primary shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        title="앱 설치 방법"
+                      >
+                        <span className="material-symbols-outlined text-sm sm:text-base">get_app</span>
+                        앱 설치
+                      </button>
+                      {showInstallHint && (
+                        <div className="absolute top-full right-0 mt-1 z-50 w-64 sm:w-72 p-2.5 rounded-lg bg-gray-900 text-white text-[11px] shadow-lg border border-gray-700">
+                          <p className="font-medium mb-1">앱 설치 방법</p>
+                          <p className="text-gray-300">
+                            대부분 기기에서 보안 정책 때문에 자동 설치 배너가 뜨지 않을 수 있습니다.
+                            <br />
+                            <strong>우측 상단 ⋮ 메뉴</strong> → <strong>홈 화면에 추가</strong> 또는 <strong>앱 설치</strong>를 눌러 홈 화면에 직접 추가해 주세요.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setShowInstallHint(false)}
+                            className="mt-2 text-primary text-right w-full"
+                          >
+                            닫기
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPrizeGuide(true)}
+                    className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-sm sm:text-base">visibility</span>
+                    시상안보기
+                  </button>
                 </div>
               </div>
+
               {/* 2줄(모바일) / 우측(데스크톱): 검색+리스트 (admin/manager만) */}
-              {(user?.role === 'admin' || user?.role === 'manager') && (
+              {(user?.role === "admin" || user?.role === "manager") && (
                 <div className="relative w-full md:w-auto flex items-center gap-1">
                   <input
                     type="text"
                     placeholder="이름 또는 지사명 검색..."
-                    value={agentSearchOpen ? agentSearchQuery : (selectedAgent ? `${selectedAgent.name} (${selectedAgent.branch})` : "")}
+                    value={
+                      agentSearchOpen
+                        ? agentSearchQuery
+                        : selectedAgent
+                        ? `${selectedAgent.name} (${selectedAgent.branch})`
+                        : ""
+                    }
                     onChange={(e) => {
                       setAgentSearchQuery(e.target.value);
                       setAgentSearchOpen(true);
@@ -1283,10 +1275,20 @@ function Dashboard() {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         const searchMonthKey = "2026-03";
-                        const sorted = [...(agents || [])].filter((a: any) => a.code !== RANK_EXCLUDE_CODE).sort((a, b) => (b.performance?.[searchMonthKey] || 0) - (a.performance?.[searchMonthKey] || 0));
+                        const sorted = [...(agents || [])]
+                          .filter((a: any) => a.code !== RANK_EXCLUDE_CODE)
+                          .sort(
+                            (a, b) =>
+                              (b.performance?.[searchMonthKey] || 0) -
+                              (a.performance?.[searchMonthKey] || 0),
+                          );
                         const q = agentSearchQuery.trim().toLowerCase();
                         const filtered = q
-                          ? sorted.filter((a) => a.name?.toLowerCase().includes(q) || (a.branch && String(a.branch).toLowerCase().includes(q)))
+                          ? sorted.filter(
+                              (a) =>
+                                a.name?.toLowerCase().includes(q) ||
+                                (a.branch && String(a.branch).toLowerCase().includes(q)),
+                            )
                           : sorted;
                         setAgentSearchOpen(true);
                         if (filtered.length === 1) {
@@ -1307,23 +1309,35 @@ function Dashboard() {
                     className="p-1.5 rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 shrink-0"
                     title="리스트 보기"
                   >
-                    <span className="material-symbols-outlined text-lg text-gray-600 dark:text-gray-400">format_list_bulleted</span>
+                    <span className="material-symbols-outlined text-lg text-gray-600 dark:text-gray-400">
+                      format_list_bulleted
+                    </span>
                   </button>
                   {agentSearchOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setAgentSearchOpen(false)} />
                       <div className="absolute top-full left-0 right-0 md:right-auto mt-1 w-full md:w-80 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50">
-                          {(() => {
-                            const searchMonthKey = "2026-03";
-                            const sorted = [...(agents || [])].filter((a: any) => a.code !== RANK_EXCLUDE_CODE).sort((a, b) => (b.performance?.[searchMonthKey] || 0) - (a.performance?.[searchMonthKey] || 0));
-                            const q = agentSearchQuery.trim().toLowerCase();
-                            const filtered = q
-                              ? sorted.filter((a) => a.name?.toLowerCase().includes(q) || (a.branch && String(a.branch).toLowerCase().includes(q)))
-                              : sorted;
-                            const toShow = filtered.slice(0, 80);
-                            return toShow.length > 0 ? (
-                              <>
-                                {toShow.map((agent) => (
+                        {(() => {
+                          const searchMonthKey = "2026-03";
+                          const sorted = [...(agents || [])]
+                            .filter((a: any) => a.code !== RANK_EXCLUDE_CODE)
+                            .sort(
+                              (a, b) =>
+                                (b.performance?.[searchMonthKey] || 0) -
+                                (a.performance?.[searchMonthKey] || 0),
+                            );
+                          const q = agentSearchQuery.trim().toLowerCase();
+                          const filtered = q
+                            ? sorted.filter(
+                                (a) =>
+                                  a.name?.toLowerCase().includes(q) ||
+                                  (a.branch && String(a.branch).toLowerCase().includes(q)),
+                              )
+                            : sorted;
+                          const toShow = filtered.slice(0, 80);
+                          return toShow.length > 0 ? (
+                            <>
+                              {toShow.map((agent) => (
                                 <button
                                   key={agent.code}
                                   type="button"
@@ -1333,28 +1347,34 @@ function Dashboard() {
                                     setAgentSearchQuery("");
                                   }}
                                   className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
-                                    selectedAgent?.code === agent.code ? "bg-primary/10 text-primary" : "text-gray-900 dark:text-white"
+                                    selectedAgent?.code === agent.code
+                                      ? "bg-primary/10 text-primary"
+                                      : "text-gray-900 dark:text-white"
                                   }`}
                                 >
-                                  <span>{agent.name} ({agent.branch})</span>
+                                  <span>
+                                    {agent.name} ({agent.branch})
+                                  </span>
                                   <span className="text-xs text-gray-500">
                                     3월 {Math.round((agent.performance?.[searchMonthKey] || 0) / 10000)}만
                                   </span>
                                 </button>
                               ))}
-                                {filtered.length > 80 && (
-                                  <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 dark:border-gray-600">
-                                    상위 80명만 표시. 이름 또는 지사명 검색으로 찾아주세요.
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              <div className="px-3 py-4 text-sm text-gray-500 text-center">검색 결과 없음</div>
-                            );
-                          })()}
-                        </div>
-                      </>
-                    )}
+                              {filtered.length > 80 && (
+                                <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 dark:border-gray-600">
+                                  상위 80명만 표시. 이름 또는 지사명 검색으로 찾아주세요.
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                              검색 결과 없음
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -1819,9 +1839,9 @@ function Dashboard() {
                 </div>
               </div>
             </div>
-            </div>
+          </div>
 
-            {/* 고정 하단 바: 면책문구(왼쪽) + 업데이트 날짜(오른쪽). 모바일에서만 2줄·작은 폰트 */}
+          {/* 고정 하단 바: 면책문구(왼쪽) + 업데이트 날짜(오른쪽). 모바일에서만 2줄·작은 폰트 */}
             <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col gap-0.5 md:flex-row md:items-center md:justify-between px-3 py-2 md:px-4 md:py-2.5 bg-white/95 dark:bg-gray-900/95 border-t border-gray-200 dark:border-gray-700 text-[10px] md:text-xs text-gray-500 dark:text-gray-400 backdrop-blur-sm">
               <span className="text-left md:max-w-[60%]">*상기 시상내용은 예상값이며, 참고용으로만 활용하시기 바랍니다.</span>
               {updateDate && (
@@ -1829,7 +1849,7 @@ function Dashboard() {
               )}
             </div>
           </main>
-        </>
+        </div>
       )}
     </>
   );
