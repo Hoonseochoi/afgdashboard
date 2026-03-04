@@ -106,9 +106,9 @@ export function MarchCards(props: MarchCardsProps) {
         <div className="absolute -left-3 -right-3 top-0 bottom-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
           <img src="/meritzair.png" alt="" className="w-full h-[115%] max-h-none object-cover object-center -translate-y-[7%]" />
         </div>
-        <div className="relative z-10 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] [text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
+        <div className="relative z-10 md:drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">🌴</span>
+            <span className="text-xl md:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">🌴</span>
             <div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">파타야 여행시상</h3>
               <p className="text-[10px] text-gray-800 dark:text-gray-200 font-medium opacity-90">3월 실적 기준</p>
@@ -116,7 +116,7 @@ export function MarchCards(props: MarchCardsProps) {
           </div>
           <TierBadges tiersMan={[40, 60, 80, 100]} currentPerf={currentMonthPerf} className="mb-2" />
         </div>
-        <div className="relative z-10 [text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
+        <div className="relative z-10 md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
           {(() => {
             const p = currentMonthPerf;
             const toMan = (n: number) => Math.round(n / 10000);

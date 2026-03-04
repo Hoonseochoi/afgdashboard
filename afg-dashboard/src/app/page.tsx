@@ -1279,21 +1279,21 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto mt-4 md:mt-0 items-end">
+                <div className="flex flex-row flex-wrap gap-2 sm:gap-4 w-full md:w-auto mt-4 md:mt-0 items-stretch md:items-end">
                   <div
-                    className={`rounded-xl p-4 md:p-5 text-white shadow-lg min-w-0 md:min-w-[200px] flex-1 ${
+                    className={`rounded-xl p-2.5 sm:p-4 md:p-5 text-white shadow-lg min-w-0 flex-1 md:min-w-[200px] ${
                       isTop3 ? "bg-gradient-to-br from-primary via-red-600 to-red-700 border border-meritz-gold/30" : isTop30 ? "bg-gradient-to-br from-primary to-red-600 border border-meritz-gold/20" : "bg-gradient-to-br from-primary to-red-600"
                     }`}
                   >
-                    <p className="text-sm opacity-90 mb-1">이번달 총 예상 시상금</p>
+                    <p className="text-xs sm:text-sm opacity-90 mb-0.5 sm:mb-1">이번달 총 예상 시상금</p>
                     <div className="flex items-baseline gap-1">
-                      <h3 className="text-2xl md:text-3xl font-extrabold">
+                      <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold">
                         {Math.round(totalEstimatedPrize / 10000).toLocaleString()}
                         <span className="text-lg font-medium">만원</span>
                       </h3>
                     </div>
                     {selectedViewMonth === 2 && (
-                      <div className="mt-2 text-xs bg-white/20 inline-block px-2 py-1 rounded whitespace-nowrap">
+                      <div className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs bg-white/20 inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded whitespace-nowrap">
                         전월 대비{" "}
                         <span className="font-bold">
                           {prizeDiff > 0 ? "+" : ""}
@@ -1304,17 +1304,17 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div
-                    className={`rounded-xl px-2.5 md:px-3.5 py-2 md:py-2.5 shadow-sm min-w-0 md:min-w-[140px] flex-[0.54] border shrink-0 ${
+                    className={`rounded-xl px-2 md:px-3.5 py-1.5 md:py-2.5 shadow-sm min-w-0 flex-[0.54] md:min-w-[140px] border shrink-0 ${
                       isTop3 ? "bg-gray-800/80 dark:bg-gray-800 border-meritz-gold/30" : isTop30 ? "bg-surface-light dark:bg-gray-800 border-meritz-gold/20" : "bg-surface-light dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                     }`}
                   >
-                    <p className={`text-xs mb-0.5 ${isTop3 ? "text-gray-400" : "text-gray-500 dark:text-gray-400"}`}>
+                    <p className={`text-[10px] sm:text-xs mb-0.5 ${isTop3 ? "text-gray-400" : "text-gray-500 dark:text-gray-400"}`}>
                       현재 인보험 누적 실적
                     </p>
                     <div className="flex items-baseline gap-1">
-                      <h3 className={`text-xl md:text-2xl font-bold ${isTop3 ? "text-white" : "text-gray-900 dark:text-white"}`}>
+                      <h3 className={`text-base sm:text-xl md:text-2xl font-bold ${isTop3 ? "text-white" : "text-gray-900 dark:text-white"}`}>
                         {Math.round(currentMonthPerf / 10000).toLocaleString()}
-                        <span className={isTop3 ? "text-base font-medium text-meritz-gold/90" : "text-base font-medium text-gray-500"}>
+                        <span className={isTop3 ? "text-sm sm:text-base font-medium text-meritz-gold/90" : "text-sm sm:text-base font-medium text-gray-500"}>
                           만원
                         </span>
                       </h3>
@@ -1418,25 +1418,25 @@ export default function Dashboard() {
               {!isPartnerBranch && nonPartnerCardsEl}
             </div>
 
-            <div className={`grid grid-cols-1 gap-4 md:gap-5 mb-6 lg:items-stretch ${
-              isPartnerBranch ? "" : selectedViewMonth === 3 ? "lg:grid-cols-[200px_280px_1fr]" : "lg:grid-cols-[280px_1fr]"
+            <div className={`grid gap-3 md:gap-5 mb-6 lg:items-stretch ${
+              isPartnerBranch ? "grid-cols-1" : selectedViewMonth === 3 ? "grid-cols-2 lg:grid-cols-[200px_280px_1fr]" : "grid-cols-1 lg:grid-cols-[280px_1fr]"
             }`}>
-              {/* 3월 탭: 3월 정규시상 · MY HOT · 7개월 추이 한 줄 (3월 정규시상은 MY HOT과 동일 UI 형태) */}
+              {/* 3월 탭: 3월 정규시상 · MY HOT · 7개월 추이 (모바일: 정규시상+MY HOT 한 줄, 7개월 추이 아래) */}
               {!isPartnerBranch && selectedViewMonth === 3 && (
-                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative max-w-[320px] lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
+                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
-                  <div className="relative z-10 p-4 md:p-5 flex flex-col items-center flex-1">
-                    <div className="w-full flex items-center gap-2 mb-2">
-                      <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
-                      <h3 className="text-lg font-bold text-white tracking-tight">3월 정규시상</h3>
+                  <div className="relative z-10 p-2.5 md:p-5 flex flex-col items-center flex-1">
+                    <div className="w-full flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2">
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
+                      <h3 className="text-sm md:text-lg font-bold text-white tracking-tight">3월 정규시상</h3>
                     </div>
-                    <p className="text-[10px] text-gray-400 mb-4 w-full text-left lg:text-center">실적의 100% · 1:1 비율</p>
+                    <p className="text-[9px] md:text-[10px] text-gray-400 mb-2 md:mb-4 w-full text-left lg:text-center">실적의 100% · 1:1 비율</p>
                     <div className="flex-1 flex flex-col items-center justify-center w-full">
-                      <p className="text-base md:text-lg font-medium text-gray-400 dark:text-gray-500 mb-2">인정실적</p>
-                      <p className="text-5xl md:text-6xl font-black text-white tracking-tight">
+                      <p className="text-xs md:text-lg font-medium text-gray-400 dark:text-gray-500 mb-1 md:mb-2">인정실적</p>
+                      <p className="text-3xl md:text-6xl font-black text-white tracking-tight">
                         {Math.round(marchPerf / 10000).toLocaleString()}
-                        <span className="text-2xl md:text-3xl font-normal text-gray-400 ml-1.5">만원</span>
+                        <span className="text-lg md:text-3xl font-normal text-gray-400 ml-1 md:ml-1.5">만원</span>
                       </p>
                     </div>
                   </div>
@@ -1444,16 +1444,16 @@ export default function Dashboard() {
               )}
               {/* 2026 MY HOT - 비파트너만 표시 (파트너는 MY HOT 없음) */}
               {!isPartnerBranch && (
-                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative max-w-[320px] lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
+                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
-                  <div className="relative z-10 p-4 md:p-5 flex flex-col items-center flex-1">
-                    <div className="w-full flex items-center gap-2 mb-2">
-                      <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
-                      <h3 className="text-lg font-bold text-white tracking-tight">2026 MY HOT</h3>
+                  <div className="relative z-10 p-2.5 md:p-5 flex flex-col items-center flex-1">
+                    <div className="w-full flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2">
+                      <svg viewBox="0 0 24 24" className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
+                      <h3 className="text-sm md:text-lg font-bold text-white tracking-tight">2026 MY HOT</h3>
                     </div>
-                    <p className="text-[10px] text-gray-400 mb-3 w-full text-left lg:text-center">1월~{selectedViewMonth}월 누적 · 연도시상</p>
-                    <div className="relative w-32 h-32 mb-3">
+                    <p className="text-[9px] md:text-[10px] text-gray-400 mb-2 md:mb-3 w-full text-left lg:text-center">1월~{selectedViewMonth}월 누적 · 연도시상</p>
+                    <div className="relative w-20 h-20 md:w-32 md:h-32 mb-2 md:mb-3">
                       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" fill="none" r="42" stroke="rgba(75,85,99,0.5)" strokeWidth="10" />
                         <circle
@@ -1477,28 +1477,28 @@ export default function Dashboard() {
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
                         {myHotIsChamp ? (
                           <>
-                            <span className="text-2xl font-black bg-gradient-to-r from-meritz-gold to-amber-200 bg-clip-text text-transparent">CHAMP</span>
-                            <span className="text-xs text-gray-400 mt-0.5">합산 RANK 1위</span>
+                            <span className="text-lg md:text-2xl font-black bg-gradient-to-r from-meritz-gold to-amber-200 bg-clip-text text-transparent">CHAMP</span>
+                            <span className="text-[10px] md:text-xs text-gray-400 mt-0.5">합산 RANK 1위</span>
                           </>
                         ) : (
                           <>
-                            <span className="text-3xl font-black text-white">
+                            <span className="text-xl md:text-3xl font-black text-white">
                               {myHotProgress}
-                              <span className="text-lg font-normal text-gray-400">%</span>
+                              <span className="text-sm md:text-lg font-normal text-gray-400">%</span>
                             </span>
-                            <span className="text-xs text-gray-400 mt-0.5">{myHotLabel} 목표</span>
+                            <span className="text-[10px] md:text-xs text-gray-400 mt-0.5">{myHotLabel} 목표</span>
                           </>
                         )}
                       </div>
                     </div>
-                    <div className="w-full rounded-lg bg-gray-800/50 border border-gray-700/50 p-2 text-center">
-                      <p className="text-[10px] text-gray-500 mb-0.5">현재 합산 실적</p>
-                      <p className="text-base font-bold text-white">{Math.round(myHotSum / 10000).toLocaleString()}만원</p>
+                    <div className="w-full rounded-lg bg-gray-800/50 border border-gray-700/50 p-1.5 md:p-2 text-center">
+                      <p className="text-[9px] md:text-[10px] text-gray-500 mb-0.5">현재 합산 실적</p>
+                      <p className="text-sm md:text-base font-bold text-white">{Math.round(myHotSum / 10000).toLocaleString()}만원</p>
                       {!myHotIsChamp && myHotRank > 0 && (
                         <p className="text-[10px] text-gray-400 mt-0.5">합산 순위 {myHotRank}위</p>
                       )}
                     </div>
-                    <p className="mt-2 w-full text-center text-[10px] text-gray-400 whitespace-nowrap">
+                    <p className="mt-1 md:mt-2 w-full text-center text-[9px] md:text-[10px] text-gray-400 whitespace-nowrap">
                       {[500, 650, 800, 1000].map((t, i) => {
                         const tierWon = t * 10000;
                         const achieved = myHotSum >= tierWon;
@@ -1515,7 +1515,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-              <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0">
+              <div className={`bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0 ${!isPartnerBranch && selectedViewMonth === 3 ? "col-span-2 lg:col-span-1" : ""}`}>
                 <div className="flex justify-between items-center mb-4 shrink-0">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
