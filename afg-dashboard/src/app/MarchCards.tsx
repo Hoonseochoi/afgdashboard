@@ -24,7 +24,7 @@ const containerVariants = {
 };
 const itemVariants = {
   hidden: { opacity: 0, y: 16, scale: 0.97 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 120, damping: 14 } },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 120, damping: 14 } },
 };
 
 const card = "relative overflow-hidden rounded-2xl backdrop-blur-xl border transition-all duration-200";
@@ -230,7 +230,8 @@ export function MarchCards(props: MarchCardsProps) {
       {/* ── 메리츠 클럽+ (1주차 특별 현금시상과 동일 UI, 구간 20/40/60/80/100만원) ── */}
       <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
         {(() => {
-          const tierMan = plusTarget >= 1000000 ? 100 : plusTarget > 0 ? plusTarget / 10000 : 20;
+          const target = plusTarget ?? 0;
+          const tierMan = target >= 1000000 ? 100 : target > 0 ? target / 10000 : 20;
           const goalLabel = tierMan >= 100 ? "100만원" : `${tierMan}만원`;
           const is100Man = plusTargetMinPerf >= 1000000;
           return (
