@@ -80,12 +80,31 @@ export function MarchCards(props: MarchCardsProps) {
       animate="visible"
       className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 auto-rows-[minmax(130px,auto)]"
     >
-      {/* ── 파타야 여행시상 (2행 스팬, 사진 비율에 맞게 컴팩트) ── */}
-      <motion.div variants={itemVariants} className={`md:row-span-2 ${card} ${accentCyan} p-3 flex flex-col justify-between min-h-0`}>
-        <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-300/20 dark:bg-cyan-400/10 blur-2xl pointer-events-none" />
+      {/* ── 파타야 여행시상 (2행 스팬, 테두리 글로우) ── */}
+      <motion.div
+        variants={itemVariants}
+        className="md:row-span-2 rounded-2xl p-[3px] overflow-hidden"
+        animate={{
+          background: [
+            "conic-gradient(from 0deg at 50% 50%, #06b6d4, #0d9488, #14b8a6, #22d3ee, #06b6d4)",
+            "conic-gradient(from 360deg at 50% 50%, #06b6d4, #0d9488, #14b8a6, #22d3ee, #06b6d4)",
+          ],
+          boxShadow: [
+            "0 0 20px rgba(6,182,212,0.45), 0 0 40px rgba(13,148,136,0.25)",
+            "0 0 32px rgba(34,211,238,0.55), 0 0 56px rgba(20,184,166,0.35)",
+            "0 0 20px rgba(6,182,212,0.45), 0 0 40px rgba(13,148,136,0.25)",
+          ],
+        }}
+        transition={{
+          background: { duration: 8, repeat: Infinity, ease: "linear" },
+          boxShadow: { duration: 2.5, repeat: Infinity, repeatType: "reverse" },
+        }}
+      >
+        <div className={`relative rounded-[14px] overflow-hidden ${card} ${accentCyan} p-3 flex flex-col justify-between min-h-0 w-full h-full`}>
+          <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-300/20 dark:bg-cyan-400/10 blur-2xl pointer-events-none" />
         {/* 이미지: 카드 가로 끝까지, 세로는 원본 비율 그대로(잘리지 않음), 텍스트와 겹침 가능 */}
-        <div className="absolute -left-3 -right-3 top-0 bottom-0 z-0 pointer-events-none flex items-center justify-center">
-          <img src="/meritzair.png" alt="" className="w-full h-full object-contain object-center" />
+        <div className="absolute -left-3 -right-3 top-0 bottom-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
+          <img src="/meritzair.png" alt="" className="w-full h-[115%] max-h-none object-cover object-center -translate-y-[7%]" />
         </div>
         <div className="relative z-10 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] [text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
           <div className="flex items-center gap-2 mb-2">
@@ -131,6 +150,7 @@ export function MarchCards(props: MarchCardsProps) {
               </div>
             );
           })()}
+        </div>
         </div>
       </motion.div>
 
