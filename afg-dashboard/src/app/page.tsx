@@ -224,6 +224,9 @@ function Dashboard() {
   const [exportLoading, setExportLoading] = useState(false);
   const [showPrizeGuide, setShowPrizeGuide] = useState(false);
   const exportAreaRef = useRef<HTMLDivElement>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [canInstall, setCanInstall] = useState(false);
+  const deferredPromptRef = useRef<any>(null);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -238,6 +241,59 @@ function Dashboard() {
       })
       .catch(() => {});
   }, []);
+
+  // PWA: standalone 모드 여부 감지
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateStandalone = () => {
+      const isStandaloneDisplayMode = window.matchMedia?.("(display-mode: standalone)")?.matches;
+      const isIOSStandalone = (window.navigator as any).standalone === true;
+      setIsStandalone(!!(isStandaloneDisplayMode || isIOSStandalone));
+    };
+
+    updateStandalone();
+
+    const mql = window.matchMedia?.("(display-mode: standalone)");
+    mql?.addEventListener?.("change", updateStandalone);
+
+    return () => {
+      mql?.removeEventListener?.("change", updateStandalone);
+    };
+  }, []);
+
+  // PWA: 설치 가능 여부 감지 (beforeinstallprompt)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = (event: Event) => {
+      const e = event as any;
+      e.preventDefault();
+      deferredPromptRef.current = e;
+      setCanInstall(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    const promptEvent = deferredPromptRef.current;
+    if (!promptEvent) return;
+    promptEvent.prompt();
+    try {
+      const choice = await promptEvent.userChoice;
+      console.log("[PWA] install choice:", choice?.outcome);
+    } catch {
+      // ignore
+    } finally {
+      deferredPromptRef.current = null;
+      setCanInstall(false);
+    }
+  };
 
   const handleExportPng = async () => {
     const el = exportAreaRef.current;
@@ -1174,15 +1230,27 @@ function Dashboard() {
                     로그아웃
                   </button>
                   <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={handleExportPng}
-                      disabled={exportLoading}
-                      className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <span className="material-symbols-outlined text-sm sm:text-base">download</span>
-                      {exportLoading ? "내보내는 중..." : "내보내기"}
-                    </button>
+                    {!isCaptureMode && !isStandalone && canInstall && (
+                      <button
+                        type="button"
+                        onClick={handleInstallApp}
+                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-primary border border-primary/60 dark:border-primary shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-sm sm:text-base">download</span>
+                        앱 설치
+                      </button>
+                    )}
+                    {!isCaptureMode && !isStandalone && !canInstall && (
+                      <button
+                        type="button"
+                        onClick={handleExportPng}
+                        disabled={exportLoading}
+                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <span className="material-symbols-outlined text-sm sm:text-base">download</span>
+                        {exportLoading ? "내보내는 중..." : "내보내기"}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setShowPrizeGuide(true)}
@@ -1549,7 +1617,7 @@ function Dashboard() {
             }`}>
               {/* 3월 탭: 3월 정규시상 · MY HOT · 7개월 추이 (모바일: 정규시상+MY HOT 한 줄, 7개월 추이 아래) */}
               {!isPartnerBranch && selectedViewMonth === 3 && (
-                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
+                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none w-full lg:h-full flex flex-col">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
                   <div className="relative z-10 p-2.5 md:p-5 flex flex-col items-center flex-1">
@@ -1570,7 +1638,7 @@ function Dashboard() {
               )}
               {/* 2026 MY HOT - 비파트너만 표시 (파트너는 MY HOT 없음) */}
               {!isPartnerBranch && (
-                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
+                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none w-full lg:h-full flex flex-col">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
                   <div className="relative z-10 p-2.5 md:p-5 flex flex-col items-center flex-1">
