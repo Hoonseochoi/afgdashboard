@@ -17,7 +17,7 @@ export interface NonPartnerCardsProps {
   week3Next: string;
   week3Progress: number;
   viewW3: number;
-  selectedViewMonth: 1 | 2;
+  selectedViewMonth: 1 | 2 | 3;
   monthlyPrize: number;
   monthlyNext: string;
   monthlyProgress: number;

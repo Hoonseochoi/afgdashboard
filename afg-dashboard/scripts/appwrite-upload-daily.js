@@ -83,38 +83,67 @@ function parseMonthFromFilename(filename) {
   return { current, prev };
 }
 
+/** 헤더 행에서 열 제목으로 인덱스 찾기. 없으면 기본값 반환 */
+function findCol(headerRow, keywords, defaultIdx) {
+  if (!Array.isArray(headerRow)) return defaultIdx;
+  for (let c = 0; c < headerRow.length; c++) {
+    const cell = String(headerRow[c] ?? '').trim();
+    if (keywords.some((kw) => cell.includes(kw))) return c;
+  }
+  return defaultIdx;
+}
+
 function parseDailyXlsx(filePath) {
   const XLSX = require('xlsx');
   const wb = XLSX.readFile(filePath);
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: 0 });
   let headerRow = 0;
-  for (let r = 0; r < Math.min(10, rows.length); r++) {
+  for (let r = 0; r < Math.min(15, rows.length); r++) {
     const row = rows[r];
-    if (Array.isArray(row) && row.some((c) => String(c).includes('인정실적') || String(c).includes('사용인코드'))) {
+    if (Array.isArray(row) && row.some((c) => String(c).includes('인정실적') || String(c).includes('당월실적') || String(c).includes('사용인코드'))) {
       headerRow = r;
       break;
     }
   }
+  const h = rows[headerRow] || [];
+  const idxCode = findCol(h, ['사용인코드', '코드'], IDX_CODE);
+  const idxName = findCol(h, ['설계사명', '이름'], IDX_NAME);
+  const idxCurrent = findCol(h, ['인정실적', '인정 실적', '당월실적'], IDX_CURRENT);
+  const idxPrev = findCol(h, ['전월실적'], IDX_PREV);
+  const idxW1 = findCol(h, ['1주차'], IDX_W1);
+  const idxW2 = findCol(h, ['2주차'], IDX_W2);
+  const idxW3 = findCol(h, ['3주차'], IDX_W3);
+  const idxW4 = findCol(h, ['4주차'], IDX_W4);
+  const idxBranch = findCol(h, ['지사명'], IDX_BRANCH);
+
   const result = [];
   for (let r = headerRow + 1; r < rows.length; r++) {
     const row = rows[r];
     if (!Array.isArray(row)) continue;
-    const branch = String(row[IDX_BRANCH] ?? '').trim();
+    const branch = String(row[idxBranch] ?? '').trim();
     if (!branch.includes('어센틱')) continue;
-    const code = String(row[IDX_CODE] ?? '').trim();
+    const code = String(row[idxCode] ?? '').trim();
     if (!code || code.length < 5) continue;
-    const name = String(row[IDX_NAME] ?? '').trim() || code;
+    const name = String(row[idxName] ?? '').trim() || code;
+    const rawCurrent = row[idxCurrent];
+    const rawW1 = row[idxW1];
+    const currentMonth = Number(rawCurrent) || (typeof rawCurrent === 'string' ? Number(String(rawCurrent).replace(/[,\s]/g, '')) || 0 : 0);
+    const prevMonth = Number(row[idxPrev]) || 0;
+    const week1 = Number(rawW1) || (typeof rawW1 === 'string' ? Number(String(rawW1).replace(/[,\s]/g, '')) || 0 : 0);
+    const week2 = Number(row[idxW2]) || 0;
+    const week3 = Number(row[idxW3]) || 0;
+    const week4 = Number(row[idxW4]) || 0;
     result.push({
       code,
       name,
       branch,
-      currentMonth: Number(row[IDX_CURRENT]) || 0,
-      prevMonth: Number(row[IDX_PREV]) || 0,
-      week1: Number(row[IDX_W1]) || 0,
-      week2: Number(row[IDX_W2]) || 0,
-      week3: Number(row[IDX_W3]) || 0,
-      week4: Number(row[IDX_W4]) || 0,
+      currentMonth,
+      prevMonth,
+      week1,
+      week2,
+      week3,
+      week4,
     });
   }
   return result;

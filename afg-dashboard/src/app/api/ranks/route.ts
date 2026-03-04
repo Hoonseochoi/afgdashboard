@@ -6,7 +6,7 @@ import { join } from 'path';
 
 const DEV_MASTER_ID = 'develope';
 const RANK_EXCLUDE_CODE = '712345678';
-const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02'];
+const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03'];
 
 function getRanksFromLocalJson(): Record<string, number[]> {
   const dataPath = join(process.cwd(), 'src', 'data', 'data.json');

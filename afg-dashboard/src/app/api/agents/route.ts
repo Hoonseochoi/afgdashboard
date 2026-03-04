@@ -12,7 +12,27 @@ import { join } from 'path';
 
 const DEV_MASTER_ID = 'develope';
 const RANK_EXCLUDE_CODE = '712345678';
-const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02'];
+const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03'];
+
+type AgentWithPerf = { code?: string; performance?: Record<string, number>; weekly?: Record<string, number> };
+
+/** 2월 마감 fix 데이터(february_closed.json)로 2026-01, 2026-02만 덮어쓰기. weekly는 덮지 않음(3월 탭에서 당월 1주차 등이 유지되도록) */
+function mergeFebruaryFix<T extends AgentWithPerf>(agents: T[]): T[] {
+  try {
+    const fixPath = join(process.cwd(), 'src', 'data', 'february_closed.json');
+    const raw = readFileSync(fixPath, 'utf-8');
+    const fix = JSON.parse(raw) as Record<string, { performance: Record<string, number>; weekly?: Record<string, number> }>;
+    return agents.map((a) => {
+      const code = a.code ?? '';
+      const closed = fix[code];
+      if (!closed) return a;
+      const performance = { ...a.performance, ...closed.performance };
+      return { ...a, performance };
+    });
+  } catch {
+    return agents;
+  }
+}
 
 function getAgentsFromLocalJson(): any[] {
   const dataPath = join(process.cwd(), 'src', 'data', 'data.json');
@@ -92,7 +112,8 @@ export async function GET() {
     const updateDate = configApp?.updateDate ?? '0000';
 
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
-      const items = await appwriteAgentsListAll({ filterRole: 'agent' });
+      let items = await appwriteAgentsListAll({ filterRole: 'agent' });
+      items = mergeFebruaryFix(items);
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
@@ -102,15 +123,18 @@ export async function GET() {
 
     if (session.role === 'manager') {
       const mCode = session.targetManagerCode || session.code || '';
-      const items = await appwriteAgentsListAll({ filterManagerCode: mCode });
+      let items = await appwriteAgentsListAll({ filterManagerCode: mCode });
+      items = mergeFebruaryFix(items);
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
       return NextResponse.json({ agents: agentsData, updateDate });
     }
 
-    const agent = await appwriteAgentGetByCode(session.code!);
+    let agent = await appwriteAgentGetByCode(session.code!);
     if (agent && agent.code !== RANK_EXCLUDE_CODE) {
+      const merged = mergeFebruaryFix([agent]);
+      agent = merged[0];
       return NextResponse.json({ agents: [toSafeAgent(agent)], updateDate });
     }
     return NextResponse.json({ agents: [], updateDate });

@@ -14,7 +14,9 @@ import {
   Line,
 } from "recharts";
 import januaryClosedData from "@/data/january_closed.json";
+import februaryClosedData from "@/data/february_closed.json";
 import type { PartnerPrizeData } from "@/lib/appwrite-server";
+import { MarchCards } from "./MarchCards";
 import { NonPartnerCards } from "./NonPartnerCards";
 
 const januaryClosed = januaryClosedData as Record<
@@ -23,6 +25,14 @@ const januaryClosed = januaryClosedData as Record<
     code: string;
     performance: Record<string, number>;
     weekly: { week1: number; week2: number; week3?: number };
+  }
+>;
+const februaryClosed = februaryClosedData as Record<
+  string,
+  {
+    code: string;
+    performance: Record<string, number>;
+    weekly: { week1: number; week2: number; week3: number; week4: number };
   }
 >;
 const RANK_EXCLUDE_CODE = "712345678"; // 테스트용 노연지 계정 — 랭킹·실적 순위에서 제외
@@ -197,7 +207,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [globalRanks, setGlobalRanks] = useState<Record<string, number[]>>({});
   const [updateDate, setUpdateDate] = useState<string>("");
-  const [selectedViewMonth, setSelectedViewMonth] = useState<1 | 2>(2); // 1월 | 2월
+  const [selectedViewMonth, setSelectedViewMonth] = useState<1 | 2 | 3>(3); // 1월 | 2월 | 3월 (디폴트 3월)
   const [prizeMonthDropdownOpen, setPrizeMonthDropdownOpen] = useState(false);
   const [agentSearchOpen, setAgentSearchOpen] = useState(false);
   const [agentSearchQuery, setAgentSearchQuery] = useState("");
@@ -246,16 +256,17 @@ export default function Dashboard() {
       // 화면과 동일한 픽셀 너비로 고정해 클론이 같은 비율로 렌더링되게 함 (글씨 두 줄 내려감 방지)
       const w = el.offsetWidth;
       const h = el.offsetHeight;
+      const pad = 4; // PNG 내보낼 때 네 방향 여백(px)
       const origStyle = { width: el.style.width, minWidth: el.style.minWidth, maxWidth: el.style.maxWidth, boxSizing: el.style.boxSizing, padding: el.style.padding };
       try {
-        el.style.width = `${w}px`;
-        el.style.minWidth = `${w}px`;
-        el.style.maxWidth = `${w}px`;
         el.style.boxSizing = "border-box";
-        el.style.padding = "2px"; // PNG 내보낼 때 네 방향 2px 여백
+        el.style.padding = `${pad}px`;
+        el.style.width = `${w + pad * 2}px`;
+        el.style.minWidth = `${w + pad * 2}px`;
+        el.style.maxWidth = `${w + pad * 2}px`;
         const dataUrl = await toPng(el, {
-          width: w + 4,
-          height: h + 4,
+          width: w + pad * 2,
+          height: h + pad * 2,
           pixelRatio: 3,
           backgroundColor: document.documentElement.classList.contains("dark") ? "#111827" : "#f3f4f6",
           cacheBust: true,
@@ -309,7 +320,8 @@ export default function Dashboard() {
         setUpdateDate(data.updateDate || "");
         const excludeTest = (data.agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
         if (excludeTest.length > 0) {
-          const sorted = [...excludeTest].sort((a, b) => (b.performance?.["2026-02"] || 0) - (a.performance?.["2026-02"] || 0));
+          const rankKey = new Date().getMonth() + 1 >= 3 ? "2026-03" : "2026-02";
+          const sorted = [...excludeTest].sort((a, b) => (b.performance?.[rankKey] || 0) - (a.performance?.[rankKey] || 0));
           setSelectedAgent(sorted[0]);
         }
         if (data.ranks) setGlobalRanks(data.ranks);
@@ -323,7 +335,7 @@ export default function Dashboard() {
     fetchData();
   }, [router, retryKey]);
 
-  const rankKeyMonth = selectedViewMonth === 1 ? "2026-01" : "2026-02";
+  const rankKeyMonth = selectedViewMonth === 1 ? "2026-01" : selectedViewMonth === 2 ? "2026-02" : "2026-03";
   const dailyDiffKey = `${rankKeyMonth}-diff`;
   const dailyDiff = (selectedAgent?.performance?.[dailyDiffKey] ?? 0) as number;
   const isPartnerBranch = (selectedAgent?.branch || "").includes("파트너");
@@ -340,7 +352,7 @@ export default function Dashboard() {
     const o: Record<string, number> = {};
     if (!selectedAgent || !(selectedAgent.branch || "").includes("파트너")) return o;
     const list = (agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE && (a.branch || "").includes("파트너"));
-    for (const monthKey of ["2026-01", "2026-02"]) {
+    for (const monthKey of ["2026-01", "2026-02", "2026-03"]) {
       const sorted = [...list].sort((a: any, b: any) => (b.performance?.[monthKey] ?? 0) - (a.performance?.[monthKey] ?? 0));
       const idx = sorted.findIndex((a: any) => a.code === selectedAgent.code);
       if (idx !== -1) o[monthKey] = idx + 1;
@@ -486,6 +498,8 @@ export default function Dashboard() {
   let viewW3Feb = 0; // 2월 3주차 실적 (3주차 인보험용)
   let week1Past = false;
   let week2Past = false;
+  let week1SpecialPrizeMarch = 0;
+  let week1PatayaPrizeMarch = 0;
   // 주차 종료 여부는 '지금 시점'(오늘 날짜) 기준. 진행중/달성 실패 배지가 실제와 맞도록
   const todayDay = new Date().getDate();
   const currentWeekNum = Math.min(4, Math.max(1, Math.ceil((todayDay || 1) / 7)));
@@ -505,6 +519,7 @@ export default function Dashboard() {
       { name: "12월", value: selectedAgent.performance["2025-12"] || 0, prize: 0 },
       { name: "1월", value: selectedAgent.performance["2026-01"] || 0, prize: 0 },
       { name: "2월", value: selectedAgent.performance["2026-02"] || 0, prize: 0 },
+      { name: "3월", value: selectedAgent.performance["2026-03"] || 0, prize: 0 },
     ];
 
     // 1·2월 시상금 (실적 추이 차트 막대용)
@@ -534,22 +549,42 @@ export default function Dashboard() {
     let fPlus = 0;
     if (fMin >= 1000000) fPlus = 3000000; else if (fMin >= 800000) fPlus = 2400000; else if (fMin >= 600000) fPlus = 1800000; else if (fMin >= 400000) fPlus = 1200000; else if (fMin >= 200000) fPlus = 600000;
     prizeFeb += fMonthly + fDouble + fPlus + fCur;
-    const nameToPrize: Record<string, number> = { "1월": prizeJan, "2월": prizeFeb };
+    const marW1 = selectedAgent.weekly?.week1 || 0;
+    const marCur = selectedAgent.performance["2026-03"] ?? 0;
+    const marPrev = selectedAgent.performance["2026-02"] ?? 0;
+    const MAR_W1_SPECIAL: [number, number][] = [[1200000, 6000000], [1000000, 4000000], [800000, 2400000], [500000, 1000000], [300000, 300000], [200000, 200000]];
+    const MAR_W1_PATAYA: [number, number][] = [[1000000, 5000000], [700000, 2100000], [500000, 1000000], [300000, 300000], [200000, 200000]];
+    const getWP = (p: number, tiers: [number, number][]) => { for (const [t, prize] of tiers) { if (p >= t) return prize; } return 0; };
+    let prizeMar = getWP(marW1, MAR_W1_SPECIAL) + getWP(marW1, MAR_W1_PATAYA);
+    let marMonthly = 0;
+    if (marCur >= 2500000) marMonthly = 5000000; else if (marCur >= 2000000) marMonthly = 4000000; else if (marCur >= 1800000) marMonthly = 3600000; else if (marCur >= 1500000) marMonthly = 3000000; else if (marCur >= 1200000) marMonthly = 2000000; else if (marCur >= 1000000) marMonthly = 1500000;
+    let marDouble = 0;
+    if (marPrev >= 200000 && marCur >= 200000) { let bt = Math.floor(marCur / 100000) * 100000; if (bt > 1000000) bt = 1000000; marDouble = bt * 2; }
+    const marMin = Math.min(marPrev, marCur);
+    let marPlus = 0;
+    if (marMin >= 1000000) marPlus = 3000000; else if (marMin >= 800000) marPlus = 2400000; else if (marMin >= 600000) marPlus = 1800000; else if (marMin >= 400000) marPlus = 1200000; else if (marMin >= 200000) marPlus = 600000;
+    prizeMar += marMonthly + marDouble + marPlus + marCur;
+    const nameToPrize: Record<string, number> = { "1월": prizeJan, "2월": prizeFeb, "3월": prizeMar };
     performanceData = performanceData.map((d) => ({ ...d, prize: nameToPrize[d.name] ?? 0 }));
 
-    // 선택 월에 따른 데이터 소스 (1월=마감데이터, 2월=현재)
+    // 선택 월에 따른 데이터 소스 (1월=마감데이터, 2월/3월=현재)
     const isJanuaryView = selectedViewMonth === 1;
+    const isMarchView = selectedViewMonth === 3;
 
     currentMonthPerf = isJanuaryView
       ? (janData?.performance["2026-01"] ?? selectedAgent.performance["2026-01"] ?? 0)
-      : (selectedAgent.performance["2026-02"] ?? 0);
+      : isMarchView
+        ? (selectedAgent.performance["2026-03"] ?? 0)
+        : (selectedAgent.performance["2026-02"] ?? 0);
     prevMonthPerf = isJanuaryView
       ? (janData?.performance["2025-12"] ?? selectedAgent.performance["2025-12"] ?? 0)
-      : (janData?.performance["2026-01"] ?? selectedAgent.performance["2026-01"] ?? 0); // 2월 전월대비: 1월 마감 데이터 우선
+      : isMarchView
+        ? (selectedAgent.performance["2026-02"] ?? 0)
+        : (janData?.performance["2026-01"] ?? selectedAgent.performance["2026-01"] ?? 0);
     diff = currentMonthPerf - prevMonthPerf;
 
     // 누적실적 목표 계산: 기본 40만, 40만 초과 시 다음구간, 전구간 초과 시 RANK-1 실적. 파트너는 파트너 내 RANK만 사용
-    const rankKey = isJanuaryView ? "2026-01" : "2026-02";
+    const rankKey = isJanuaryView ? "2026-01" : isMarchView ? "2026-03" : "2026-02";
     const monthRanks = isPartnerBranch
       ? sortedByMonth.map((a: any) => a.performance?.[rankKey] ?? 0)
       : (globalRanks[rankKey] || []);
@@ -576,10 +611,11 @@ export default function Dashboard() {
     progress = monthlyGoal > 0 ? Math.min(100, Math.round((currentMonthPerf / monthlyGoal) * 100)) : 0;
     
     // 시상금 로직 계산 (선택 월 기준)
-    viewW1 = isJanuaryView ? (janData?.weekly?.week1 ?? 0) : (selectedAgent.weekly?.week1 || 0);
-    viewW2 = isJanuaryView ? (janData?.weekly?.week2 ?? 0) : (selectedAgent.weekly?.week2 || 0);
+    const febData = februaryClosed[code];
+    viewW1 = isJanuaryView ? (janData?.weekly?.week1 ?? 0) : isMarchView ? (selectedAgent.weekly?.week1 || 0) : (febData?.weekly?.week1 ?? selectedAgent.weekly?.week1 ?? 0);
+    viewW2 = isJanuaryView ? (janData?.weekly?.week2 ?? 0) : isMarchView ? (selectedAgent.weekly?.week2 || 0) : (febData?.weekly?.week2 ?? selectedAgent.weekly?.week2 ?? 0);
     viewW3 = isJanuaryView ? (janData?.weekly?.week3 ?? 0) : 0;
-    viewW3Feb = isJanuaryView ? 0 : (selectedAgent.weekly?.week3 ?? 0);
+    viewW3Feb = isJanuaryView ? 0 : isMarchView ? (selectedAgent.weekly?.week3 ?? 0) : (febData?.weekly?.week3 ?? selectedAgent.weekly?.week3 ?? 0);
     const w1 = viewW1;
     const w2 = viewW2;
     const w3 = viewW3;
@@ -591,11 +627,20 @@ export default function Dashboard() {
       return 0;
     };
     
-    // 1주차 시상 (1월/2월 티어 다름)
-    week1Prize = isJanuaryView ? getWeekPrize(w1, JAN_W1_PRIZES) : getWeekPrize(w1, FEB_W1_PRIZES);
+    const MAR_W1_SPECIAL_PRIZES: [number, number][] = [[1200000, 6000000], [1000000, 4000000], [800000, 2400000], [500000, 1000000], [300000, 300000], [200000, 200000]];
+    const MAR_W1_PATAYA_PRIZES: [number, number][] = [[1000000, 5000000], [700000, 2100000], [500000, 1000000], [300000, 300000], [200000, 200000]];
     
-    // 2주차 시상
-    week2Prize = isJanuaryView ? getWeekPrize(w2, JAN_W2_PRIZES) : getWeekPrize(w2, FEB_W2_PRIZES);
+    // 1주차 시상 (1월/2월/3월 티어 다름)
+    if (isMarchView) {
+      week1SpecialPrizeMarch = getWeekPrize(w1, MAR_W1_SPECIAL_PRIZES);
+      week1PatayaPrizeMarch = getWeekPrize(w1, MAR_W1_PATAYA_PRIZES);
+      week1Prize = week1SpecialPrizeMarch + week1PatayaPrizeMarch;
+    } else {
+      week1Prize = isJanuaryView ? getWeekPrize(w1, JAN_W1_PRIZES) : getWeekPrize(w1, FEB_W1_PRIZES);
+    }
+    
+    // 2주차 시상 (3월 탭에서는 1주차만 시상 카드 사용)
+    week2Prize = isJanuaryView ? getWeekPrize(w2, JAN_W2_PRIZES) : isMarchView ? 0 : getWeekPrize(w2, FEB_W2_PRIZES);
     
     // 3주차 시상 (1월만)
     week3Prize = isJanuaryView ? getWeekPrize(w3, JAN_W3_PRIZES) : 0;
@@ -623,12 +668,16 @@ export default function Dashboard() {
     else if (minPerf >= 400000) meritzClubPlusPrize = 1200000;
     else if (minPerf >= 200000) meritzClubPlusPrize = 600000;
     
-    // 정규시상 (100%). 파트너 지사는 1번 시상이 실적 정률 450%
-    regularPrize = currentMonthPerf;
-    if (isPartnerBranch) regularPrize = Math.round(currentMonthPerf * 4.5);
+    // 정규시상: 비파트너 = 실적 100%, 파트너 지사 = 실적 정률 450%
+    regularPrize = isPartnerBranch ? Math.round(currentMonthPerf * 4.5) : currentMonthPerf;
     
-    // 총 예상 시상금
-    totalEstimatedPrize = week1Prize + week2Prize + week3Prize + monthlyPrize + doubleMeritzPrize + meritzClubPlusPrize + regularPrize;
+    // 총 예상 시상금 (MY MERITZ PRIZE 카드에 보이는 예상시상금들의 합)
+    if (isMarchView && !isPartnerBranch) {
+      // 3월 탭: 1주차 특별 + 1주차 파타야 + 2배 메리츠클럽 + 메리츠클럽+ + 3월 정규시상
+      totalEstimatedPrize = week1Prize + doubleMeritzPrize + meritzClubPlusPrize + regularPrize;
+    } else {
+      totalEstimatedPrize = week1Prize + week2Prize + week3Prize + monthlyPrize + doubleMeritzPrize + meritzClubPlusPrize + regularPrize;
+    }
     if (isPartnerBranch && p) {
       if (isJanuaryView) {
         totalEstimatedPrize = (p.productWeek1PrizeJan ?? 0) + (p.productWeek2PrizeJan ?? 0) + (p.continuous121Prize ?? 0) + (p.week3PrizeJan ?? 0) + (p.week4PrizeJan ?? 0) + (p.continuous12Prize ?? 0) + (p.continuous12ExtraPrize ?? 0) + meritzClubPlusPrize + regularPrize;
@@ -645,7 +694,7 @@ export default function Dashboard() {
       }
     }
 
-    // 2월 시: 전월(1월) 시상금 계산 → 시상금 차이 (전월 대비)
+    // 2월/3월 시: 전월 시상금 계산 → 시상금 차이 (전월 대비). 3월은 2월 대비
     if (!isJanuaryView) {
       const jData = janData ?? { performance: { "2026-01": selectedAgent.performance["2026-01"] ?? 0, "2025-12": selectedAgent.performance["2025-12"] ?? 0 }, weekly: { week1: 0, week2: 0, week3: 0 } };
       const jW1 = jData.weekly?.week1 ?? 0;
@@ -653,6 +702,31 @@ export default function Dashboard() {
       const jW3 = jData.weekly?.week3 ?? 0;
       const jCur = jData.performance["2026-01"] ?? 0;
       const jPrev = jData.performance["2025-12"] ?? 0;
+      let prevMonthTotalPrize: number;
+      if (isMarchView) {
+        const febCur = selectedAgent.performance["2026-02"] ?? 0;
+        let jMonthly = 0;
+        if (febCur >= 2500000) jMonthly = 5000000;
+        else if (febCur >= 2000000) jMonthly = 4000000;
+        else if (febCur >= 1800000) jMonthly = 3600000;
+        else if (febCur >= 1500000) jMonthly = 3000000;
+        else if (febCur >= 1200000) jMonthly = 2000000;
+        else if (febCur >= 1000000) jMonthly = 1500000;
+        let jDouble = 0;
+        if (jCur >= 200000 && febCur >= 200000) {
+          let bt = Math.floor(febCur / 100000) * 100000;
+          if (bt > 1000000) bt = 1000000;
+          jDouble = bt * 2;
+        }
+        const jMin = Math.min(jCur, febCur);
+        let jPlus = 0;
+        if (jMin >= 1000000) jPlus = 3000000;
+        else if (jMin >= 800000) jPlus = 2400000;
+        else if (jMin >= 600000) jPlus = 1800000;
+        else if (jMin >= 400000) jPlus = 1200000;
+        else if (jMin >= 200000) jPlus = 600000;
+        prevMonthTotalPrize = jMonthly + jDouble + jPlus + febCur;
+      } else {
       let jWeek1 = getWeekPrize(jW1, JAN_W1_PRIZES);
       let jWeek2 = getWeekPrize(jW2, JAN_W2_PRIZES);
       let jWeek3 = getWeekPrize(jW3, JAN_W3_PRIZES);
@@ -676,12 +750,13 @@ export default function Dashboard() {
       else if (jMin >= 600000) jPlus = 1800000;
       else if (jMin >= 400000) jPlus = 1200000;
       else if (jMin >= 200000) jPlus = 600000;
-      const prevMonthTotalPrize = jWeek1 + jWeek2 + jWeek3 + jMonthly + jDouble + jPlus + jCur;
+      prevMonthTotalPrize = jWeek1 + jWeek2 + jWeek3 + jMonthly + jDouble + jPlus + jCur;
+      }
       prizeDiff = totalEstimatedPrize - prevMonthTotalPrize;
     }
     
-    // 1주차: 지난 주차면 "다음 구간" 대신 "달성 실패" 또는 "달성 OO만원" (1월 선택 시 모두 마감)
-    week1Past = isJanuaryView || currentWeekNum >= 2;
+    // 1주차: 지난 주차면 "다음 구간" 대신 "달성 실패" 또는 "달성 OO만원" (1월 선택 시 모두 마감, 3월은 3월 1주차 기준)
+    week1Past = isJanuaryView || (isMarchView ? currentMonthNum >= 3 && currentWeekNum >= 2 : currentWeekNum >= 2);
     const nextW1 = WEEK_TIERS.find(t => t > w1);
     const week1AchievedTier = week1Past && w1 >= 200000 ? WEEK_TIERS.filter(t => t <= w1).pop() : null;
     week1Next = week1Past
@@ -791,12 +866,12 @@ export default function Dashboard() {
   let remainingMonthly = 0;
   let remainingPlus = 0;
   if (selectedAgent?.performance) {
-    const curM = selectedAgent.performance["2026-02"] || 0;
+    const curM = (selectedAgent.performance[rankKeyMonth] ?? 0) || 0;
     const nextM = MONTHLY_TIERS.find(t => t > curM);
     remainingMonthly = nextM ? Math.max(0, nextM - curM) : 0;
-    const jan = selectedAgent.performance["2026-01"] || 0;
-    const feb = selectedAgent.performance["2026-02"] || 0;
-    const mar = selectedAgent.performance["2026-03"] || 0;
+    const jan = selectedAgent.performance["2026-01"] ?? 0;
+    const feb = selectedAgent.performance["2026-02"] ?? 0;
+    const mar = selectedAgent.performance["2026-03"] ?? 0;
     const min12 = Math.min(jan, feb);
     if (currentMonthNum >= 3) {
       const pt = getTier(min12);
@@ -817,7 +892,7 @@ export default function Dashboard() {
   const allTiersFilledThisMonth = remainingMonthly === 0;
   let remainToShow = 0;
   let remainLabel: "more" | "gap" = "more"; // "more" = N만원 더 채우세요, "gap" = 2위와의 격차
-  if (selectedViewMonth === 2) {
+  if (selectedViewMonth === 2 || selectedViewMonth === 3) {
     if (allTiersFilledThisMonth) {
       // 해당월 모든 구간 채움 → 랭크 1단계 올리기 또는 1위면 2위와의 격차
       if (rankInMonth === 1 && sortedByMonth.length >= 2) {
@@ -843,8 +918,27 @@ export default function Dashboard() {
       }
     }
   }
-  // 비파트너 시상 카드: 1월·2월 모두 표시 (위의 selectedViewMonth === 2 배너 로직과 분리)
+  // 비파트너 시상 카드: 1·2월 NonPartnerCards, 3월 MarchCards
   if (!isPartnerBranch) {
+    if (selectedViewMonth === 3) {
+      nonPartnerCardsEl = (
+        <MarchCards
+          viewW1={viewW1}
+          week1SpecialPrize={week1SpecialPrizeMarch}
+          week1PatayaPrize={week1PatayaPrizeMarch}
+          currentMonthPerf={currentMonthPerf}
+          prevMonthPerf={prevMonthPerf}
+          doubleMeritzPrize={doubleMeritzPrize}
+          meritzClubPlusPrize={meritzClubPlusPrize}
+          plusTarget={plusTarget}
+          plusNext={plusNext}
+          plusProgress={plusProgress}
+          febPerf={febPerf}
+          marchPerf={marchPerf}
+          currentMonthNum={currentMonthNum}
+        />
+      );
+    } else {
     nonPartnerCardsEl = (
       <NonPartnerCards
         week1Prize={week1Prize}
@@ -879,6 +973,7 @@ export default function Dashboard() {
         dailyDiff={dailyDiff}
       />
     );
+    }
   }
 
   return (
@@ -984,8 +1079,8 @@ export default function Dashboard() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        const perfKey = "2026-02";
-                        const sorted = [...agents].filter((a: any) => a.code !== RANK_EXCLUDE_CODE).sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
+                        const searchMonthKey = "2026-03";
+                        const sorted = [...(agents || [])].filter((a: any) => a.code !== RANK_EXCLUDE_CODE).sort((a, b) => (b.performance?.[searchMonthKey] || 0) - (a.performance?.[searchMonthKey] || 0));
                         const q = agentSearchQuery.trim().toLowerCase();
                         const filtered = q
                           ? sorted.filter((a) => a.name?.toLowerCase().includes(q) || (a.branch && String(a.branch).toLowerCase().includes(q)))
@@ -1016,8 +1111,8 @@ export default function Dashboard() {
                       <div className="fixed inset-0 z-40" onClick={() => setAgentSearchOpen(false)} />
                       <div className="absolute top-full left-0 right-0 md:right-auto mt-1 w-full md:w-80 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50">
                           {(() => {
-                            const perfKey = "2026-02";
-                            const sorted = [...agents].filter((a: any) => a.code !== RANK_EXCLUDE_CODE).sort((a, b) => (b.performance?.[perfKey] || 0) - (a.performance?.[perfKey] || 0));
+                            const searchMonthKey = "2026-03";
+                            const sorted = [...(agents || [])].filter((a: any) => a.code !== RANK_EXCLUDE_CODE).sort((a, b) => (b.performance?.[searchMonthKey] || 0) - (a.performance?.[searchMonthKey] || 0));
                             const q = agentSearchQuery.trim().toLowerCase();
                             const filtered = q
                               ? sorted.filter((a) => a.name?.toLowerCase().includes(q) || (a.branch && String(a.branch).toLowerCase().includes(q)))
@@ -1040,7 +1135,7 @@ export default function Dashboard() {
                                 >
                                   <span>{agent.name} ({agent.branch})</span>
                                   <span className="text-xs text-gray-500">
-                                    {Math.round((agent.performance?.[perfKey] || 0) / 10000)}만
+                                    3월 {Math.round((agent.performance?.[searchMonthKey] || 0) / 10000)}만
                                   </span>
                                 </button>
                               ))}
@@ -1065,20 +1160,37 @@ export default function Dashboard() {
             <div ref={exportAreaRef} className="space-y-0">
             <div
               className={`rounded-2xl shadow-lg p-4 md:p-6 mb-6 md:mb-8 relative overflow-hidden ${
-                isTop3
-                  ? "bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black border-2 border-meritz-gold/50"
-                  : isTop30
-                    ? "bg-gradient-to-br from-gray-800/95 to-gray-900/95 dark:from-gray-900 dark:to-black border border-meritz-gold/30 bg-surface-light dark:bg-surface-dark"
-                    : "bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-gray-700"
+                selectedViewMonth === 3
+                  ? isTop3
+                    ? "shadow-cyan-200/20 dark:shadow-cyan-900/20 bg-gradient-to-br from-slate-900 via-cyan-950/90 to-teal-950 dark:from-black dark:via-cyan-950 dark:to-teal-950 border-2 border-cyan-400/50 dark:border-cyan-500/50"
+                    : isTop30
+                      ? "shadow-cyan-200/20 dark:shadow-cyan-900/20 bg-gradient-to-br from-sky-900/95 via-cyan-900/90 to-teal-900/95 dark:from-cyan-950 dark:via-slate-900 dark:to-teal-950 border-2 border-cyan-400/40 dark:border-cyan-500/40"
+                      : "shadow-cyan-200/20 dark:shadow-cyan-900/20 bg-gradient-to-br from-sky-50 via-cyan-50/80 to-teal-50 dark:from-slate-800 dark:via-cyan-900/30 dark:to-teal-950/50 border-2 border-cyan-200/60 dark:border-cyan-500/30"
+                  : isTop3
+                    ? "bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black border-2 border-meritz-gold/50"
+                    : isTop30
+                      ? "bg-gradient-to-br from-gray-800/95 to-gray-900/95 dark:from-gray-900 dark:to-black border border-meritz-gold/30 bg-surface-light dark:bg-surface-dark"
+                      : "bg-surface-light dark:bg-surface-dark border border-gray-100 dark:border-gray-700"
               }`}
             >
-              {isTop30 && (
+              {selectedViewMonth === 3 ? (
+                isTop30 ? (
+                  <>
+                    <div className="absolute top-0 right-0 w-72 h-72 bg-cyan-400/10 dark:bg-cyan-500/10 rounded-full -mr-24 -mt-24 z-0" />
+                    <div className="absolute bottom-0 left-0 w-56 h-56 bg-teal-400/10 dark:bg-teal-500/10 rounded-full -ml-20 -mb-20 z-0" />
+                  </>
+                ) : (
+                  <>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-300/15 dark:bg-cyan-500/10 rounded-full -mr-16 -mt-16 z-0" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-300/15 dark:bg-teal-500/10 rounded-full -ml-12 -mb-12 z-0" />
+                  </>
+                )
+              ) : isTop30 ? (
                 <>
                   <div className="absolute top-0 right-0 w-72 h-72 bg-meritz-gold/10 rounded-full -mr-24 -mt-24 z-0" />
                   <div className="absolute bottom-0 left-0 w-56 h-56 bg-primary/10 rounded-full -ml-20 -mb-20 z-0" />
                 </>
-              )}
-              {!isTop30 && (
+              ) : (
                 <>
                   <div className="absolute top-0 right-0 w-64 h-64 bg-meritz-gold/10 rounded-full -mr-16 -mt-16 z-0" />
                   <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full -ml-12 -mb-12 z-0" />
@@ -1139,7 +1251,7 @@ export default function Dashboard() {
                     <div className="flex flex-wrap gap-2">
                       {totalEstimatedPrize > 0 && (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-meritz-gold/10 text-meritz-gold border border-meritz-gold/30 whitespace-nowrap">
-                          2월 시상 달성
+                          {selectedViewMonth}월 시상 달성
                         </span>
                       )}
                       {prevMonthPerf >= 200000 && currentMonthPerf >= 200000 && (
@@ -1236,7 +1348,7 @@ export default function Dashboard() {
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setPrizeMonthDropdownOpen(false)} aria-hidden />
                       <div className="absolute top-full right-0 mt-1 z-50 min-w-[4rem] py-1 rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-surface-dark shadow-lg">
-                        {([1, 2] as const).map((m) => (
+                        {([1, 2, 3] as const).map((m) => (
                           <button
                             key={m}
                             type="button"
@@ -1379,7 +1491,7 @@ export default function Dashboard() {
                       <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gray fill-current mr-2" aria-hidden><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.07-4-4L2 16.99z"/></svg>
                       최근 7개월 실적 추이
                     </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">1월·2월 클릭 시 시상 현황 전환</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">1월·2월·3월 클릭 시 시상 현황 전환</p>
                   </div>
                 </div>
                 <div className="flex-1 min-h-[200px] w-full">
@@ -1414,6 +1526,7 @@ export default function Dashboard() {
                               "12월": "2025-12",
                               "1월": "2026-01",
                               "2월": "2026-02",
+                              "3월": "2026-03",
                             };
                             const monthKey = label != null ? monthMap[label] : undefined;
                             if (value != null && monthKey) {
@@ -1456,8 +1569,8 @@ export default function Dashboard() {
                         strokeWidth={3}
                         dot={(props: any) => {
                           const { cx, cy, payload } = props;
-                          const isClickable = payload?.name === "1월" || payload?.name === "2월";
-                          const monthNum = payload?.name === "1월" ? 1 : payload?.name === "2월" ? 2 : null;
+                          const isClickable = payload?.name === "1월" || payload?.name === "2월" || payload?.name === "3월";
+                          const monthNum = payload?.name === "1월" ? 1 : payload?.name === "2월" ? 2 : payload?.name === "3월" ? 3 : null;
                           return (
                             <circle
                               cx={cx}
