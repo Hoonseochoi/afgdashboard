@@ -52,7 +52,7 @@ async function main() {
   const db = new Databases(client);
 
   const code = "105203241";
-  const name = "105203241";
+  const name = "이진영 지점장";
   const defaultPassword = "105203241";
 
   console.log("[AddAgent] checking agent code:", code);
@@ -66,7 +66,8 @@ async function main() {
     const doc = docs[0];
     console.log("[AddAgent] existing document found:", doc.$id);
     const update = {};
-    if (!doc.name) update.name = name;
+    // 이름은 항상 최신 값으로 맞춰 준다.
+    update.name = name;
     if (!doc.password) update.password = defaultPassword;
     if (!doc.role) update.role = "agent";
     if (doc.isFirstLogin === undefined) update.isFirstLogin = true;
