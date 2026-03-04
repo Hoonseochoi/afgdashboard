@@ -1,0 +1,188 @@
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * Supabase 서버 전용 클라이언트
+ * - API 라우트 / Node 스크립트에서만 사용 (Service Role Key 필요)
+ * - 환경 변수는 매 요청 시점에 읽음 (배포 시 빌드 타임 인라인 방지)
+ *   - SUPABASE_URL 또는 NEXT_PUBLIC_SUPABASE_URL
+ *   - SUPABASE_SERVICE_ROLE_KEY
+ */
+
+function getEnv() {
+  const url =
+    process.env.SUPABASE_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL ??
+    "";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  return { url, key };
+}
+
+function getServerClient(): SupabaseClient {
+  const { url, key } = getEnv();
+  if (!url || !key) {
+    throw new Error("Supabase 환경변수가 설정되어 있지 않습니다.");
+  }
+  return createClient(url, key, {
+    auth: {
+      persistSession: false,
+    },
+  });
+}
+
+export function isSupabaseConfigured(): boolean {
+  const { url, key } = getEnv();
+  return !!url && !!key;
+}
+
+/** 파트너 시상 데이터 (기존 Appwrite와 동일 타입 호환) */
+export type PartnerPrizeData = {
+  productWeek1?: number;
+  productWeek1InsPrize?: number;
+  productWeek1Prize?: number;
+  productWeek2?: number;
+  productWeek2InsPrize?: number;
+  productWeek2Prize?: number;
+  week3Prize?: number;
+  week34Sum?: number;
+  week34Prize?: number;
+  continuous12Jan?: number;
+  continuous12Feb?: number;
+  continuous12Prize?: number;
+  continuous12ExtraJan?: number;
+  continuous12ExtraFeb?: number;
+  continuous12ExtraPrize?: number;
+  continuous23Feb?: number;
+  continuous23Mar?: number;
+  continuous23Prize?: number;
+  continuous23ExtraFeb?: number;
+  continuous23ExtraMar?: number;
+  continuous23ExtraPrize?: number;
+  continuous121Dec?: number;
+  continuous121Jan?: number;
+  continuous121Prize?: number;
+  productWeek1PrizeJan?: number;
+  productWeek2PrizeJan?: number;
+  productWeek2InsJan?: number;
+  week3PrizeJan?: number;
+  week4Jan?: number;
+  week4PrizeJan?: number;
+};
+
+export type SupabaseAgentRecord = {
+  id: string;
+  code: string;
+  name: string;
+  password?: string | null;
+  role?: string | null;
+  performance?: Record<string, number> | null;
+  weekly?: Record<string, number> | null;
+  partner?: PartnerPrizeData | null;
+  managerCode?: string | null;
+  managerName?: string | null;
+  branch?: string | null;
+  isFirstLogin?: boolean | null;
+  targetManagerCode?: string | null;
+};
+
+function rowToAgent(row: any): SupabaseAgentRecord {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    password: row.password ?? undefined,
+    role: row.role ?? undefined,
+    performance: (row.performance || null) as Record<string, number> | null,
+    weekly: (row.weekly || null) as Record<string, number> | null,
+    partner: (row.partner || null) as PartnerPrizeData | null,
+    managerCode: row.manager_code ?? null,
+    managerName: row.manager_name ?? null,
+    branch: row.branch ?? null,
+    isFirstLogin: row.is_first_login ?? null,
+    targetManagerCode: row.target_manager_code ?? null,
+  };
+}
+
+/** code로 설계사 1건 조회 */
+export async function supabaseAgentGetByCode(
+  code: string,
+): Promise<SupabaseAgentRecord | null> {
+  const client = getServerClient();
+  const trimmed = String(code).trim();
+  if (!trimmed) return null;
+  const { data, error } = await client
+    .from("agents")
+    .select("*")
+    .eq("code", trimmed)
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("supabaseAgentGetByCode error:", error.message);
+    throw error;
+  }
+  if (!data) return null;
+  return rowToAgent(data);
+}
+
+/** 필터로 설계사 목록 조회 (전체 수집) */
+export async function supabaseAgentsListAll(params: {
+  filterRole?: string;
+  filterManagerCode?: string;
+}): Promise<SupabaseAgentRecord[]> {
+  const client = getServerClient();
+  let query = client.from("agents").select("*");
+
+  if (params.filterRole) {
+    query = query.eq("role", params.filterRole);
+  }
+  if (params.filterManagerCode) {
+    query = query.eq("manager_code", params.filterManagerCode);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("supabaseAgentsListAll error:", error.message);
+    throw error;
+  }
+  return (data || []).map(rowToAgent);
+}
+
+/** config 테이블에서 key='app' 행 1건 조회 */
+export async function supabaseConfigGetApp(): Promise<{
+  updateDate?: string;
+} | null> {
+  const client = getServerClient();
+  const { data, error } = await client
+    .from("config")
+    .select("key, update_date")
+    .eq("key", "app")
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("supabaseConfigGetApp error:", error.message);
+    throw error;
+  }
+  if (!data) return null;
+  return { updateDate: data.update_date ?? undefined };
+}
+
+/** 설계사 비밀번호 / isFirstLogin 수정 (change-password 전용) */
+export async function supabaseAgentUpdate(
+  code: string,
+  data: { password?: string; isFirstLogin?: boolean },
+): Promise<void> {
+  const client = getServerClient();
+  const patch: Record<string, unknown> = {};
+  if (data.password !== undefined) patch.password = data.password;
+  if (data.isFirstLogin !== undefined) patch.is_first_login = data.isFirstLogin;
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await client
+    .from("agents")
+    .update(patch)
+    .eq("code", code);
+  if (error) {
+    console.error("supabaseAgentUpdate error:", error.message);
+    throw error;
+  }
+}
+

@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
-import { isAppwriteConfigured, appwriteConfigGetApp } from '@/lib/appwrite-server';
+import { isSupabaseConfigured, supabaseConfigGetApp } from '@/lib/supabase-server';
 
-/** Appwrite 연결 상태 확인 (배포/연결 테스트용) */
+/** DB 연결 상태 확인 (Supabase, 기존 /api/appwrite-health 경로 유지) */
 export async function GET() {
-  if (!isAppwriteConfigured()) {
+  if (!isSupabaseConfigured()) {
     return NextResponse.json(
-      { ok: false, error: 'Appwrite env not configured (API key, database, collections)' },
+      { ok: false, error: 'Supabase env not configured (URL, service_role key)' },
       { status: 503 }
     );
   }
   try {
-    const config = await appwriteConfigGetApp();
+    const config = await supabaseConfigGetApp();
     return NextResponse.json({
       ok: true,
-      message: 'Appwrite connected',
+      message: 'Supabase connected',
       updateDate: config?.updateDate ?? null,
     });
   } catch (e) {

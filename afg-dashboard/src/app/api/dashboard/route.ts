@@ -1,15 +1,15 @@
 /**
  * 대시보드 초기 로드용 - 세션 + agents + updateDate + ranks 를 한 번에 반환.
- * 클라이언트 요청 1회, Appwrite listAll 1회로 로딩 시간 단축.
+ * Supabase agents 테이블 사용.
  */
 import { NextResponse } from 'next/server';
 import {
-  appwriteAgentGetByCode,
-  appwriteAgentsListAll,
-  appwriteConfigGetApp,
-  isAppwriteConfigured,
-  type AppwriteAgentRecord,
-} from '@/lib/appwrite-server';
+  supabaseAgentGetByCode,
+  supabaseAgentsListAll,
+  supabaseConfigGetApp,
+  isSupabaseConfigured,
+  type SupabaseAgentRecord,
+} from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -18,7 +18,7 @@ const DEV_MASTER_ID = 'develope';
 const RANK_EXCLUDE_CODE = '712345678';
 const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03'];
 
-type AgentWithPerf = { code?: string; performance?: Record<string, number>; weekly?: Record<string, number> };
+type AgentWithPerf = { code?: string; performance?: Record<string, number> | null; weekly?: Record<string, number> | null };
 
 /** 2월 마감 fix 데이터(february_closed.json)로 2026-01, 2026-02만 덮어쓰기. weekly는 덮지 않음(3월 탭 당월 1주차 유지) */
 function mergeFebruaryFix<T extends AgentWithPerf>(agents: T[]): T[] {
@@ -45,12 +45,12 @@ function getAgentsFromLocalJson(): any[] {
   return data.filter((a) => a.code !== RANK_EXCLUDE_CODE).map((a) => ({ ...a, role: 'agent' }));
 }
 
-function toSafeAgent(d: AppwriteAgentRecord) {
+function toSafeAgent(d: SupabaseAgentRecord) {
   const { password, ...rest } = d;
   return rest;
 }
 
-function computeRanks(items: AppwriteAgentRecord[]): Record<string, number[]> {
+function computeRanks(items: SupabaseAgentRecord[]): Record<string, number[]> {
   const allPerformances: Record<string, number[]> = Object.fromEntries(RANK_MONTHS.map((m) => [m, []]));
   items.forEach((data) => {
     if (data.code === RANK_EXCLUDE_CODE) return;
@@ -107,26 +107,26 @@ export async function GET() {
       targetManagerCode: session.targetManagerCode,
     };
 
-    if (session.code === DEV_MASTER_ID && !isAppwriteConfigured()) {
+    if (session.code === DEV_MASTER_ID && !isSupabaseConfigured()) {
       const agentsData = getAgentsFromLocalJson();
       return NextResponse.json({ user, agents: agentsData, updateDate: '0000' });
     }
 
-    if (!isAppwriteConfigured()) {
+    if (!isSupabaseConfigured()) {
       return NextResponse.json(
-        { error: '서버 설정 오류: Appwrite가 설정되지 않았습니다.' },
+        { error: '서버 설정 오류: Supabase가 설정되지 않았습니다.' },
         { status: 500 }
       );
     }
 
-    const configApp = await appwriteConfigGetApp();
+    const configApp = await supabaseConfigGetApp();
     const updateDate = configApp?.updateDate ?? '0000';
 
     // 특수 코드: 105203241 → 지정된 지사만 조회
     if (session.code === '105203241') {
       const allowedBranches = ['송도스튜디오', '에이스스튜디오', '엔타스2스튜디오'];
-      let allItems = await appwriteAgentsListAll({ filterRole: 'agent' });
-      allItems = mergeFebruaryFix(allItems);
+      let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
+      allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
       const filtered = allItems.filter((a) => {
         if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
         const branchName = String(a.branch);
@@ -135,8 +135,8 @@ export async function GET() {
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
 
-      let allForRanks = await appwriteAgentsListAll({ filterRole: 'agent' });
-      allForRanks = mergeFebruaryFix(allForRanks);
+      let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
+      allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
       const ranks = computeRanks(allForRanks);
       const partnerAgents = allForRanks
         .filter(
@@ -157,8 +157,8 @@ export async function GET() {
     }
 
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
-      let items = await appwriteAgentsListAll({ filterRole: 'agent' });
-      items = mergeFebruaryFix(items);
+      let items = await supabaseAgentsListAll({ filterRole: 'agent' });
+      items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
@@ -169,13 +169,13 @@ export async function GET() {
 
     if (session.role === 'manager') {
       const mCode = session.targetManagerCode || session.code || '';
-      let items = await appwriteAgentsListAll({ filterManagerCode: mCode });
-      items = mergeFebruaryFix(items);
+      let items = await supabaseAgentsListAll({ filterManagerCode: mCode });
+      items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
-      let allForRanks = await appwriteAgentsListAll({ filterRole: 'agent' });
-      allForRanks = mergeFebruaryFix(allForRanks);
+      let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
+      allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
       const ranks = computeRanks(allForRanks);
       const partnerAgents = allForRanks
         .filter((a) => a.code !== RANK_EXCLUDE_CODE && a.branch && String(a.branch).includes('파트너'))
@@ -183,12 +183,12 @@ export async function GET() {
       return NextResponse.json({ user, agents: agentsData, updateDate, ranks, partnerAgents });
     }
 
-    let agent = await appwriteAgentGetByCode(session.code!);
+    let agent = await supabaseAgentGetByCode(session.code!);
     if (agent && agent.code !== RANK_EXCLUDE_CODE) {
-      const merged = mergeFebruaryFix([agent]);
+      const merged = mergeFebruaryFix([agent]) as SupabaseAgentRecord[];
       agent = merged[0];
-      let allForRanks = await appwriteAgentsListAll({ filterRole: 'agent' });
-      allForRanks = mergeFebruaryFix(allForRanks);
+      let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
+      allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
       const ranks = computeRanks(allForRanks);
       const partnerAgents = allForRanks
         .filter((a) => a.code !== RANK_EXCLUDE_CODE && a.branch && String(a.branch).includes('파트너'))

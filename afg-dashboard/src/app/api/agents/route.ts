@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import {
-  appwriteAgentGetByCode,
-  appwriteAgentsListAll,
-  appwriteConfigGetApp,
-  isAppwriteConfigured,
-  type AppwriteAgentRecord,
-} from '@/lib/appwrite-server';
+  supabaseAgentGetByCode,
+  supabaseAgentsListAll,
+  supabaseConfigGetApp,
+  isSupabaseConfigured,
+  type SupabaseAgentRecord,
+} from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -14,7 +14,7 @@ const DEV_MASTER_ID = 'develope';
 const RANK_EXCLUDE_CODE = '712345678';
 const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03'];
 
-type AgentWithPerf = { code?: string; performance?: Record<string, number>; weekly?: Record<string, number> };
+type AgentWithPerf = { code?: string; performance?: Record<string, number> | null; weekly?: Record<string, number> | null };
 
 /** 2월 마감 fix 데이터(february_closed.json)로 2026-01, 2026-02만 덮어쓰기. weekly는 덮지 않음(3월 탭에서 당월 1주차 등이 유지되도록) */
 function mergeFebruaryFix<T extends AgentWithPerf>(agents: T[]): T[] {
@@ -41,12 +41,12 @@ function getAgentsFromLocalJson(): any[] {
   return data.filter((a) => a.code !== RANK_EXCLUDE_CODE).map((a) => ({ ...a, role: 'agent' }));
 }
 
-function toSafeAgent(d: AppwriteAgentRecord) {
+function toSafeAgent(d: SupabaseAgentRecord) {
   const { password, ...rest } = d;
   return rest;
 }
 
-function computeRanks(items: AppwriteAgentRecord[]): Record<string, number[]> {
+function computeRanks(items: SupabaseAgentRecord[]): Record<string, number[]> {
   const allPerformances: Record<string, number[]> = Object.fromEntries(RANK_MONTHS.map((m) => [m, []]));
   items.forEach((data) => {
     if (data.code === RANK_EXCLUDE_CODE) return;
@@ -96,24 +96,24 @@ export async function GET() {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
 
-    if (session.code === DEV_MASTER_ID && !isAppwriteConfigured()) {
+    if (session.code === DEV_MASTER_ID && !isSupabaseConfigured()) {
       const agentsData = getAgentsFromLocalJson();
       return NextResponse.json({ agents: agentsData, updateDate: '0000' });
     }
 
-    if (!isAppwriteConfigured()) {
+    if (!isSupabaseConfigured()) {
       return NextResponse.json(
-        { error: '서버 설정 오류: Appwrite가 설정되지 않았습니다.' },
+        { error: '서버 설정 오류: Supabase가 설정되지 않았습니다.' },
         { status: 500 }
       );
     }
 
-    const configApp = await appwriteConfigGetApp();
+    const configApp = await supabaseConfigGetApp();
     const updateDate = configApp?.updateDate ?? '0000';
 
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
-      let items = await appwriteAgentsListAll({ filterRole: 'agent' });
-      items = mergeFebruaryFix(items);
+      let items = await supabaseAgentsListAll({ filterRole: 'agent' });
+      items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
@@ -123,17 +123,17 @@ export async function GET() {
 
     if (session.role === 'manager') {
       const mCode = session.targetManagerCode || session.code || '';
-      let items = await appwriteAgentsListAll({ filterManagerCode: mCode });
-      items = mergeFebruaryFix(items);
+      let items = await supabaseAgentsListAll({ filterManagerCode: mCode });
+      items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMcListOrder(agentsData);
       return NextResponse.json({ agents: agentsData, updateDate });
     }
 
-    let agent = await appwriteAgentGetByCode(session.code!);
+    let agent = await supabaseAgentGetByCode(session.code!);
     if (agent && agent.code !== RANK_EXCLUDE_CODE) {
-      const merged = mergeFebruaryFix([agent]);
+      const merged = mergeFebruaryFix([agent]) as SupabaseAgentRecord[];
       agent = merged[0];
       return NextResponse.json({ agents: [toSafeAgent(agent)], updateDate });
     }

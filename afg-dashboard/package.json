@@ -6,16 +6,19 @@
     "dev": "next dev -p 3001 --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "capture:dump": "node scripts/capture-dump-dashboard.js",
+    "capture:bulk": "node scripts/bulk-capture.js",
+    "capture:bulk:test": "node scripts/bulk-capture.js 10",
+    "upload-daily": "node scripts/supabase-upload-daily.js"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "appwrite": "^22.4.1",
+    "@supabase/supabase-js": "^2.98.0",
     "dotenv": "^17.3.1",
     "framer-motion": "^12.34.5",
     "html-to-image": "^1.11.13",
     "next": "16.1.6",
-    "node-appwrite": "^22.1.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.7.0",
@@ -28,6 +31,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "puppeteer": "^24.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

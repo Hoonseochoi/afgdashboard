@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { appwriteAgentsListAll, isAppwriteConfigured } from '@/lib/appwrite-server';
+import { supabaseAgentsListAll, isSupabaseConfigured } from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -28,7 +28,7 @@ function getRanksFromLocalJson(): Record<string, number[]> {
 }
 
 function computeRanks(
-  items: { code?: string; performance?: Record<string, number> }[]
+  items: { code?: string; performance?: Record<string, number> | null }[]
 ): Record<string, number[]> {
   const allPerformances: Record<string, number[]> = Object.fromEntries(RANK_MONTHS.map((m) => [m, []]));
   items.forEach((data) => {
@@ -58,18 +58,18 @@ export async function GET() {
       }
     }
 
-    if (session?.code === DEV_MASTER_ID && !isAppwriteConfigured()) {
+    if (session?.code === DEV_MASTER_ID && !isSupabaseConfigured()) {
       return NextResponse.json({ ranks: getRanksFromLocalJson() });
     }
 
-    if (!isAppwriteConfigured()) {
+    if (!isSupabaseConfigured()) {
       return NextResponse.json(
-        { error: '서버 설정 오류: Appwrite가 설정되지 않았습니다.' },
+        { error: '서버 설정 오류: Supabase가 설정되지 않았습니다.' },
         { status: 500 }
       );
     }
 
-    const items = await appwriteAgentsListAll({ filterRole: 'agent' });
+    const items = await supabaseAgentsListAll({ filterRole: 'agent' });
     const ranks = computeRanks(items);
     return NextResponse.json({ ranks });
   } catch (error) {

@@ -20,7 +20,7 @@ const patches = {
   "add-partner-import": (content) => {
     const nl = content.includes("\r\n") ? "\r\n" : "\n";
     const old = `import januaryClosedData from "@/data/january_closed.json";${nl}${nl}const januaryClosed`;
-    const new_ = `import januaryClosedData from "@/data/january_closed.json";${nl}import type { PartnerPrizeData } from "@/lib/appwrite-server";${nl}${nl}const januaryClosed`;
+    const new_ = `import januaryClosedData from "@/data/january_closed.json";${nl}import type { PartnerPrizeData } from "@/lib/supabase-server";${nl}${nl}const januaryClosed`;
     if (!content.includes(old)) throw new Error("add-partner-import: 찾을 문자열 없음");
     return content.replace(old, new_);
   },

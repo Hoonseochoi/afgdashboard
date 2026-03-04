@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, useRef, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toPng } from "html-to-image";
 import {
   Bar,
@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import januaryClosedData from "@/data/january_closed.json";
 import februaryClosedData from "@/data/february_closed.json";
-import type { PartnerPrizeData } from "@/lib/appwrite-server";
+import type { PartnerPrizeData } from "@/lib/supabase-server";
 import { MarchCards } from "./MarchCards";
 import { NonPartnerCards } from "./NonPartnerCards";
 import LoadingLines from "./LoadingLines";
@@ -201,7 +201,7 @@ function PartnerPrizeCardFull({
   );
 }
 
-export default function Dashboard() {
+function Dashboard() {
   const [agents, setAgents] = useState<any[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
@@ -226,6 +226,8 @@ export default function Dashboard() {
   const exportAreaRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isCaptureMode = searchParams.get("capture") === "1";
 
   // App 처음 열릴 때 백엔드 Appwrite 연결 확인 (브라우저 SDK 직접 호출 시 404 등 오류 방지)
   useEffect(() => {
@@ -294,39 +296,54 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    // 대시보드 데이터 한 번에 로드 (요청 1회로 로딩 단축)
     const fetchData = async () => {
       try {
         setAgentsError(null);
-        const res = await fetch("/api/dashboard");
-        const data = await res.json();
-
-        if (!res.ok) {
-          if (res.status === 401) {
+        if (isCaptureMode) {
+          // 캡처 모드: 로그인 없이 로컬 JSON만 사용
+          const res = await fetch("/api/capture-data");
+          const data = await res.json();
+          if (!res.ok) {
+            setAgentsError(data.error || "캡처 데이터를 불러올 수 없습니다.");
+            setLoading(false);
+            return;
+          }
+          setAgents(data.agents || []);
+          setUpdateDate(data.updateDate || "");
+          const excludeTest = (data.agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
+          if (excludeTest.length > 0) {
+            const rankKey = new Date().getMonth() + 1 >= 3 ? "2026-03" : "2026-02";
+            const sorted = [...excludeTest].sort((a, b) => (b.performance?.[rankKey] || 0) - (a.performance?.[rankKey] || 0));
+            setSelectedAgent(sorted[0]);
+          }
+          if (data.ranks) setGlobalRanks(data.ranks);
+        } else {
+          const res = await fetch("/api/dashboard");
+          const data = await res.json();
+          if (!res.ok) {
+            if (res.status === 401) {
+              router.push("/login");
+              return;
+            }
+            setAgentsError(data.error || "데이터를 불러올 수 없습니다.");
+            return;
+          }
+          if (!data.user) {
             router.push("/login");
             return;
           }
-          setAgentsError(data.error || "데이터를 불러올 수 없습니다.");
-          return;
+          setUser(data.user);
+          if (data.user.isFirstLogin) setShowPasswordModal(true);
+          setAgents(data.agents || []);
+          setUpdateDate(data.updateDate || "");
+          const excludeTest = (data.agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
+          if (excludeTest.length > 0) {
+            const rankKey = new Date().getMonth() + 1 >= 3 ? "2026-03" : "2026-02";
+            const sorted = [...excludeTest].sort((a, b) => (b.performance?.[rankKey] || 0) - (a.performance?.[rankKey] || 0));
+            setSelectedAgent(sorted[0]);
+          }
+          if (data.ranks) setGlobalRanks(data.ranks);
         }
-
-        if (!data.user) {
-          router.push("/login");
-          return;
-        }
-
-        setUser(data.user);
-        if (data.user.isFirstLogin) setShowPasswordModal(true);
-
-        setAgents(data.agents || []);
-        setUpdateDate(data.updateDate || "");
-        const excludeTest = (data.agents || []).filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
-        if (excludeTest.length > 0) {
-          const rankKey = new Date().getMonth() + 1 >= 3 ? "2026-03" : "2026-02";
-          const sorted = [...excludeTest].sort((a, b) => (b.performance?.[rankKey] || 0) - (a.performance?.[rankKey] || 0));
-          setSelectedAgent(sorted[0]);
-        }
-        if (data.ranks) setGlobalRanks(data.ranks);
       } catch (err) {
         console.error("데이터 로드 실패", err);
       } finally {
@@ -335,7 +352,71 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, [router, retryKey]);
+  }, [router, retryKey, isCaptureMode]);
+
+  // 캡처 모드: Puppeteer에서 호출할 전역 함수 노출
+  useEffect(() => {
+    if (!isCaptureMode || !agents.length || !exportAreaRef.current) return;
+    const el = exportAreaRef.current;
+    (window as any).__CAPTURE_SELECT = (index: number) => {
+      const list = agents.filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
+      const i = Math.max(0, Math.min(index, list.length - 1));
+      setSelectedAgent(list[i]);
+    };
+    (window as any).__CAPTURE_GET_PNG = async (): Promise<string> => {
+      const target = exportAreaRef.current;
+      if (!target) return "";
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const removed: { link: HTMLLinkElement; parent: Node; next: Node | null }[] = [];
+      document.querySelectorAll('link[rel="stylesheet"]').forEach((linkEl) => {
+        const link = linkEl as HTMLLinkElement;
+        if (link.href && new URL(link.href).origin !== origin) {
+          const parent = link.parentNode;
+          if (parent) {
+            removed.push({ link, parent, next: link.nextSibling });
+            parent.removeChild(link);
+          }
+        }
+      });
+      const w = target.offsetWidth;
+      const h = target.offsetHeight;
+      const pad = 4;
+      const origStyle = {
+        width: target.style.width,
+        minWidth: target.style.minWidth,
+        maxWidth: target.style.maxWidth,
+        boxSizing: target.style.boxSizing,
+        padding: target.style.padding,
+      };
+      try {
+        target.style.boxSizing = "border-box";
+        target.style.padding = `${pad}px`;
+        target.style.width = `${w + pad * 2}px`;
+        target.style.minWidth = `${w + pad * 2}px`;
+        target.style.maxWidth = `${w + pad * 2}px`;
+        const dataUrl = await toPng(target, {
+          width: w + pad * 2,
+          height: h + pad * 2,
+          pixelRatio: 3,
+          backgroundColor: document.documentElement.classList.contains("dark") ? "#111827" : "#f3f4f6",
+          cacheBust: true,
+          skipFonts: false,
+        });
+        return dataUrl;
+      } finally {
+        target.style.width = origStyle.width;
+        target.style.minWidth = origStyle.minWidth;
+        target.style.maxWidth = origStyle.maxWidth;
+        target.style.boxSizing = origStyle.boxSizing;
+        target.style.padding = origStyle.padding;
+        removed.forEach(({ link, parent, next }) => parent.insertBefore(link, next));
+      }
+    };
+    return () => {
+      delete (window as any).__CAPTURE_SELECT;
+      delete (window as any).__CAPTURE_GET_PNG;
+    };
+  }, [isCaptureMode, agents]);
 
   const rankKeyMonth = selectedViewMonth === 1 ? "2026-01" : selectedViewMonth === 2 ? "2026-02" : "2026-03";
   const dailyDiffKey = `${rankKeyMonth}-diff`;
@@ -433,11 +514,13 @@ export default function Dashboard() {
     );
   }
 
-  if (!selectedAgent && !loading && !user?.isFirstLogin) {
-    return <div className="flex flex-col h-screen items-center justify-center">
-      <p>조회 가능한 데이터가 없습니다.</p>
-      <button onClick={handleLogout} className="mt-4 text-primary underline">로그아웃</button>
-    </div>;
+  if (!selectedAgent && !loading && (isCaptureMode ? true : !user?.isFirstLogin)) {
+    return (
+      <div className="flex flex-col h-screen items-center justify-center">
+        <p>{isCaptureMode ? "캡처 데이터가 없습니다. data/capture/dashboard.json을 준비하세요." : "조회 가능한 데이터가 없습니다."}</p>
+        {!isCaptureMode && <button onClick={handleLogout} className="mt-4 text-primary underline">로그아웃</button>}
+      </div>
+    );
   }
 
   // 시상 실적 구간 (1주/2주/월간/MC+ 통합, 유니크 오름차순)
@@ -1069,7 +1152,7 @@ export default function Dashboard() {
 
       {selectedAgent && (
         <>
-          <header className="bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm">
+          <header className={`bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm ${isCaptureMode ? "hidden" : ""}`}>
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-0 md:h-16 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-0">
               {/* 1줄(모바일) / 좌측(데스크톱): 로고 + 우측 유저/로그아웃 */}
               <div className="flex items-center justify-between w-full md:w-auto">
@@ -1204,7 +1287,7 @@ export default function Dashboard() {
             </div>
           </header>
           <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-14">
-            <div ref={exportAreaRef} className="space-y-0">
+            <div ref={exportAreaRef} className="space-y-0" data-capture-area>
             <div
               className={`rounded-2xl shadow-lg p-4 md:p-6 mb-6 md:mb-8 relative overflow-hidden ${
                 selectedViewMonth === 3
@@ -1676,5 +1759,13 @@ export default function Dashboard() {
         </>
       )}
     </>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<LoadingLines />}>
+      <Dashboard />
+    </Suspense>
   );
 }

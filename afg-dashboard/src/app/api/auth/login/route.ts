@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { appwriteAgentGetByCode, isAppwriteConfigured } from '@/lib/appwrite-server';
+import { supabaseAgentGetByCode, isSupabaseConfigured } from '@/lib/supabase-server';
 
 const DEV_MASTER_ID = 'develope';
 const DEV_MASTER_PW = 'develope';
@@ -38,14 +38,14 @@ export async function POST(request: Request) {
       return response;
     }
 
-    if (!isAppwriteConfigured()) {
+    if (!isSupabaseConfigured()) {
       return NextResponse.json(
-        { error: '서버 설정 오류: Appwrite가 설정되지 않았습니다. 관리자에게 문의하세요.' },
+        { error: '서버 설정 오류: Supabase가 설정되지 않았습니다. 관리자에게 문의하세요.' },
         { status: 500 }
       );
     }
 
-    const agent = await appwriteAgentGetByCode(String(code));
+    const agent = await supabaseAgentGetByCode(String(code));
     if (!agent) {
       return NextResponse.json({ error: '존재하지 않는 사번입니다.' }, { status: 401 });
     }

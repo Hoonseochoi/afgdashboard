@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { appwriteAgentGetByCode, appwriteAgentUpdate, isAppwriteConfigured } from '@/lib/appwrite-server';
+import { supabaseAgentGetByCode, supabaseAgentUpdate, isSupabaseConfigured } from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
@@ -18,18 +18,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '유효한 비밀번호를 입력해주세요.' }, { status: 400 });
     }
 
-    if (!isAppwriteConfigured()) {
+    if (!isSupabaseConfigured()) {
       return NextResponse.json(
-        { error: '서버 설정 오류: Appwrite가 설정되지 않았습니다.' },
+        { error: '서버 설정 오류: Supabase가 설정되지 않았습니다.' },
         { status: 500 }
       );
     }
 
-    const agent = await appwriteAgentGetByCode(session.code);
+    const agent = await supabaseAgentGetByCode(session.code);
     if (!agent) {
       return NextResponse.json({ error: '계정을 찾을 수 없습니다.' }, { status: 404 });
     }
-    await appwriteAgentUpdate(agent.id, {
+    await supabaseAgentUpdate(agent.code, {
       password: newPassword,
       isFirstLogin: false,
     });
