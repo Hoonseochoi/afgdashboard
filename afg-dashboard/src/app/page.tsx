@@ -221,6 +221,7 @@ export default function Dashboard() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [showPrizeGuide, setShowPrizeGuide] = useState(false);
   const exportAreaRef = useRef<HTMLDivElement>(null);
 
   const router = useRouter();
@@ -1034,6 +1035,31 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* 시상안 보기 모달 */}
+      {showPrizeGuide && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="relative bg-white dark:bg-surface-dark rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">1주차 시상안 보기</h3>
+              <button
+                type="button"
+                onClick={() => setShowPrizeGuide(false)}
+                className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900/60 flex items-center justify-center p-3 md:p-4">
+              <img
+                src="/api/prize-guide"
+                alt="1주차 시상안"
+                className="max-h-[80vh] w-auto rounded-lg shadow-md"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedAgent && (
         <>
           <header className="bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm">
@@ -1065,6 +1091,14 @@ export default function Dashboard() {
                   >
                     <span className="material-symbols-outlined text-base">download</span>
                     {exportLoading ? "내보내는 중..." : "내보내기"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPrizeGuide(true)}
+                    className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-base">visibility</span>
+                    시상안보기
                   </button>
                 </div>
               </div>
