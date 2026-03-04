@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Nunito } from "next/font/google";
 import "./globals.css";
+import { RegisterSW } from "./RegisterSW";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
@@ -17,6 +18,8 @@ const nunito = Nunito({
 export const metadata: Metadata = {
   title: "Meritz Individual Agent Dashboard",
   description: "Dashboard for Meritz GA Performance Management",
+  manifest: "/manifest.json",
+  themeColor: "#1e40af",
 };
 
 export default function RootLayout({
@@ -27,12 +30,16 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${notoSansKr.variable} ${nunito.variable} font-sans`} suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#1e40af" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
       </head>
       <body className="bg-background-light dark:bg-background-dark min-h-screen text-gray-800 dark:text-gray-200 transition-colors duration-200" suppressHydrationWarning>
+        <RegisterSW />
         {children}
       </body>
     </html>
