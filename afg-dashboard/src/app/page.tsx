@@ -487,6 +487,7 @@ export default function Dashboard() {
   let monthlyNext = "";
   let monthlyProgress = 0;
   let plusTarget = 0;      // 목표 구간 (min 기준)
+  let plusTargetMinPerf = 0; // 3월 메리츠클럽+ 달성목표 표기용 min(1월,2월) 실적
   let plusNext = "";
   let plusProgress = 0;
   let currentMonthNum = new Date().getMonth() + 1;
@@ -809,7 +810,8 @@ export default function Dashboard() {
           ? `2월에도 ${Math.round((plusTarget || 200000) / 10000)}만원달성시 완성`
           : (nextPlus ? `${Math.round(nextPlus / 10000)}만원` : "최대구간");
     } else if (currentMonthNum >= 3) {
-      plusTarget = getAchievedTier(Math.min(janPerf, febPerf));
+      plusTargetMinPerf = Math.min(janPerf, febPerf);
+      plusTarget = getAchievedTier(plusTargetMinPerf);
       plusProgress = plusTarget > 0 ? Math.min(100, (marchPerf / plusTarget) * 100) : 0;
       const nextPlus = PLUS_TIERS.find(t => t > (plusTarget || 0));
       const plusMarDone = marchPerf >= plusTarget && plusTarget > 0;
@@ -931,6 +933,7 @@ export default function Dashboard() {
           doubleMeritzPrize={doubleMeritzPrize}
           meritzClubPlusPrize={meritzClubPlusPrize}
           plusTarget={plusTarget}
+          plusTargetMinPerf={plusTargetMinPerf}
           plusNext={plusNext}
           plusProgress={plusProgress}
           febPerf={febPerf}
@@ -1162,10 +1165,10 @@ export default function Dashboard() {
               className={`rounded-2xl shadow-lg p-4 md:p-6 mb-6 md:mb-8 relative overflow-hidden ${
                 selectedViewMonth === 3
                   ? isTop3
-                    ? "shadow-cyan-200/20 dark:shadow-cyan-900/20 bg-gradient-to-br from-slate-900 via-cyan-950/90 to-teal-950 dark:from-black dark:via-cyan-950 dark:to-teal-950 border-2 border-cyan-400/50 dark:border-cyan-500/50"
+                    ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-meritz-gold/40 shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.25)]"
                     : isTop30
-                      ? "shadow-cyan-200/20 dark:shadow-cyan-900/20 bg-gradient-to-br from-sky-900/95 via-cyan-900/90 to-teal-900/95 dark:from-cyan-950 dark:via-slate-900 dark:to-teal-950 border-2 border-cyan-400/40 dark:border-cyan-500/40"
-                      : "shadow-cyan-200/20 dark:shadow-cyan-900/20 bg-gradient-to-br from-sky-50 via-cyan-50/80 to-teal-50 dark:from-slate-800 dark:via-cyan-900/30 dark:to-teal-950/50 border-2 border-cyan-200/60 dark:border-cyan-500/30"
+                      ? "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.25)]"
+                      : "bg-gradient-to-br from-white to-gray-50/60 dark:from-gray-800 dark:to-gray-800/90 border border-gray-200 dark:border-gray-600 shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.2)]"
                   : isTop3
                     ? "bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black border-2 border-meritz-gold/50"
                     : isTop30
@@ -1176,13 +1179,13 @@ export default function Dashboard() {
               {selectedViewMonth === 3 ? (
                 isTop30 ? (
                   <>
-                    <div className="absolute top-0 right-0 w-72 h-72 bg-cyan-400/10 dark:bg-cyan-500/10 rounded-full -mr-24 -mt-24 z-0" />
-                    <div className="absolute bottom-0 left-0 w-56 h-56 bg-teal-400/10 dark:bg-teal-500/10 rounded-full -ml-20 -mb-20 z-0" />
+                    <div className="absolute top-0 right-0 w-72 h-72 bg-gray-100/80 dark:bg-gray-700/30 rounded-full -mr-24 -mt-24 z-0" />
+                    <div className="absolute bottom-0 left-0 w-56 h-56 bg-gray-100/60 dark:bg-gray-700/20 rounded-full -ml-20 -mb-20 z-0" />
                   </>
                 ) : (
                   <>
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-300/15 dark:bg-cyan-500/10 rounded-full -mr-16 -mt-16 z-0" />
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-300/15 dark:bg-teal-500/10 rounded-full -ml-12 -mb-12 z-0" />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-gray-100/70 dark:bg-gray-700/25 rounded-full -mr-16 -mt-16 z-0" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-100/50 dark:bg-gray-700/20 rounded-full -ml-12 -mb-12 z-0" />
                   </>
                 )
               ) : isTop30 ? (
@@ -1231,11 +1234,13 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h2
                         className={`text-2xl md:text-3xl font-bold ${
-                          isTop3 || isTop30 ? "text-white" : "text-gray-900 dark:text-white"
+                          selectedViewMonth === 3 ? "text-gray-900 dark:text-white" : isTop3 || isTop30 ? "text-white" : "text-gray-900 dark:text-white"
                         }`}
                       >
                         {selectedAgent.name}{" "}
-                        <span className={`text-base md:text-lg font-normal ${isTop3 ? "text-meritz-gold/90" : isTop30 ? "text-meritz-gold dark:text-meritz-gold/90" : "text-gray-500 dark:text-gray-400"}`}>
+                        <span className={`text-base md:text-lg font-normal ${
+                          selectedViewMonth === 3 ? "text-gray-500 dark:text-gray-400" : isTop3 ? "text-meritz-gold/90" : isTop30 ? "text-meritz-gold dark:text-meritz-gold/90" : "text-gray-500 dark:text-gray-400"
+                        }`}>
                           님
                         </span>
                       </h2>
@@ -1245,7 +1250,9 @@ export default function Dashboard() {
                         </span>
                       )}
                     </div>
-                    <p className={`mb-2 ${isTop3 ? "text-gray-400" : isTop30 ? "text-gray-500 dark:text-gray-400" : "text-gray-600 dark:text-gray-300"}`}>
+                    <p className={`mb-2 ${
+                      selectedViewMonth === 3 ? "text-gray-600 dark:text-gray-300" : isTop3 ? "text-gray-400" : isTop30 ? "text-gray-500 dark:text-gray-400" : "text-gray-600 dark:text-gray-300"
+                    }`}>
                       {selectedAgent.branch}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1410,7 +1417,30 @@ export default function Dashboard() {
               {!isPartnerBranch && nonPartnerCardsEl}
             </div>
 
-            <div className={`grid grid-cols-1 gap-4 md:gap-5 mb-6 lg:items-stretch ${isPartnerBranch ? "" : "lg:grid-cols-[280px_1fr]"}`}>
+            <div className={`grid grid-cols-1 gap-4 md:gap-5 mb-6 lg:items-stretch ${
+              isPartnerBranch ? "" : selectedViewMonth === 3 ? "lg:grid-cols-[200px_280px_1fr]" : "lg:grid-cols-[280px_1fr]"
+            }`}>
+              {/* 3월 탭: 3월 정규시상 · MY HOT · 7개월 추이 한 줄 (3월 정규시상은 MY HOT과 동일 UI 형태) */}
+              {!isPartnerBranch && selectedViewMonth === 3 && (
+                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative max-w-[320px] lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
+                  <div className="relative z-10 p-4 md:p-5 flex flex-col items-center flex-1">
+                    <div className="w-full flex items-center gap-2 mb-2">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 flex-shrink-0 text-meritz-gold fill-current" aria-hidden><path d="M17 11V3H7v8H3v12h8v-4h2v4h8V11h-4zM7 19H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm4 4H9v-2h2v2zm0-4H9V9h2v2zm0-4H9V5h2v2zm4 8v-2h2v2h-2zm0-4V9h2v2h-2zm0-4V5h2v2h-2zm4 12v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
+                      <h3 className="text-lg font-bold text-white tracking-tight">3월 정규시상</h3>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mb-4 w-full text-left lg:text-center">실적의 100% · 1:1 비율</p>
+                    <div className="flex-1 flex flex-col items-center justify-center w-full">
+                      <p className="text-base md:text-lg font-medium text-gray-400 dark:text-gray-500 mb-2">인정실적</p>
+                      <p className="text-5xl md:text-6xl font-black text-white tracking-tight">
+                        {Math.round(marchPerf / 10000).toLocaleString()}
+                        <span className="text-2xl md:text-3xl font-normal text-gray-400 ml-1.5">만원</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* 2026 MY HOT - 비파트너만 표시 (파트너는 MY HOT 없음) */}
               {!isPartnerBranch && (
                 <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative max-w-[320px] lg:max-w-none mx-auto lg:mx-0 lg:h-full flex flex-col">

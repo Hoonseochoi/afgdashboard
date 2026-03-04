@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "framer-motion";
 import { TierBadges } from "./TierBadges";
 
 const SPECIAL_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000], [500000, 1000000], [800000, 2400000], [1000000, 4000000], [1200000, 6000000]];
@@ -17,6 +18,24 @@ function getNextTierAndPrize(perf: number, tiersAsc: [number, number][]): { gap:
   return null;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 16, scale: 0.97 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 120, damping: 14 } },
+};
+
+const card = "relative overflow-hidden rounded-2xl backdrop-blur-xl border transition-all duration-200";
+const glassLight = "bg-white/70 dark:bg-white/[0.06] border-white/50 dark:border-white/[0.12] shadow-[0_2px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_20px_rgba(0,0,0,0.3)]";
+const accentCyan = "bg-gradient-to-br from-cyan-50/90 via-sky-50/70 to-teal-50/60 dark:from-cyan-900/30 dark:via-slate-800/60 dark:to-teal-900/20 border-cyan-200/60 dark:border-cyan-500/25 shadow-[0_2px_24px_rgba(6,182,212,0.08)] dark:shadow-[0_2px_24px_rgba(6,182,212,0.12)]";
+const accentDark = "bg-gradient-to-br from-gray-900/95 via-gray-800/95 to-gray-900/95 dark:from-[#111]/95 dark:via-[#1a1a1a]/95 dark:to-[#111]/95 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.4)]";
+
+const labelCls = "text-[11px] font-medium tracking-wide uppercase text-gray-600 dark:text-gray-400";
+const prizeCls = "text-xl font-bold tracking-tight text-red-600 dark:text-red-400";
+const subLabel = "text-xs text-gray-600 dark:text-gray-400";
+
 export interface MarchCardsProps {
   viewW1: number;
   week1SpecialPrize: number;
@@ -26,6 +45,8 @@ export interface MarchCardsProps {
   doubleMeritzPrize: number;
   meritzClubPlusPrize: number;
   plusTarget: number | null;
+  /** 3월 메리츠클럽+ 달성목표 표기: min(1월,2월) 실적 */
+  plusTargetMinPerf: number;
   plusNext: string;
   plusProgress: number;
   febPerf: number;
@@ -43,114 +64,212 @@ export function MarchCards(props: MarchCardsProps) {
     doubleMeritzPrize,
     meritzClubPlusPrize,
     plusTarget,
-    plusNext,
+    plusTargetMinPerf,
     plusProgress,
-    febPerf,
     marchPerf,
     currentMonthNum,
   } = props;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-6">
-      {/* 파타야 여행시상 (3월) — 40/60/80/100 구간 · 휴양지 테마 */}
-      <div className="rounded-xl shadow-lg shadow-cyan-200/25 dark:shadow-cyan-900/20 border-2 border-cyan-300/50 dark:border-cyan-500/40 p-4 bg-gradient-to-br from-sky-100 via-cyan-50 to-teal-50 dark:from-slate-800 dark:via-cyan-900/50 dark:to-teal-950">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-cyan-600 dark:text-cyan-400 font-bold">🌴 파타야 여행시상</span>
-          <span className="text-xs text-sky-600/80 dark:text-sky-400/80">3월</span>
+    <motion.section
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 auto-rows-[minmax(130px,auto)]"
+    >
+      {/* ── 파타야 여행시상 (2행 스팬, 사진 비율에 맞게 컴팩트) ── */}
+      <motion.div variants={itemVariants} className={`md:row-span-2 ${card} ${accentCyan} p-3 flex flex-col justify-between min-h-0`}>
+        <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-300/20 dark:bg-cyan-400/10 blur-2xl pointer-events-none" />
+        {/* 이미지: 카드 가로 끝까지, 세로는 원본 비율 그대로(잘리지 않음), 텍스트와 겹침 가능 */}
+        <div className="absolute -left-3 -right-3 top-0 bottom-0 z-0 pointer-events-none flex items-center justify-center">
+          <img src="/meritzair.png" alt="" className="w-full h-full object-contain object-center" />
         </div>
-        <p className="text-xs text-sky-600/80 dark:text-sky-400/80 mb-2">3월 실적 기준 · 40/60/80/100만원 구간</p>
-        <TierBadges tiersMan={[40, 60, 80, 100]} currentPerf={currentMonthPerf} className="mb-3" />
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600 dark:text-gray-300">현재 3월 실적 {Math.round(currentMonthPerf / 10000)}만원</span>
-          <span className="font-semibold text-teal-600 dark:text-cyan-400">
-            {currentMonthPerf >= 1000000 ? "100만 달성!" : currentMonthPerf >= 800000 ? "다음 100만" : currentMonthPerf >= 600000 ? "다음 80만" : currentMonthPerf >= 400000 ? "다음 60만" : "다음 40만"}
-          </span>
+        <div className="relative z-10 drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] [text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">🌴</span>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">파타야 여행시상</h3>
+              <p className="text-[10px] text-gray-800 dark:text-gray-200 font-medium opacity-90">3월 실적 기준</p>
+            </div>
+          </div>
+          <TierBadges tiersMan={[40, 60, 80, 100]} currentPerf={currentMonthPerf} className="mb-2" />
         </div>
-      </div>
+        <div className="relative z-10 [text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
+          {(() => {
+            const p = currentMonthPerf;
+            const toMan = (n: number) => Math.round(n / 10000);
+            let label = "";
+            let remain = 0;
+            if (p < 400000) {
+              label = "탑승까지";
+              remain = 400000 - p;
+            } else if (p < 600000) {
+              label = "1박추가까지";
+              remain = 600000 - p;
+            } else if (p < 800000) {
+              label = "국적기+5성까지";
+              remain = 800000 - p;
+            } else if (p < 1000000) {
+              label = "1인실+1만바트까지";
+              remain = 1000000 - p;
+            } else {
+              label = "챔피언까지";
+              remain = 0;
+            }
+            return (
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 uppercase tracking-wide opacity-90">현재 실적</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">{Math.round(p / 10000)}<span className="text-base font-medium text-gray-700 dark:text-gray-300 ml-0.5">만원</span></p>
+                </div>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white bg-white/80 dark:bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full border border-gray-200/80 dark:border-white/20 shadow-sm text-right whitespace-nowrap">
+                  {`${label} ${toMan(remain)}만원`}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
+      </motion.div>
 
-      {/* 1주차 특별 현금시상 */}
-      <div className="rounded-xl shadow-sm border border-emerald-200 dark:border-emerald-800 p-4 bg-emerald-500/5 dark:bg-emerald-400/5">
-        <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">1주차 특별 현금시상</h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">3월 1주차 실적</p>
-        <TierBadges tiersMan={[20, 30, 50, 80, 100, 120]} currentPerf={viewW1} className="mb-2" />
-        <div className="flex justify-between text-sm mt-2">
-          <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(viewW1 / 10000)}만</span>
-          <span className="font-bold text-emerald-600 dark:text-emerald-400">{Math.round(week1SpecialPrize / 10000)}만원</span>
+      {/* ── 1주차 특별 현금시상 (구간 20→30→50→80→100→120만) ── */}
+      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
+        {(() => {
+          const specialBadge = viewW1 >= 1200000 ? "최대구간 달성완료" : viewW1 >= 1000000 ? "120만구간도전" : viewW1 >= 800000 ? "100만구간도전" : viewW1 >= 500000 ? "80만구간도전" : viewW1 >= 300000 ? "50만구간도전" : viewW1 >= 200000 ? "30만구간도전" : "20만구간도전";
+          const isMax = viewW1 >= 1200000;
+          return (
+            <div className="flex items-center justify-between mb-1.5">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">1주차 특별 현금시상</h3>
+              <span className={isMax
+                ? "text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 rounded-full"
+                : "text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded-full"
+              }>
+                {specialBadge}
+              </span>
+            </div>
+          );
+        })()}
+        <TierBadges tiersMan={[20, 30, 50, 80, 100, 120]} currentPerf={viewW1} className="mb-auto" />
+        <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
+          <div>
+            <p className={labelCls}>현재</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.round(viewW1 / 10000)}만</p>
+          </div>
+          <div className="text-right">
+            <p className={labelCls}>예상 시상금</p>
+            <p className={prizeCls}>{Math.round(week1SpecialPrize / 10000)}만원</p>
+          </div>
         </div>
         {(() => {
           const next = getNextTierAndPrize(viewW1, SPECIAL_TIERS_ASC);
           if (!next || next.gap <= 0) return null;
+          return <p className="text-[11px] text-emerald-500 dark:text-emerald-400 mt-2 font-medium">+{Math.round(next.gap / 10000)}만 더 → 시상금 +{Math.round(next.addPrize / 10000)}만</p>;
+        })()}
+      </motion.div>
+
+      {/* ── 1주차 PATAYA특별 현금시상 (구간 20→30→50→70→100만) ── */}
+      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
+        {(() => {
+          const patayaBadge = viewW1 >= 1000000 ? "최대구간 달성완료" : viewW1 >= 700000 ? "100만구간도전" : viewW1 >= 500000 ? "70만구간도전" : viewW1 >= 300000 ? "50만구간도전" : viewW1 >= 200000 ? "30만구간도전" : "20만구간도전";
+          const isMax = viewW1 >= 1000000;
           return (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 pt-2 border-t border-emerald-200/50 dark:border-emerald-700/50">
-              {Math.round(next.gap / 10000).toLocaleString()}만원 더하시면 시상금 {Math.round(next.addPrize / 10000).toLocaleString()}만원 추가 !
-            </p>
+            <div className="flex items-center justify-between mb-1.5">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">1주차 PATAYA특별 현금시상</h3>
+              <span className={isMax
+                ? "text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 rounded-full"
+                : "text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded-full"
+              }>
+                {patayaBadge}
+              </span>
+            </div>
           );
         })()}
-      </div>
-
-      {/* 1주차 PATAYA 특별 */}
-      <div className="rounded-xl shadow-sm border border-orange-200 dark:border-orange-800 p-4 bg-orange-500/5 dark:bg-orange-400/5">
-        <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">1주차 PATAYA특별 현금시상</h4>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">3월 1주차 실적</p>
-        <TierBadges tiersMan={[20, 30, 50, 70, 100]} currentPerf={viewW1} className="mb-2" />
-        <div className="flex justify-between text-sm mt-2">
-          <span className="text-gray-600 dark:text-gray-400">현재 실적 {Math.round(viewW1 / 10000)}만원</span>
-        </div>
-        <div className="flex justify-between text-sm mt-0.5">
-          <span className="text-gray-500 dark:text-gray-400">예상 시상금</span>
-          <span className="font-bold text-orange-600 dark:text-orange-400">{Math.round(week1PatayaPrize / 10000)}만원</span>
+        <TierBadges tiersMan={[20, 30, 50, 70, 100]} currentPerf={viewW1} className="mb-auto" />
+        <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
+          <div>
+            <p className={labelCls}>현재</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.round(viewW1 / 10000)}만</p>
+          </div>
+          <div className="text-right">
+            <p className={labelCls}>예상 시상금</p>
+            <p className={prizeCls}>{Math.round(week1PatayaPrize / 10000)}만원</p>
+          </div>
         </div>
         {(() => {
           const next = getNextTierAndPrize(viewW1, PATAYA_TIERS_ASC);
           if (!next || next.gap <= 0) return null;
+          return <p className="text-[11px] text-orange-500 dark:text-orange-400 mt-2 font-medium">+{Math.round(next.gap / 10000)}만 더 → 시상금 +{Math.round(next.addPrize / 10000)}만</p>;
+        })()}
+      </motion.div>
+
+      {/* ── 2배 메리츠클럽 (1주차 특별 현금시상과 동일 UI) ── */}
+      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
+        <div className="flex items-center justify-between mb-1.5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">2배 메리츠클럽</h3>
+          <span className={prevMonthPerf >= 200000
+            ? "text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-500/20 border border-red-200 dark:border-red-500/30 px-2 py-0.5 rounded-full"
+            : "text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-white/[0.06] px-2 py-0.5 rounded-full"
+          }>
+            {prevMonthPerf >= 200000 ? "연속대상" : "미대상"}
+          </span>
+        </div>
+        <div className="mb-auto">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">2월 {Math.round(prevMonthPerf / 10000)}만 / 3월 {Math.round(currentMonthPerf / 10000)}만</p>
+        </div>
+        <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
+          <div>
+            <p className={labelCls}>2·3월 실적</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.round(prevMonthPerf / 10000)}만 · {Math.round(currentMonthPerf / 10000)}만</p>
+          </div>
+          <div className="text-right">
+            <p className={labelCls}>예상 시상금</p>
+            <p className={prizeCls}>{Math.round(doubleMeritzPrize / 10000).toLocaleString()}만원</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── 메리츠 클럽+ (1주차 특별 현금시상과 동일 UI, 구간 20/40/60/80/100만원) ── */}
+      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
+        {(() => {
+          const tierMan = plusTarget >= 1000000 ? 100 : plusTarget > 0 ? plusTarget / 10000 : 20;
+          const goalLabel = tierMan >= 100 ? "100만원" : `${tierMan}만원`;
+          const is100Man = plusTargetMinPerf >= 1000000;
           return (
-            <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 pt-2 border-t border-orange-200/50 dark:border-orange-700/50">
-              {Math.round(next.gap / 10000).toLocaleString()}만원 더하시면 시상금 {Math.round(next.addPrize / 10000).toLocaleString()}만원 추가 !
-            </p>
+            <>
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">메리츠 클럽+</h3>
+                <span className={is100Man
+                  ? "text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded-full"
+                  : "text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-white/[0.06] px-2 py-0.5 rounded-full"
+                }>
+                  {is100Man ? "100만구간도전" : "미대상"}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5">
+                {currentMonthNum >= 3 ? `달성목표 : ${goalLabel}` : "2월 실적 · 목표"}
+              </p>
+              <div className="w-full bg-gray-200 dark:bg-white/[0.08] rounded-full h-1.5 mb-auto overflow-hidden">
+                <motion.div
+                  className="bg-primary h-1.5 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, plusProgress)}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
+                />
+              </div>
+              <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
+                <div>
+                  <p className={labelCls}>3월 {Math.round(marchPerf / 10000)}만 / 달성목표 {goalLabel}</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.min(100, Math.round(plusProgress))}%</p>
+                </div>
+                <div className="text-right">
+                  <p className={labelCls}>예상 시상금</p>
+                  <p className={prizeCls}>{Math.round(meritzClubPlusPrize / 10000).toLocaleString()}만원</p>
+                </div>
+              </div>
+            </>
           );
         })()}
-      </div>
-
-      {/* 2배 메리츠클럽 */}
-      <div className="bg-gradient-to-br from-amber-950 via-amber-900/95 to-gray-900 dark:from-gray-900 dark:via-amber-950/80 dark:to-gray-950 rounded-xl shadow-lg border border-amber-500/30 p-3 md:p-4 text-white">
-        <h4 className="text-base font-bold text-white mb-0.5">2배 메리츠클럽</h4>
-        <p className="text-xs text-amber-100 mb-2">2월·3월 각 20만 이상 시</p>
-        <div className="flex justify-between text-xs text-amber-100 mb-1">
-          <span>2월 {Math.round(prevMonthPerf / 10000)}만 / 3월 {Math.round(currentMonthPerf / 10000)}만</span>
-        </div>
-        <div className="border-t border-amber-400/20 pt-2 flex justify-between items-center">
-          <span className="text-xs text-amber-100">예상 시상금</span>
-          <span className="text-base font-bold text-white">{Math.round(doubleMeritzPrize / 10000).toLocaleString()}만원</span>
-        </div>
-      </div>
-
-      {/* 메리츠클럽+ */}
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-lg border border-meritz-gold/30 p-3 md:p-4 text-white">
-        <h4 className="text-base font-bold text-meritz-gold mb-0.5">메리츠 클럽+</h4>
-        <p className="text-xs text-gray-300 mb-2">
-          {currentMonthNum >= 3 ? "min(1,2월) 구간 목표 · 3월 실적" : "2월 실적 · 목표"}
-        </p>
-        <div className="flex justify-between text-xs mb-1 text-gray-300">
-          <span>3월 {Math.round(marchPerf / 10000)}만 / 목표 {Math.round((plusTarget || 200000) / 10000)}만</span>
-        </div>
-        <div className="w-full bg-gray-700 rounded-full h-1.5 border border-gray-600 mb-2">
-          <div className="bg-meritz-gold h-1.5 rounded-full" style={{ width: `${Math.min(100, plusProgress)}%` }} />
-        </div>
-        <div className="border-t border-gray-700 pt-2 flex justify-between items-center">
-          <span className="text-xs text-gray-400">예상 시상금</span>
-          <span className="text-base font-bold text-white">{Math.round(meritzClubPlusPrize / 10000).toLocaleString()}만원</span>
-        </div>
-      </div>
-
-      {/* 3월 정규 시상 */}
-      <div className="bg-gradient-to-br from-slate-800 via-slate-700/90 to-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-950 rounded-xl shadow-lg border border-slate-500/30 p-3 md:p-4 text-white">
-        <h4 className="text-base font-bold text-slate-100 mb-0.5">3월 정규 시상</h4>
-        <p className="text-xs text-slate-300/80 mb-2">3월 실적 100%</p>
-        <div className="border-t border-white/10 pt-2 flex justify-between items-center">
-          <span className="text-xs text-slate-400">3월 달성분</span>
-          <span className="text-base font-bold text-white">{Math.round(marchPerf / 10000).toLocaleString()}만원</span>
-        </div>
-      </div>
-    </div>
+      </motion.div>
+      {/* 3월 정규 시상 카드는 page.tsx에서 MY HOT·7개월 추이와 한 줄에 배치 */}
+    </motion.section>
   );
 }
