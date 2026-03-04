@@ -1051,7 +1051,7 @@ export default function Dashboard() {
             </div>
             <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900/60 flex items-center justify-center p-3 md:p-4">
               <img
-                src="/api/prize-guide"
+                src="/26031w_prize.jpg"
                 alt="1주차 시상안"
                 className="max-h-[80vh] w-auto rounded-lg shadow-md"
               />
