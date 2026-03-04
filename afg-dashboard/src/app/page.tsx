@@ -226,6 +226,7 @@ function Dashboard() {
   const exportAreaRef = useRef<HTMLDivElement>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
+  const [installInProgress, setInstallInProgress] = useState(false);
   const deferredPromptRef = useRef<any>(null);
 
   const router = useRouter();
@@ -282,16 +283,19 @@ function Dashboard() {
 
   const handleInstallApp = async () => {
     const promptEvent = deferredPromptRef.current;
-    if (!promptEvent) return;
+    if (!promptEvent || installInProgress) return;
+    setInstallInProgress(true);
     promptEvent.prompt();
+    const timeout = new Promise<void>((resolve) => setTimeout(resolve, 15000));
     try {
-      const choice = await promptEvent.userChoice;
-      console.log("[PWA] install choice:", choice?.outcome);
+      const choice = await Promise.race([promptEvent.userChoice, timeout.then(() => null)]);
+      if (choice) console.log("[PWA] install choice:", choice.outcome);
     } catch {
       // ignore
     } finally {
       deferredPromptRef.current = null;
       setCanInstall(false);
+      setInstallInProgress(false);
     }
   };
 
@@ -1234,10 +1238,11 @@ function Dashboard() {
                       <button
                         type="button"
                         onClick={handleInstallApp}
-                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-primary border border-primary/60 dark:border-primary shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        disabled={installInProgress}
+                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-white dark:bg-gray-800 text-primary border border-primary/60 dark:border-primary shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-wait"
                       >
                         <span className="material-symbols-outlined text-sm sm:text-base">download</span>
-                        앱 설치
+                        {installInProgress ? "설치 중..." : "앱 설치"}
                       </button>
                     )}
                     {!isCaptureMode && !isStandalone && !canInstall && (
