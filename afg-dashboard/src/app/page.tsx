@@ -18,6 +18,7 @@ import februaryClosedData from "@/data/february_closed.json";
 import type { PartnerPrizeData } from "@/lib/appwrite-server";
 import { MarchCards } from "./MarchCards";
 import { NonPartnerCards } from "./NonPartnerCards";
+import LoadingLines from "./LoadingLines";
 
 const januaryClosed = januaryClosedData as Record<
   string,
@@ -411,7 +412,13 @@ export default function Dashboard() {
     router.push("/login");
   };
 
-  if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-surface-light dark:bg-surface-dark">
+        <LoadingLines />
+      </div>
+    );
+  }
 
   if (agentsError) {
     return (
