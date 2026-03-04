@@ -169,14 +169,14 @@ export function MarchCards(props: MarchCardsProps) {
         })()}
       </motion.div>
 
-      {/* ── 1주차 PATAYA특별 현금시상 (구간 20→30→50→70→100만) ── */}
+      {/* ── 1주차 PATTAYA 특별 현금 시상 (구간 20→30→50→70→100만) ── */}
       <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
         {(() => {
           const patayaBadge = viewW1 >= 1000000 ? "최대구간 달성완료" : viewW1 >= 700000 ? "100만구간도전" : viewW1 >= 500000 ? "70만구간도전" : viewW1 >= 300000 ? "50만구간도전" : viewW1 >= 200000 ? "30만구간도전" : "20만구간도전";
           const isMax = viewW1 >= 1000000;
           return (
             <div className="flex items-center justify-between mb-1.5">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">1주차 PATAYA특별 현금시상</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">1주차 PATTAYA 특별 현금 시상</h3>
               <span className={isMax
                 ? "text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 rounded-full"
                 : "text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded-full"
@@ -204,7 +204,7 @@ export function MarchCards(props: MarchCardsProps) {
         })()}
       </motion.div>
 
-      {/* ── 2배 메리츠클럽 (1주차 특별 현금시상과 동일 UI) ── */}
+      {/* ── 2배 메리츠클럽 (3월 실적 + 근접구간까지 N만 더하세요 / 100만↑ 최대구간달성) ── */}
       <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
         <div className="flex items-center justify-between mb-1.5">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">2배 메리츠클럽</h3>
@@ -216,13 +216,25 @@ export function MarchCards(props: MarchCardsProps) {
           </span>
         </div>
         <div className="mb-auto">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">2월 {Math.round(prevMonthPerf / 10000)}만 / 3월 {Math.round(currentMonthPerf / 10000)}만</p>
+          {(() => {
+            const marchMan = Math.round(currentMonthPerf / 10000);
+            const DOUBLE_TIERS = [20, 30, 40, 50, 60, 70, 80, 90, 100];
+            const nextTierMan = DOUBLE_TIERS.find(t => currentMonthPerf < t * 10000);
+            const isMax = currentMonthPerf >= 1000000;
+            return (
+              <>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">3월 실적 {marchMan}만</p>
+                {isMax ? (
+                  <p className="text-[11px] font-semibold text-green-600 dark:text-green-400">최대구간 달성!</p>
+                ) : nextTierMan != null ? (
+                  <p className="text-[11px] text-orange-600 dark:text-orange-400 font-medium">{nextTierMan}만까지 {Math.round((nextTierMan * 10000 - currentMonthPerf) / 10000)}만 더하세요!</p>
+                ) : null}
+              </>
+            );
+          })()}
         </div>
         <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
-          <div>
-            <p className={labelCls}>2·3월 실적</p>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.round(prevMonthPerf / 10000)}만 · {Math.round(currentMonthPerf / 10000)}만</p>
-          </div>
+          <div />
           <div className="text-right">
             <p className={labelCls}>예상 시상금</p>
             <p className={prizeCls}>{Math.round(doubleMeritzPrize / 10000).toLocaleString()}만원</p>
