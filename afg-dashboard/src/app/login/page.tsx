@@ -32,7 +32,9 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/direct");
+      const branch = data.user?.branch ?? "";
+      const isPartner = typeof branch === "string" && branch.includes("파트너");
+      router.push(isPartner ? "/partner" : "/direct");
     } catch (err) {
       setError("서버와 통신할 수 없습니다.");
       setLoading(false);

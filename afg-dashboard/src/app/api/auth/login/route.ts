@@ -21,6 +21,7 @@ export async function POST(request: Request) {
           isFirstLogin: false,
           role: 'admin',
           targetManagerCode: null,
+          branch: null,
         },
       });
       response.cookies.set('auth_session', JSON.stringify({
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
         isFirstLogin: false,
         role: 'admin',
         targetManagerCode: null,
+        branch: null,
       }), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -60,6 +62,7 @@ export async function POST(request: Request) {
       isFirstLogin: agent.isFirstLogin ?? true,
       role: isSpecialStudioCode ? 'manager' : agent.role || 'agent',
       targetManagerCode: agent.targetManagerCode ?? null,
+      branch: agent.branch ?? null,
     };
     const response = NextResponse.json({ success: true, user });
     response.cookies.set('auth_session', JSON.stringify(user), {

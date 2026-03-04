@@ -1725,9 +1725,11 @@ export function Dashboard({
             </div>
 
             <div className={`grid gap-3 md:gap-5 mb-6 lg:items-stretch ${
-              showPartnerContent ? "grid-cols-1" : selectedViewMonth === 3 ? "grid-cols-2 lg:grid-cols-[4fr_6fr_1fr]" : "grid-cols-1 lg:grid-cols-[280px_1fr]"
+              showPartnerContent ? "grid-cols-1" : selectedViewMonth === 3
+                ? `grid-cols-2 ${isStandalone ? "lg:grid-cols-[4fr_6fr_1fr]" : "lg:grid-cols-[200px_280px_1fr]"}`
+                : "grid-cols-1 lg:grid-cols-[280px_1fr]"
             }`}>
-              {/* 3월 탭: 3월 정규시상 · MY HOT · 7개월 추이 (가로폭 비율 4:6) */}
+              {/* 3월 탭: 앱(standalone)에서만 정규시상·MY HOT 가로폭 4:6, 웹은 200px/280px 고정 */}
               {showDirectContent && selectedViewMonth === 3 && (
                 <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none w-full lg:h-full flex flex-col">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
