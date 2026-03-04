@@ -32,7 +32,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
+      router.push("/direct");
     } catch (err) {
       setError("서버와 통신할 수 없습니다.");
       setLoading(false);
