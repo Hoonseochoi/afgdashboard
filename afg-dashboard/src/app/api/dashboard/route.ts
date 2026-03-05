@@ -66,21 +66,15 @@ function computeRanks(items: SupabaseAgentRecord[]): Record<string, number[]> {
   return allPerformances;
 }
 
-function sortByMcListOrder<T extends { code?: string }>(agents: T[]): T[] {
-  try {
-    const orderPath = join(process.cwd(), 'src', 'data', 'agent-order.json');
-    const raw = readFileSync(orderPath, 'utf-8');
-    const { codes } = JSON.parse(raw) as { codes?: string[] };
-    if (!Array.isArray(codes) || codes.length === 0) return agents;
-    const orderMap = new Map(codes.map((c, i) => [c, i]));
-    return [...agents].sort((a, b) => {
-      const ia = orderMap.get(a.code ?? '') ?? 999999;
-      const ib = orderMap.get(b.code ?? '') ?? 999999;
-      return ia - ib;
-    });
-  } catch {
-    return agents;
-  }
+/** 3월(2026-03) 매출 순 정렬: 당월 인정실적 높은 순 */
+const SORT_MONTH = '2026-03';
+function sortByMarchPerformance<T extends { code?: string; performance?: Record<string, number> | null }>(agents: T[]): T[] {
+  return [...agents].sort((a, b) => {
+    const va = a.performance?.[SORT_MONTH] ?? 0;
+    const vb = b.performance?.[SORT_MONTH] ?? 0;
+    if (vb !== va) return vb - va;
+    return (a.code ?? '').localeCompare(b.code ?? '');
+  });
 }
 
 export async function GET() {
@@ -133,7 +127,7 @@ export async function GET() {
         return allowedBranches.some((b) => branchName.includes(b));
       });
       let agentsData = filtered.map(toSafeAgent);
-      agentsData = sortByMcListOrder(agentsData);
+      agentsData = sortByMarchPerformance(agentsData);
 
       let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
       allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
@@ -161,7 +155,7 @@ export async function GET() {
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
-      agentsData = sortByMcListOrder(agentsData);
+      agentsData = sortByMarchPerformance(agentsData);
       const ranks = computeRanks(items);
       const partnerAgents = agentsData.filter((a) => a.branch && String(a.branch).includes('파트너'));
       return NextResponse.json({ user, agents: agentsData, updateDate, ranks, partnerAgents });
@@ -173,7 +167,7 @@ export async function GET() {
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
-      agentsData = sortByMcListOrder(agentsData);
+      agentsData = sortByMarchPerformance(agentsData);
       let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
       allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
       const ranks = computeRanks(allForRanks);

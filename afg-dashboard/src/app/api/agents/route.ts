@@ -62,22 +62,14 @@ function computeRanks(items: SupabaseAgentRecord[]): Record<string, number[]> {
   return allPerformances;
 }
 
-/** MC_LIST 파일 순서(agent-order.json)로 정렬. 없으면 그대로 반환 */
-function sortByMcListOrder<T extends { code?: string }>(agents: T[]): T[] {
-  try {
-    const orderPath = join(process.cwd(), 'src', 'data', 'agent-order.json');
-    const raw = readFileSync(orderPath, 'utf-8');
-    const { codes } = JSON.parse(raw) as { codes?: string[] };
-    if (!Array.isArray(codes) || codes.length === 0) return agents;
-    const orderMap = new Map(codes.map((c, i) => [c, i]));
-    return [...agents].sort((a, b) => {
-      const ia = orderMap.get(a.code ?? '') ?? 999999;
-      const ib = orderMap.get(b.code ?? '') ?? 999999;
-      return ia - ib;
-    });
-  } catch {
-    return agents;
-  }
+/** 3월(2026-03) 매출 순 정렬 */
+function sortByMarchPerformance<T extends { code?: string; performance?: Record<string, number> | null }>(agents: T[]): T[] {
+  return [...agents].sort((a, b) => {
+    const va = a.performance?.['2026-03'] ?? 0;
+    const vb = b.performance?.['2026-03'] ?? 0;
+    if (vb !== va) return vb - va;
+    return (a.code ?? '').localeCompare(b.code ?? '');
+  });
 }
 
 export async function GET() {
@@ -116,7 +108,7 @@ export async function GET() {
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
-      agentsData = sortByMcListOrder(agentsData);
+      agentsData = sortByMarchPerformance(agentsData);
       const ranks = computeRanks(items);
       return NextResponse.json({ agents: agentsData, updateDate, ranks });
     }
@@ -127,7 +119,7 @@ export async function GET() {
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
-      agentsData = sortByMcListOrder(agentsData);
+      agentsData = sortByMarchPerformance(agentsData);
       return NextResponse.json({ agents: agentsData, updateDate });
     }
 

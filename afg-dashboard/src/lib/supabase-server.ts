@@ -123,27 +123,36 @@ export async function supabaseAgentGetByCode(
   return rowToAgent(data);
 }
 
-/** 필터로 설계사 목록 조회 (전체 수집) */
+const AGENTS_PAGE_SIZE = 1000;
+const AGENTS_MAX_PAGES = 10;
+
+/** 필터로 설계사 목록 조회 (전체 수집). PostgREST 1000행 제한이 있어 페이지네이션으로 전부 수집 */
 export async function supabaseAgentsListAll(params: {
   filterRole?: string;
   filterManagerCode?: string;
 }): Promise<SupabaseAgentRecord[]> {
   const client = getServerClient();
-  let query = client.from("agents").select("*");
-
-  if (params.filterRole) {
-    query = query.eq("role", params.filterRole);
+  const all: SupabaseAgentRecord[] = [];
+  for (let page = 0; page < AGENTS_MAX_PAGES; page++) {
+    const from = page * AGENTS_PAGE_SIZE;
+    const to = from + AGENTS_PAGE_SIZE - 1;
+    let query = client.from("agents").select("*").range(from, to);
+    if (params.filterRole) {
+      query = query.eq("role", params.filterRole);
+    }
+    if (params.filterManagerCode) {
+      query = query.eq("manager_code", params.filterManagerCode);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.error("supabaseAgentsListAll error:", error.message);
+      throw error;
+    }
+    const chunk = (data || []).map(rowToAgent);
+    all.push(...chunk);
+    if (chunk.length < AGENTS_PAGE_SIZE) break;
   }
-  if (params.filterManagerCode) {
-    query = query.eq("manager_code", params.filterManagerCode);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    console.error("supabaseAgentsListAll error:", error.message);
-    throw error;
-  }
-  return (data || []).map(rowToAgent);
+  return all;
 }
 
 /** config 테이블에서 key='app' 행 1건 조회 */

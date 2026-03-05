@@ -1266,10 +1266,22 @@ export function Dashboard({
             }`}
           >
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-0 md:h-16 flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-0">
-              {/* 1줄(모바일) / 좌측(데스크톱): 로고 + 우측 유저/로그아웃 */}
+              {/* 1줄(모바일) / 좌측(데스크톱): 로고 + 우측 유저/로그아웃. 앱에서는 로고 탭 시 강력 새로고침 */}
               <div className="flex items-center justify-between w-full md:w-auto">
                 <div className="flex items-center shrink-0">
-                  <img src="/ci.png" alt="CI" className="h-[1.6rem] md:h-[1.8rem] object-contain" />
+                  {isStandalone ? (
+                    <button
+                      type="button"
+                      onClick={() => window.location.reload()}
+                      className="p-1 -m-1 rounded touch-manipulation"
+                      title="새로고침 (실적 반영)"
+                      aria-label="새로고침"
+                    >
+                      <img src="/ci.png" alt="CI" className="h-[1.6rem] md:h-[1.8rem] object-contain" />
+                    </button>
+                  ) : (
+                    <img src="/ci.png" alt="CI" className="h-[1.6rem] md:h-[1.8rem] object-contain" />
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5 md:gap-4 md:pl-4 md:border-l border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-2">
