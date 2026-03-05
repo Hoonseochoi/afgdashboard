@@ -4,6 +4,16 @@ import React from "react";
 import { motion } from "framer-motion";
 import { TierBadges } from "./TierBadges";
 
+/** 금액 표시: 원 단위를 '만원' 기준 소수 첫째 자리(천원 단위)까지, 반올림 없이 표시 */
+function formatMan(amount: number | null | undefined): string {
+  const v = typeof amount === "number" ? amount : Number(amount ?? 0);
+  if (!Number.isFinite(v) || v === 0) return "0";
+  const manTimes10 = Math.floor((v / 10000) * 10); // 0.1만원(=천원 단위) 내림
+  const man = manTimes10 / 10;
+  const hasDecimal = manTimes10 % 10 !== 0;
+  return man.toLocaleString(undefined, hasDecimal ? { minimumFractionDigits: 1, maximumFractionDigits: 1 } : { maximumFractionDigits: 0 });
+}
+
 const SPECIAL_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000], [500000, 1000000], [800000, 2400000], [1000000, 4000000], [1200000, 6000000]];
 const PATAYA_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000], [500000, 1000000], [700000, 2100000], [1000000, 5000000]];
 
@@ -119,7 +129,7 @@ export function MarchCards(props: MarchCardsProps) {
         <div className="relative z-10 md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
           {(() => {
             const p = currentMonthPerf;
-            const toMan = (n: number) => Math.round(n / 10000);
+            const toMan = (n: number) => formatMan(n);
             let label = "";
             let remain = 0;
             if (p < 400000) {
@@ -142,7 +152,7 @@ export function MarchCards(props: MarchCardsProps) {
               <div className="flex items-end justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-200 uppercase tracking-wide opacity-90">현재 실적</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">{Math.round(p / 10000)}<span className="text-base font-medium text-gray-700 dark:text-gray-300 ml-0.5">만원</span></p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">{formatMan(p)}<span className="text-base font-medium text-gray-700 dark:text-gray-300 ml-0.5">만원</span></p>
                 </div>
                 <span className="text-sm font-semibold text-gray-900 dark:text-white bg-white/80 dark:bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full border border-gray-200/80 dark:border-white/20 shadow-sm text-right whitespace-nowrap">
                   {`${label} ${toMan(remain)}만원`}
@@ -175,17 +185,17 @@ export function MarchCards(props: MarchCardsProps) {
         <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
           <div>
             <p className={labelCls}>현재</p>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.round(viewW1 / 10000)}만</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{formatMan(viewW1)}만</p>
           </div>
           <div className="text-right">
             <p className={labelCls}>예상 시상금</p>
-            <p className={prizeCls}>{Math.round(week1SpecialPrize / 10000)}만원</p>
+            <p className={prizeCls}>{formatMan(week1SpecialPrize)}만원</p>
           </div>
         </div>
         {(() => {
           const next = getNextTierAndPrize(viewW1, SPECIAL_TIERS_ASC);
           if (!next || next.gap <= 0) return null;
-          return <p className="text-[11px] text-emerald-500 dark:text-emerald-400 mt-2 font-medium">+{Math.round(next.gap / 10000)}만 더 → 시상금 +{Math.round(next.addPrize / 10000)}만</p>;
+          return <p className="text-[11px] text-emerald-500 dark:text-emerald-400 mt-2 font-medium">+{formatMan(next.gap)}만 더 → 시상금 +{formatMan(next.addPrize)}만</p>;
         })()}
       </motion.div>
 
@@ -210,17 +220,17 @@ export function MarchCards(props: MarchCardsProps) {
         <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
           <div>
             <p className={labelCls}>현재</p>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.round(viewW1 / 10000)}만</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{formatMan(viewW1)}만</p>
           </div>
           <div className="text-right">
             <p className={labelCls}>예상 시상금</p>
-            <p className={prizeCls}>{Math.round(week1PatayaPrize / 10000)}만원</p>
+            <p className={prizeCls}>{formatMan(week1PatayaPrize)}만원</p>
           </div>
         </div>
         {(() => {
           const next = getNextTierAndPrize(viewW1, PATAYA_TIERS_ASC);
           if (!next || next.gap <= 0) return null;
-          return <p className="text-[11px] text-orange-500 dark:text-orange-400 mt-2 font-medium">+{Math.round(next.gap / 10000)}만 더 → 시상금 +{Math.round(next.addPrize / 10000)}만</p>;
+          return <p className="text-[11px] text-orange-500 dark:text-orange-400 mt-2 font-medium">+{formatMan(next.gap)}만 더 → 시상금 +{formatMan(next.addPrize)}만</p>;
         })()}
       </motion.div>
 
@@ -237,7 +247,7 @@ export function MarchCards(props: MarchCardsProps) {
         </div>
         <div className="mb-auto">
           {(() => {
-            const marchMan = Math.round(currentMonthPerf / 10000);
+            const marchMan = formatMan(currentMonthPerf);
             const DOUBLE_TIERS = [20, 30, 40, 50, 60, 70, 80, 90, 100];
             const nextTierMan = DOUBLE_TIERS.find(t => currentMonthPerf < t * 10000);
             const isMax = currentMonthPerf >= 1000000;
@@ -247,7 +257,7 @@ export function MarchCards(props: MarchCardsProps) {
                 {isMax ? (
                   <p className="text-[11px] font-semibold text-green-600 dark:text-green-400">최대구간 달성!</p>
                 ) : nextTierMan != null ? (
-                  <p className="text-[11px] text-orange-600 dark:text-orange-400 font-medium">{nextTierMan}만까지 {Math.round((nextTierMan * 10000 - currentMonthPerf) / 10000)}만 더하세요!</p>
+                  <p className="text-[11px] text-orange-600 dark:text-orange-400 font-medium">{nextTierMan}만까지 {formatMan(nextTierMan * 10000 - currentMonthPerf)}만 더하세요!</p>
                 ) : null}
               </>
             );
@@ -257,7 +267,7 @@ export function MarchCards(props: MarchCardsProps) {
           <div />
           <div className="text-right">
             <p className={labelCls}>예상 시상금</p>
-            <p className={prizeCls}>{Math.round(doubleMeritzPrize / 10000).toLocaleString()}만원</p>
+            <p className={prizeCls}>{formatMan(doubleMeritzPrize)}만원</p>
           </div>
         </div>
       </motion.div>
@@ -282,7 +292,7 @@ export function MarchCards(props: MarchCardsProps) {
                 </span>
               </div>
               <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5">
-                {currentMonthNum >= 3 ? `1월 : ${Math.round(janPerf / 10000)}만원 / 2월 : ${Math.round(febPerf / 10000)}만원` : "2월 실적 · 목표"}
+                {currentMonthNum >= 3 ? `1월 : ${formatMan(janPerf)}만원 / 2월 : ${formatMan(febPerf)}만원` : "2월 실적 · 목표"}
               </p>
               <div className="w-full bg-gray-200 dark:bg-white/[0.08] rounded-full h-1.5 mb-auto overflow-hidden">
                 <motion.div
@@ -294,12 +304,12 @@ export function MarchCards(props: MarchCardsProps) {
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
                 <div>
-                  <p className={labelCls}>3월 {Math.round(marchPerf / 10000)}만 / 달성목표 {goalLabel}</p>
+                  <p className={labelCls}>3월 {formatMan(marchPerf)}만 / 달성목표 {goalLabel}</p>
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.min(100, Math.round(plusProgress))}%</p>
                 </div>
                 <div className="text-right">
                   <p className={labelCls}>예상 시상금</p>
-                  <p className={prizeCls}>{Math.round(meritzClubPlusPrize / 10000).toLocaleString()}만원</p>
+                  <p className={prizeCls}>{formatMan(meritzClubPlusPrize)}만원</p>
                 </div>
               </div>
             </>

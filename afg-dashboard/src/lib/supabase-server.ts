@@ -80,6 +80,7 @@ export type SupabaseAgentRecord = {
   managerCode?: string | null;
   managerName?: string | null;
   branch?: string | null;
+  gaBranch?: string | null;
   isFirstLogin?: boolean | null;
   targetManagerCode?: string | null;
 };
@@ -97,6 +98,7 @@ function rowToAgent(row: any): SupabaseAgentRecord {
     managerCode: row.manager_code ?? null,
     managerName: row.manager_name ?? null,
     branch: row.branch ?? null,
+    gaBranch: row.ga_branch ?? null,
     isFirstLogin: row.is_first_login ?? null,
     targetManagerCode: row.target_manager_code ?? null,
   };

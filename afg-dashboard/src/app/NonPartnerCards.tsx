@@ -2,6 +2,16 @@
 
 import React from "react";
 
+/** 금액 표시: 원 단위를 '만원' 기준 소수 첫째 자리(천원 단위)까지, 반올림 없이 표시 */
+function formatMan(amount: number | null | undefined): string {
+  const v = typeof amount === "number" ? amount : Number(amount ?? 0);
+  if (!Number.isFinite(v) || v === 0) return "0";
+  const manTimes10 = Math.floor((v / 10000) * 10); // 0.1만원(=천원 단위) 내림
+  const man = manTimes10 / 10;
+  const hasDecimal = manTimes10 % 10 !== 0;
+  return man.toLocaleString(undefined, hasDecimal ? { minimumFractionDigits: 1, maximumFractionDigits: 1 } : { maximumFractionDigits: 0 });
+}
+
 export interface NonPartnerCardsProps {
   week1Prize: number;
   week1Next: string;
@@ -93,7 +103,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 pl-1">1주차 실적 기준</p>
         <div className="mb-3 pl-1">
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(viewW1 / 10000)}만</span>
+            <span className="text-gray-600 dark:text-gray-400">현재 {formatMan(viewW1)}만</span>
             <span className={`font-semibold ${week1Next === "달성 실패" ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"}`}>
               {week1Past ? week1Next : `다음 구간 ${week1Next}`}
             </span>
@@ -104,7 +114,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
         </div>
         <div className="border-t border-gray-100 dark:border-gray-700 pt-2.5 flex justify-between items-center pl-1">
           <span className="text-xs text-gray-500 dark:text-gray-400">예상 시상금</span>
-          <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">{Math.round(week1Prize / 10000).toLocaleString()}만원</span>
+          <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">{formatMan(week1Prize)}만원</span>
         </div>
       </div>
 
@@ -131,7 +141,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 pl-1 relative z-10">2주차 실적 기준</p>
         <div className="mb-3 pl-1 relative z-10">
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(viewW2 / 10000)}만</span>
+            <span className="text-gray-600 dark:text-gray-400">현재 {formatMan(viewW2)}만</span>
             <span className={`font-semibold ${week2Next === "달성 실패" ? "text-red-500" : "text-primary"}`}>
               {week2Past ? week2Next : `다음 구간 ${week2Next}`}
             </span>
@@ -142,7 +152,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
         </div>
         <div className="border-t border-gray-100 dark:border-gray-700 pt-2.5 flex justify-between items-center pl-1 relative z-10">
           <span className="text-xs text-gray-500 dark:text-gray-400">예상 시상금</span>
-          <span className="text-base font-bold text-primary">{Math.round(week2Prize / 10000).toLocaleString()}만원</span>
+          <span className="text-base font-bold text-primary">{formatMan(week2Prize)}만원</span>
         </div>
       </div>
 
@@ -168,7 +178,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 pl-1">3주차 실적 기준</p>
           <div className="mb-3 pl-1">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(viewW3 / 10000)}만</span>
+              <span className="text-gray-600 dark:text-gray-400">현재 {formatMan(viewW3)}만</span>
               <span className={`font-semibold ${week3Next === "달성 실패" ? "text-red-500" : "text-violet-600 dark:text-violet-400"}`}>
                 {week3Next}
               </span>
@@ -179,7 +189,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
           </div>
           <div className="border-t border-gray-100 dark:border-gray-700 pt-2.5 flex justify-between items-center pl-1">
             <span className="text-xs text-gray-500 dark:text-gray-400">예상 시상금</span>
-            <span className="text-base font-bold text-violet-600 dark:text-violet-400">{Math.round(week3Prize / 10000).toLocaleString()}만원</span>
+            <span className="text-base font-bold text-violet-600 dark:text-violet-400">{formatMan(week3Prize)}만원</span>
           </div>
         </div>
       )}
@@ -204,7 +214,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 pl-1">당월 누적 실적</p>
         <div className="mb-3 pl-1">
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-600 dark:text-gray-400">현재 {Math.round(currentMonthPerf / 10000)}만</span>
+            <span className="text-gray-600 dark:text-gray-400">현재 {formatMan(currentMonthPerf)}만</span>
             <span className="text-sky-600 dark:text-sky-400 font-semibold">다음 구간 {monthlyNext}</span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -213,7 +223,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
         </div>
         <div className="border-t border-gray-100 dark:border-gray-700 pt-2.5 flex justify-between items-center pl-1">
           <span className="text-xs text-gray-500 dark:text-gray-400">예상 시상금</span>
-          <span className="text-base font-bold text-sky-600 dark:text-sky-400">{Math.round(monthlyPrize / 10000).toLocaleString()}만원</span>
+          <span className="text-base font-bold text-sky-600 dark:text-sky-400">{formatMan(monthlyPrize)}만원</span>
         </div>
       </div>
 
@@ -237,7 +247,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
           <p className="text-xs text-amber-100 mb-3">전월·당월 각 20만 이상 시</p>
           <div className="mb-3">
             <div className="flex justify-between text-xs mb-1 text-amber-100">
-              <span>전월 {Math.round(prevMonthPerf / 10000)}만 / 당월 {Math.round(currentMonthPerf / 10000)}만</span>
+              <span>전월 {formatMan(prevMonthPerf)}만 / 당월 {formatMan(currentMonthPerf)}만</span>
             </div>
             <div className="w-full bg-white/10 rounded-full h-1.5 border border-amber-400/10">
               <div
@@ -248,7 +258,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
           </div>
           <div className="border-t border-amber-400/20 pt-2 flex justify-between items-center">
             <span className="text-xs text-amber-100">예상 시상금</span>
-            <span className="text-base font-bold text-white">{Math.round(doubleMeritzPrize / 10000).toLocaleString()}만원</span>
+            <span className="text-base font-bold text-white">{formatMan(doubleMeritzPrize)}만원</span>
           </div>
         </div>
       </div>
@@ -280,10 +290,10 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
           <div className="flex justify-between text-xs mb-1 text-gray-300">
             <span>
               {selectedViewMonth === 1
-                ? `2월 ${Math.round(febPerf / 10000)}만 / 목표 ${Math.round((plusTarget || 200000) / 10000)}만`
+                ? `2월 ${formatMan(febPerf)}만 / 목표 ${formatMan(plusTarget || 200000)}만`
                 : currentMonthNum >= 3
-                  ? `3월 ${Math.round(marchPerf / 10000)}만 / 목표 ${Math.round((plusTarget || 200000) / 10000)}만`
-                  : `2월 ${Math.round(febPerf / 10000)}만 / 목표 ${Math.round((plusTarget || 200000) / 10000)}만`}
+                  ? `3월 ${formatMan(marchPerf)}만 / 목표 ${formatMan(plusTarget || 200000)}만`
+                  : `2월 ${formatMan(febPerf)}만 / 목표 ${formatMan(plusTarget || 200000)}만`}
             </span>
             <span className="text-meritz-gold font-bold">
               {plusNext === "완성" || plusNext.startsWith("3월에도") ? plusNext : `다음 구간 ${plusNext}`}
@@ -295,7 +305,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
         </div>
         <div className="border-t border-gray-700 pt-2 flex justify-between items-center relative z-10">
           <span className="text-xs text-gray-400">3월 완성시 예상 시상금</span>
-          <span className="text-base font-bold text-white">{Math.round(meritzClubPlusPrize / 10000).toLocaleString()}만원</span>
+          <span className="text-base font-bold text-white">{formatMan(meritzClubPlusPrize)}만원</span>
         </div>
       </div>
 
@@ -314,7 +324,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
         <p className="text-xs text-slate-300/80 mb-3 relative z-10">실적의 100% · 1:1 비율</p>
         <div className="border-t border-white/10 pt-2 flex justify-between items-center relative z-10">
           <span className="text-xs text-slate-400">예상 시상금</span>
-          <span className="text-base font-bold text-white">{Math.round(regularPrize / 10000).toLocaleString()}만원</span>
+          <span className="text-base font-bold text-white">{formatMan(regularPrize)}만원</span>
         </div>
         <div className="mt-2 flex justify-end relative z-10">
           <span
@@ -326,7 +336,7 @@ export function NonPartnerCards(props: NonPartnerCardsProps) {
           >
             {dailyDiff === 0
               ? "전일비 변화 없음"
-              : `전일비 ${dailyDiff > 0 ? "+" : "-"}${Math.round(Math.abs(dailyDiff) / 10000).toLocaleString()}만원`}
+              : `전일비 ${dailyDiff > 0 ? "+" : "-"}${formatMan(Math.abs(dailyDiff))}만원`}
           </span>
         </div>
       </div>

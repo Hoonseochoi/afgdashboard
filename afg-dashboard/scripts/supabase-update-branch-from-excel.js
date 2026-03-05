@@ -1,8 +1,8 @@
 /**
  * 엑셀 "메리츠 보험사코드(영업자).xlsx" 기준으로 Supabase agents.branch 업데이트
  * - agents 테이블에 branch 컬럼이 없으면 마이그레이션으로 추가 후 업데이트
- * - E열: 설계사코드 (code)
- * - P열: branch
+ * - E열(등록코드): 설계사코드 (code)
+ * - O열(조직경로3): 지사/스튜디오명 → branch
  *
  * 필요: .env.local (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY), xlsx
  * 컬럼 자동 추가: DATABASE_URL 또는 SUPABASE_DB_URL (Supabase Dashboard > Settings > Database > Connection string URI)
@@ -32,9 +32,9 @@ const MIGRATION_SQL = path.join(__dirname, 'migrations', 'add_branch_to_agents.s
 const DEFAULT_EXCEL = path.join(__dirname, '..', '..', 'data', 'fix', '메리츠 보험사코드(영업자).xlsx');
 const EXCEL_PATH = process.argv[2] ? path.resolve(process.argv[2]) : DEFAULT_EXCEL;
 
-// E열 = 설계사코드(0-based 4), P열 = branch(0-based 15)
+// E열 = 등록코드(설계사코드, 0-based 4), O열 = 조직경로3(지사/스튜디오명, 0-based 14)
 const IDX_CODE = 4;
-const IDX_BRANCH = 15;
+const IDX_BRANCH = 14;
 
 function normalizeCode(c) {
   const s = String(c).trim();

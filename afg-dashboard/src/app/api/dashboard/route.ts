@@ -11,7 +11,7 @@ import {
   type SupabaseAgentRecord,
 } from '@/lib/supabase-server';
 import { cookies } from 'next/headers';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 const DEV_MASTER_ID = 'develope';
@@ -36,6 +36,62 @@ function mergeFebruaryFix<T extends AgentWithPerf>(agents: T[]): T[] {
   } catch {
     return agents;
   }
+}
+
+function normalizeCode(c: string | number | null | undefined): string {
+  const s = String(c ?? '').trim();
+  const n = Number(s);
+  if (!Number.isNaN(n) && n >= 0 && n < 1e15) return String(Math.round(n));
+  return s;
+}
+
+let mcListBranchCache:
+  | {
+      latestFile: string;
+      map: Map<string, string>;
+    }
+  | null = null;
+
+/** data/daily 폴더의 최신 MC_LIST_OUT 엑셀에서 code→현재대리점지사명 맵 생성 (DB는 변경하지 않음, 응답에서만 branch 덮어쓰기) */
+function loadMcListBranchMap(): Map<string, string> {
+  try {
+    const dailyDir = join(process.cwd(), '..', 'data', 'daily');
+    const files = readdirSync(dailyDir)
+      .filter((f) => /^\d{4}MC_LIST_OUT_.*\.xlsx$/i.test(f))
+      .sort();
+    if (files.length === 0) return new Map();
+    const latestFile = join(dailyDir, files[files.length - 1]);
+    if (mcListBranchCache && mcListBranchCache.latestFile === latestFile) {
+      return mcListBranchCache.map;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const XLSX = require('xlsx');
+    const wb = XLSX.readFile(latestFile);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    const headerRow = 1;
+    const map = new Map<string, string>();
+    for (let r = headerRow + 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!Array.isArray(row)) continue;
+      const codeRaw = row[5]; // 현재대리점설계사조직코드 (F열, 0-based 5)
+      const branchRaw = row[37]; // 현재대리점지사명 (AL열, 0-based 37)
+      const code = normalizeCode(codeRaw);
+      const branch = String(branchRaw ?? '').trim();
+      if (!code || code.length < 4 || !branch) continue;
+      map.set(code, branch);
+    }
+    mcListBranchCache = { latestFile, map };
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+function applyMcListBranch<T extends { code?: string; branch?: string | null }>(items: T[]): T[] {
+  // 현재는 Supabase agents.branch 에 이미 스튜디오/지사명이 들어 있으므로,
+  // MC_LIST 기반으로 branch 를 덮어쓰지 않는다. (향후 필요 시를 대비해 훅만 남김)
+  return items;
 }
 
 function getAgentsFromLocalJson(): any[] {
@@ -121,6 +177,7 @@ export async function GET() {
       const allowedBranches = ['송도스튜디오', '에이스스튜디오', '엔타스2스튜디오'];
       let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
       allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
+      allItems = applyMcListBranch(allItems);
       const filtered = allItems.filter((a) => {
         if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
         const branchName = String(a.branch);
@@ -131,6 +188,7 @@ export async function GET() {
 
       let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
       allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
+      allForRanks = applyMcListBranch(allForRanks);
       const ranks = computeRanks(allForRanks);
       const partnerAgents = allForRanks
         .filter(
@@ -155,6 +213,7 @@ export async function GET() {
       const allowedBranches = ['우리'];
       let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
       allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
+      allItems = applyMcListBranch(allItems);
       const filtered = allItems.filter((a) => {
         if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
         const branchName = String(a.branch);
@@ -165,6 +224,7 @@ export async function GET() {
 
       let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
       allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
+      allForRanks = applyMcListBranch(allForRanks);
       const ranks = computeRanks(allForRanks);
       const partnerAgents = allForRanks
         .filter(
@@ -187,6 +247,7 @@ export async function GET() {
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
       let items = await supabaseAgentsListAll({ filterRole: 'agent' });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = applyMcListBranch(items);
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
@@ -199,11 +260,13 @@ export async function GET() {
       const mCode = session.targetManagerCode || session.code || '';
       let items = await supabaseAgentsListAll({ filterManagerCode: mCode });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = applyMcListBranch(items);
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
       let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
       allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
+      allForRanks = applyMcListBranch(allForRanks);
       const ranks = computeRanks(allForRanks);
       const partnerAgents = allForRanks
         .filter((a) => a.code !== RANK_EXCLUDE_CODE && a.branch && String(a.branch).includes('파트너'))
@@ -214,9 +277,10 @@ export async function GET() {
     let agent = await supabaseAgentGetByCode(session.code!);
     if (agent && agent.code !== RANK_EXCLUDE_CODE) {
       const merged = mergeFebruaryFix([agent]) as SupabaseAgentRecord[];
-      agent = merged[0];
+      agent = applyMcListBranch(merged)[0];
       let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
       allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
+      allForRanks = applyMcListBranch(allForRanks);
       const ranks = computeRanks(allForRanks);
       const partnerAgents = allForRanks
         .filter((a) => a.code !== RANK_EXCLUDE_CODE && a.branch && String(a.branch).includes('파트너'))
