@@ -150,6 +150,40 @@ export async function GET() {
       });
     }
 
+    // 특수 코드: 722031500 (이도경 지점장) → "우리" 지점 설계사만 조회, 검색/리스트 오픈
+    if (session.code === '722031500') {
+      const allowedBranches = ['우리'];
+      let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
+      allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
+      const filtered = allItems.filter((a) => {
+        if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
+        const branchName = String(a.branch);
+        return allowedBranches.some((b) => branchName.includes(b));
+      });
+      let agentsData = filtered.map(toSafeAgent);
+      agentsData = sortByMarchPerformance(agentsData);
+
+      let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
+      allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
+      const ranks = computeRanks(allForRanks);
+      const partnerAgents = allForRanks
+        .filter(
+          (a) =>
+            a.code !== RANK_EXCLUDE_CODE &&
+            a.branch &&
+            String(a.branch).includes('파트너'),
+        )
+        .map(toSafeAgent);
+
+      return NextResponse.json({
+        user,
+        agents: agentsData,
+        updateDate,
+        ranks,
+        partnerAgents,
+      });
+    }
+
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
       let items = await supabaseAgentsListAll({ filterRole: 'agent' });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];

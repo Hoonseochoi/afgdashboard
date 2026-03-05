@@ -113,6 +113,19 @@ export async function GET() {
       return NextResponse.json({ agents: agentsData, updateDate, ranks });
     }
 
+    if (session.code === '722031500') {
+      const allowedBranches = ['우리'];
+      let items = await supabaseAgentsListAll({ filterRole: 'agent' });
+      items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      const filtered = items.filter((a) => {
+        if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
+        return allowedBranches.some((b) => String(a.branch).includes(b));
+      });
+      let agentsData = filtered.map(toSafeAgent);
+      agentsData = sortByMarchPerformance(agentsData);
+      return NextResponse.json({ agents: agentsData, updateDate });
+    }
+
     if (session.role === 'manager') {
       const mCode = session.targetManagerCode || session.code || '';
       let items = await supabaseAgentsListAll({ filterManagerCode: mCode });

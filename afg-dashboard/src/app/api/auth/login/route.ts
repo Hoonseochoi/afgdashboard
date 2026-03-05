@@ -55,12 +55,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '비밀번호가 일치하지 않습니다.' }, { status: 401 });
     }
 
-    const isSpecialStudioCode = String(agent.code) === '105203241';
+    const isBranchManagerCode =
+      String(agent.code) === '105203241' || String(agent.code) === '722031500';
     const user = {
       code: agent.code,
       name: agent.name,
       isFirstLogin: agent.isFirstLogin ?? true,
-      role: isSpecialStudioCode ? 'manager' : agent.role || 'agent',
+      role: isBranchManagerCode ? 'manager' : agent.role || 'agent',
       targetManagerCode: agent.targetManagerCode ?? null,
       branch: agent.branch ?? null,
     };

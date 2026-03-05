@@ -40,6 +40,14 @@ const RANK_EXCLUDE_CODE = "712345678"; // 테스트용 노연지 계정 — 랭�
 
 const PARTNER_TIERS = [100000, 200000, 300000, 500000]; // 10만, 20만, 30만, 50만 (시상 구간)
 
+/** 지점명 표시: "우리" → "WOORI BRANCH", 나머지는 스튜디오 등 그대로 */
+function branchDisplayLabel(branch: string | null | undefined): string {
+  const b = String(branch ?? "").trim();
+  if (!b) return "";
+  if (b.includes("우리")) return "WOORI BRANCH";
+  return b;
+}
+
 function PartnerPrizeCard({ title, value }: { title: string; value: number }) {
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white/5 dark:bg-gray-800/50">
@@ -1291,7 +1299,7 @@ export function Dashboard({
                     <div className="hidden lg:block text-sm text-right">
                       <p className="font-bold text-gray-800 dark:text-gray-100">
                         {user?.name}
-                        {user?.role === "admin" ? " 관리자" : user?.role === "manager" ? " 매니저" : "님"}
+                        {user?.role === "admin" ? " 관리자" : user?.role === "manager" ? (user?.code === "722031500" ? " BM" : " 매니저") : "님"}
                       </p>
                     </div>
                   </div>
@@ -1362,7 +1370,7 @@ export function Dashboard({
                       agentSearchOpen
                         ? agentSearchQuery
                         : selectedAgent
-                        ? `${selectedAgent.name} (${selectedAgent.branch})`
+                        ? `${selectedAgent.name} (${branchDisplayLabel(selectedAgent.branch)})`
                         : ""
                     }
                     onChange={(e) => {
@@ -1452,7 +1460,7 @@ export function Dashboard({
                                   }`}
                                 >
                                   <span>
-                                    {agent.name} ({agent.branch})
+                                    {agent.name} ({branchDisplayLabel(agent.branch)})
                                   </span>
                                   <span className="text-xs text-gray-500">
                                     3월 {Math.round((agent.performance?.[searchMonthKey] || 0) / 10000)}만
@@ -1572,7 +1580,7 @@ export function Dashboard({
                     <p className={`mb-2 ${
                       selectedViewMonth === 3 ? "text-gray-600 dark:text-gray-300" : isTop3 ? "text-gray-400" : isTop30 ? "text-gray-500 dark:text-gray-400" : "text-gray-600 dark:text-gray-300"
                     }`}>
-                      {selectedAgent.branch}
+                      {branchDisplayLabel(selectedAgent.branch)}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {totalEstimatedPrize > 0 && (
