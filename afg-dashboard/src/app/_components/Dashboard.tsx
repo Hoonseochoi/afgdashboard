@@ -287,19 +287,19 @@ function PartnerWeekCombinedCard({
   const achieved1 = PARTNER_TIERS.filter((t) => tierPerf1 >= t);
   const achieved2 = PARTNER_TIERS.filter((t) => tierPerf2 >= t);
 
-  const tierBadgeBase = "inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold";
+  const tierBadgeBase = "inline-flex items-center justify-center flex-1 min-w-0 px-2 py-1 rounded-md text-[10px] font-semibold";
   const tierBadgeOn = "bg-primary text-white shadow-sm";
   const tierBadgeOff =
     "bg-white/80 dark:bg-gray-800/70 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-gray-700";
 
   return (
     <div className={APPLE_CARD_BASE}>
-      {/* 상단 배지 라인 */}
-      <div className="flex flex-wrap gap-1 justify-end min-h-[22px] mb-1">
+      {/* 상단 배지 라인 — 옆으로 넓혀 공간 활용 */}
+      <div className="flex flex-wrap gap-1.5 justify-end min-h-[22px] mb-1">
         {badges?.map((b) => (
           <span
             key={b}
-            className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold border ${headerBadgeStyle[variant]}`}
+            className={`inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-md text-[10px] font-semibold border ${headerBadgeStyle[variant]}`}
           >
             {b}
           </span>
@@ -331,7 +331,7 @@ function PartnerWeekCombinedCard({
               시상금 {formatMan(prize1)}만
             </span>
           </div>
-          <div className="mt-1 flex flex-wrap gap-1">
+          <div className="mt-1 flex gap-1.5">
             {PARTNER_TIERS.map((t) => {
               const on = achieved1.includes(t);
               return (
@@ -359,7 +359,7 @@ function PartnerWeekCombinedCard({
               시상금 {formatMan(prize2)}만
             </span>
           </div>
-          <div className="mt-1 flex flex-wrap gap-1">
+          <div className="mt-1 flex gap-1.5">
             {PARTNER_TIERS.map((t) => {
               const on = achieved2.includes(t);
               return (
@@ -520,7 +520,7 @@ function ContinuousRun12Card({
   const maxTickReached = janTicks.reduce((acc, t) => (baseJan >= t ? t : acc), 0);
 
   return (
-    <div className={`${APPLE_CARD_BASE} gap-3`}>
+    <div className={`${APPLE_CARD_BASE} gap-2`}>
       <div className="absolute top-0 left-0 right-0 h-px opacity-60 bg-gradient-to-r from-transparent via-violet-300/70 to-transparent dark:via-violet-500/70" />
 
       <div className="flex items-center justify-between gap-3">
@@ -529,7 +529,7 @@ function ContinuousRun12Card({
           <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white tracking-tight">
             1~2월 연속가동 · 추가 연속가동
           </h3>
-          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+          <p className="mt-0.5 text-[11px] text-gray-600 dark:text-gray-400 leading-tight">
             1월 구간 실적과 2월 완성도를 한 눈에 보고, 연속·추가 연속가동 예상 시상금을 비교합니다.
           </p>
         </div>
@@ -545,15 +545,15 @@ function ContinuousRun12Card({
         </div>
       </div>
 
-      <div className="relative grid grid-cols-[1fr_2fr] gap-0 min-h-[164px]">
+      <div className="relative grid grid-cols-[1fr_2fr] gap-0 min-h-[128px]">
         {/* 가운데 세로 라인 */}
-        <div className="pointer-events-none absolute inset-y-3 left-[33.33%] border-l border-violet-200/70 dark:border-violet-700/70" />
+        <div className="pointer-events-none absolute inset-y-2 left-[33.33%] border-l border-violet-200/70 dark:border-violet-700/70" />
         {/* 우측만 가로 라인 */}
         <div className="pointer-events-none absolute top-1/2 left-[33.33%] right-3 border-t border-violet-200/70 dark:border-violet-700/70" />
 
         {/* 좌측: 1월 세로 그래프 (10,20,30,50 눈금) */}
         <div className="pr-3 flex flex-col justify-center">
-          <div className="flex items-end gap-3 h-24">
+          <div className="flex items-end gap-2 h-16">
             <div className="flex flex-col justify-between h-full text-[10px] text-gray-500 dark:text-gray-400">
               {janTicks
                 .slice()
@@ -625,7 +625,7 @@ function ContinuousRun12Card({
                 {formatMan(baseFeb)}만 / 10만
               </span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
+            <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
               <span>예상 시상금</span>
               <span className="font-bold text-violet-700 dark:text-violet-200 text-sm">
                 {formatMan(basePrize)}만원
@@ -634,7 +634,7 @@ function ContinuousRun12Card({
           </div>
 
           {/* 추가 연속가동 */}
-          <div className="flex flex-col gap-2 pt-2 pb-1 border-t border-violet-100/80 dark:border-violet-800/60">
+          <div className="flex flex-col gap-1.5 pt-1.5 pb-0.5 border-t border-violet-100/80 dark:border-violet-800/60">
             <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-1.5">
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/60 text-violet-800 dark:text-violet-100">
@@ -662,7 +662,7 @@ function ContinuousRun12Card({
                 {formatMan(extraFeb)}만 / 10만
               </span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
+            <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
               <span>예상 시상금</span>
               <span className="font-bold text-violet-700 dark:text-violet-200 text-sm">
                 {formatMan(extraPrize)}만원
@@ -707,7 +707,7 @@ function ContinuousRun23Card({
   const maxTickReached = febTicks.reduce((acc, t) => (febPerf >= t ? t : acc), 0);
 
   return (
-    <div className={`${APPLE_CARD_BASE} gap-3`}>
+    <div className={`${APPLE_CARD_BASE} gap-2`}>
       <div className="absolute top-0 left-0 right-0 h-px opacity-60 bg-gradient-to-r from-transparent via-violet-300/70 to-transparent dark:via-violet-500/70" />
 
       <div className="flex items-center justify-between gap-3">
@@ -729,15 +729,15 @@ function ContinuousRun23Card({
         </div>
       </div>
 
-      <div className="relative grid grid-cols-[1fr_2fr] gap-0 min-h-[164px]">
+      <div className="relative grid grid-cols-[1fr_2fr] gap-0 min-h-[128px]">
         {/* 가운데 세로 라인 (좌·우 영역 경계) */}
-        <div className="pointer-events-none absolute inset-y-3 left-[33.33%] border-l border-violet-200/70 dark:border-violet-700/70" />
+        <div className="pointer-events-none absolute inset-y-2 left-[33.33%] border-l border-violet-200/70 dark:border-violet-700/70" />
         {/* 우측만 가운데 가로 라인 */}
         <div className="pointer-events-none absolute top-1/2 left-[33.33%] right-3 border-t border-violet-200/70 dark:border-violet-700/70" />
 
         {/* 좌측: 2월 세로 그래프 (10,20,30,50 눈금) */}
         <div className="pr-3 flex flex-col justify-center">
-          <div className="flex items-end gap-3 h-24">
+          <div className="flex items-end gap-2 h-16">
             <div className="flex flex-col justify-between h-full text-[10px] text-gray-500 dark:text-gray-400">
               {febTicks
                 .slice()
@@ -770,7 +770,7 @@ function ContinuousRun23Card({
               </div>
             </div>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
+          <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
             <span>2월 16~28일 선행 구간</span>
             <span className="font-semibold text-violet-700 dark:text-violet-200">
               {formatMan(febPerf)}만 · {febStatus}
@@ -780,7 +780,7 @@ function ContinuousRun23Card({
 
         {/* 우측: 위/아래 3월 게이지 (3/15, 3/8 마감) */}
         <div className="pl-4 flex flex-col justify-between">
-          <div className="flex flex-col gap-2 pt-1 pb-3">
+          <div className="flex flex-col gap-1.5 pt-0.5 pb-2">
             <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-1.5">
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/60 text-violet-800 dark:text-violet-100">
@@ -804,7 +804,7 @@ function ContinuousRun23Card({
                 {formatMan(march15Perf)}만 / 10만
               </span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
+            <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
               <span>예상 시상금</span>
               <span className="font-bold text-violet-700 dark:text-violet-200 text-sm">
                 {formatMan(basePrize)}만원
@@ -812,7 +812,7 @@ function ContinuousRun23Card({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 pt-3 pb-1">
+          <div className="flex flex-col gap-1.5 pt-1.5 pb-0.5">
             <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-1.5">
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/60 text-violet-800 dark:text-violet-100">
@@ -836,7 +836,7 @@ function ContinuousRun23Card({
                 {formatMan(march8Perf)}만 / 10만
               </span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400 text-[11px]">
+            <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
               <span>예상 시상금</span>
               <span className="font-bold text-violet-700 dark:text-violet-200 text-sm">
                 {formatMan(extraPrize)}만원
