@@ -1591,7 +1591,13 @@ export function Dashboard({
                         <span className="text-sm font-bold text-primary">
                           {remainLabel === "gap"
                             ? `2위와의 격차 ${Math.round(remainToShow / 10000).toLocaleString()}만원`
-                            : `${Math.round(remainToShow / 10000).toLocaleString()}만원 더 채우세요 !`}
+                            : (() => {
+                                // 더채우세요: 목표를 10만원 단위로 (20만, 30만 …), 그 목표까지 남은 금액 표시. 예: 18만원 현재 → 목표 20만 → "2만원 더 채우세요"
+                                const current = currentMonthPerfForBanner;
+                                const displayTarget = Math.ceil((current + remainToShow) / 100000) * 100000;
+                                const displayRemain = Math.max(0, displayTarget - current);
+                                return `${Math.round(displayRemain / 10000).toLocaleString()}만원 더 채우세요 !`;
+                              })()}
                         </span>
                       </div>
                     )}
