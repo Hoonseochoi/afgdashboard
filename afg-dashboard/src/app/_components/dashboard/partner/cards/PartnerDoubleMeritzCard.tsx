@@ -88,7 +88,7 @@ export function PartnerDoubleMeritzCard({
           const remaining = Math.max(0, nextTierValue - currentMonthPerf);
           if (remaining <= 0) return null;
           return (
-            <p className="mt-1 text-[10px] text-red-600 dark:text-red-400 font-medium">
+            <p className="mt-1 text-[13px] text-red-600 dark:text-red-400 font-medium">
               달성까지 남은 금액 {formatMan(remaining)}만원
             </p>
           );

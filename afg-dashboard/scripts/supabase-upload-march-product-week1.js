@@ -1,11 +1,12 @@
 /**
- * 3월 상품 1주차 실적 업로드
- * - 엑셀: data/daily/0305PRIZE_SUM_OUT_202603 (1).xlsx
+ * 1주차 상품 실적 업로드 (PRIZE_SUM 엑셀)
+ * - 파일: data/daily/{MMDD}PRIZE_SUM*.xlsx (예: 0305PRIZE_SUM_OUT_202603.xlsx)
+ *   인자로 경로 지정 시 해당 파일 사용, 없으면 daily 폴더에서 최신 NNNNPRIZE_SUM*.xlsx 자동 선택
  * - K열(인덱스 10): 설계사코드, AC열(인덱스 28): 상품 1주차 실적
- * - agents.product_week1 컬럼 + agents.weekly.productWeek1 에 반영
+ * - agents.product_week1 + agents.weekly.productWeek1 반영
  *
- * DB 컬럼 추가 (최초 1회): scripts/migrations/add_product_week1_to_agents.sql 실행
- * 실행: node scripts/supabase-upload-march-product-week1.js
+ * 실행: node scripts/supabase-upload-march-product-week1.js [경로]
+ * 데일리 업데이트: run-daily-update.py 에서 MC_LIST 업로드 후 함께 실행됨
  */
 const path = require('path');
 const fs = require('fs');
@@ -27,7 +28,22 @@ const IDX_CODE = 10;   // K열: 설계사코드
 const IDX_PRODUCT_W1 = 28; // AC열: 상품 1주차 실적
 const HEADER_ROW = 0; // 데이터 시작 전 헤더(있으면 0 또는 1)
 
-const EXCEL_PATH = path.join(__dirname, '..', '..', 'data', 'daily', '0305PRIZE_SUM_OUT_202603 (1).xlsx');
+const DAILY_DIR = path.join(__dirname, '..', '..', 'data', 'daily');
+
+/** 인자로 경로가 있으면 사용, 없으면 data/daily에서 최신 NNNNPRIZE_SUM*.xlsx 선택 */
+function resolveExcelPath() {
+  const arg = process.argv[2];
+  if (arg) {
+    const p = path.isAbsolute(arg) ? arg : path.join(DAILY_DIR, path.basename(arg));
+    return fs.existsSync(p) ? p : null;
+  }
+  if (!fs.existsSync(DAILY_DIR)) return null;
+  const files = fs.readdirSync(DAILY_DIR)
+    .filter((f) => /^\d{4}PRIZE_SUM/i.test(f) && /\.xlsx?$/i.test(f))
+    .sort();
+  if (files.length === 0) return null;
+  return path.join(DAILY_DIR, files[files.length - 1]);
+}
 
 function normalizeCode(c) {
   const s = String(c).trim();
@@ -98,8 +114,13 @@ function getUpdatePayload(agentByCode, rows) {
 }
 
 async function main() {
-  console.log('[3월 상품 1주차] 엑셀:', EXCEL_PATH);
-  const rows = parsePrizeSumXlsx(EXCEL_PATH);
+  const excelPath = resolveExcelPath();
+  if (!excelPath) {
+    console.log('[1주차 상품] data/daily에 NNNNPRIZE_SUM*.xlsx 없음. 업데이트 생략.');
+    process.exit(0);
+  }
+  console.log('[1주차 상품] 엑셀:', excelPath);
+  const rows = parsePrizeSumXlsx(excelPath);
   if (!rows || rows.length === 0) {
     console.error('파싱된 행 없음. 경로·열 인덱스 확인.');
     process.exit(1);
@@ -138,7 +159,7 @@ async function main() {
     const { data: after } = await supabase.from('agents').select('code, weekly, product_week1').eq('code', checkCode).single();
     console.log('  [검증]', checkCode, '→ product_week1:', after?.product_week1 ?? '(없음)', 'weekly.productWeek1:', after?.weekly?.productWeek1 ?? '(없음)');
   }
-  console.log('[3월 상품 1주차] 완료. 반영:', updated);
+  console.log('[1주차 상품] 완료. 반영:', updated);
 }
 
 main().catch((err) => {

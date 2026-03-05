@@ -1,28 +1,62 @@
-## Supabase 데일리 업데이트 플로우 (MC_LIST)
+## Supabase 데일리 업데이트 플로우 (MC_LIST + 1주차 상품)
 
-이 문서는 `supabase-upload-daily.js` 기준으로 **일일 MC_LIST 엑셀을 업로드했을 때**  
-어떤 순서로 데이터가 갱신되는지, 특히 **3월 MC_LIST가 새로 들어오는 상황**을 가정하여 설명합니다.
+이 문서는 **데일리 업데이트** 시  
+1) **MC_LIST** 엑셀 기준 실적·주차·config·agent-order 반영,  
+2) **PRIZE_SUM** 엑셀 기준 **1주차 상품** 실적 반영  
+이 동시에 이루어지도록 정리한 것입니다.
 
 ---
 
 ## 1. 사용 스크립트 및 전제
 
-- **스크립트**: `node scripts/supabase-upload-daily.js`
+### 1.1 한 번에 실행 (권장)
+
+- **실행**: `python scripts/run-daily-update.py`  
+  - 1단계: `node scripts/supabase-upload-daily.js` (MC_LIST)
+  - 2단계: `node scripts/supabase-upload-march-product-week1.js` (1주차 상품, PRIZE_SUM)
+- **위치**: `afg-dashboard` 폴더에서 실행. `.env.local` 필요.
+
+### 1.2 개별 스크립트
+
+| 스크립트 | 용도 | 입력 파일 패턴 |
+|----------|------|----------------|
+| `node scripts/supabase-upload-daily.js` | 당월/전월 실적, 1~4주차, config, agent-order | `data/daily` 최신 `NNNNMC_LIST*.xlsx` |
+| `node scripts/supabase-upload-march-product-week1.js` [경로] | 1주차 상품 실적 → `product_week1`, `weekly.productWeek1` | `data/daily` 최신 `NNNNPRIZE_SUM*.xlsx` 또는 인자로 경로 지정 |
+
 - **필요 환경 변수 (`.env.local`)**
   - `SUPABASE_URL` 또는 `NEXT_PUBLIC_SUPABASE_URL`
   - `SUPABASE_SERVICE_ROLE_KEY`
-- **입력 파일 위치**
-  - `data/daily` 폴더
-  - 파일명 패턴: `NNNNMC_LIST*.xlsx`
-    - 예: `0227MC_LIST_OUT_202602.xlsx`
 
-스크립트는 항상 `data/daily` 폴더에서 **가장 최신(사전순으로 마지막)** `NNNNMC_LIST*.xlsx` 파일을 찾아 사용합니다.
+### 1.3 입력 파일 위치
+
+- **MC_LIST**: `data/daily` 폴더, 파일명 패턴 `NNNNMC_LIST*.xlsx`  
+  예: `0305MC_LIST_OUT_202603.xlsx`
+- **1주차 상품(PRIZE_SUM)**: 같은 폴더, 파일명 패턴 `NNNNPRIZE_SUM*.xlsx`  
+  예: `0305PRIZE_SUM_OUT_202603.xlsx`  
+  - 날짜(앞 4자리)는 MC_LIST와 맞추면 데일리 업데이트 시 같은 기준일로 동시 반영됩니다.
+  - PRIZE_SUM 파일이 없으면 1주차 상품 스크립트는 “파일 없음, 업데이트 생략” 후 정상 종료(exit 0)합니다.
+
+스크립트는 각각 `data/daily`에서 **가장 최신(사전순 마지막)** 해당 패턴 파일을 사용합니다.
 
 ---
 
-## 2. 파일 선택 및 기준 월 계산
+## 2. 1주차 상품(PRIZE_SUM) 반영
 
-### 2.1 최신/전일 파일 찾기
+- **파일 패턴**: `data/daily` 아래 `NNNNPRIZE_SUM*.xlsx` (예: `0305PRIZE_SUM_OUT_202603.xlsx`).
+- **선택**: 인자 없이 실행 시 위 패턴 중 **가장 최신 파일** 사용. `node scripts/supabase-upload-march-product-week1.js "경로"` 로 파일 지정 가능.
+- **엑셀 매핑** (고정 인덱스):
+  - **K열(인덱스 10)**: 설계사코드
+  - **AC열(인덱스 28)**: 상품 1주차 실적
+- **Supabase 반영**:
+  - `agents.product_week1` (컬럼), `agents.weekly.productWeek1` (JSON) 에 동일 값 반영.
+  - 기존 `weekly` 의 나머지 키(week1~4 등)는 유지한 채 merge.
+- **파일 없음**: 해당 패턴 파일이 없으면 스크립트는 “1주차 상품 업데이트 생략” 후 exit 0으로 종료합니다.
+
+---
+
+## 3. 파일 선택 및 기준 월 계산 (MC_LIST)
+
+### 3.1 최신/전일 파일 찾기
 
 ```js
 const dailyDir = path.join(__dirname, '..', '..', 'data', 'daily');
@@ -41,7 +75,7 @@ const prev = files.find((f) => f.startsWith(prevPrefix)) ?? null;
     그 접두어로 시작하는 파일이 있으면 `prev`(전일 파일)로 사용합니다.  
     (실제 운영에서는 `0228 → 0227` 처럼 존재하는 조합만 의미 있게 사용됨)
 
-### 2.2 월 키 계산 (`currentMonthKey`, `prevMonthKey`)
+### 3.2 월 키 계산 (`currentMonthKey`, `prevMonthKey`)
 
 ```js
 const { current: currentMonthKey, prev: prevMonthKey } = parseMonthFromFilename(fileName);
@@ -66,9 +100,9 @@ const dailyDiffKey = `${currentMonthKey}-diff`; // 예: "2026-03-diff"
 
 ---
 
-## 3. 엑셀 파싱 로직 (어센틱 설계사만 필터)
+## 4. 엑셀 파싱 로직 (MC_LIST, 어센틱 설계사만 필터)
 
-### 3.1 컬럼 위치 (고정 인덱스)
+### 4.1 컬럼 위치 (고정 인덱스)
 
 `parseDailyXlsx(filePath)` 에서 **고정 인덱스**로만 읽습니다. 헤더 검색 없음.  
 엑셀 열 정의는 **`docs/DAILY_EXCEL_MAPPING.md`** 를 기준으로 합니다.
@@ -85,7 +119,7 @@ const dailyDiffKey = `${currentMonthKey}-diff`; // 예: "2026-03-diff"
 - 헤더 행: **1** 고정 (데이터는 2행부터).
 - 열 배치가 바뀌면 `supabase-upload-daily.js` 의 `IDX_*` 상수와 이 문서를 함께 수정할 것.
 
-### 3.2 행 필터 조건
+### 4.2 행 필터 조건
 
 각 행에 대해 다음 조건을 만족하는 경우만 유효 데이터로 봅니다.
 
@@ -110,9 +144,9 @@ result.push({
 
 ---
 
-## 4. Supabase에 반영되는 내용
+## 5. Supabase에 반영되는 내용 (MC_LIST)
 
-### 4.1 config 테이블 (`update_date`)
+### 5.1 config 테이블 (`update_date`)
 
 스크립트 시작 시, 선택된 최신 파일명을 기준으로 `updateDate` 값을 정합니다.
 
@@ -134,7 +168,7 @@ await supabase.from("config").upsert(
 - `config.app.update_date = "0301"` 로 갱신되고
 - `/api/dashboard` 응답의 `updateDate` 도 `"0301"` 으로 보이게 됩니다.
 
-### 4.2 agents 테이블 (performance / weekly)
+### 5.2 agents 테이블 (performance / weekly)
 
 각 설계사 코드별로 Supabase `agents`를 조회한 뒤, 다음과 같이 갱신합니다.
 
@@ -160,7 +194,7 @@ const weekly = {
   - `performance["2026-03-diff"]` = **당일 기준 증감** (아래 4.3 참고)
 - `weekly` 는 단순히 `week1~4` 를 이번 MC_LIST 값으로 세팅합니다.
 
-### 4.3 일별 증감(`YYYY-MM-diff`) 계산 방식
+### 5.3 일별 증감(`YYYY-MM-diff`) 계산 방식
 
 전일 파일(`prev`)이 있는 경우:
 
@@ -181,9 +215,9 @@ performance[dailyDiffKey] = dailyDiff;
 - `prevCurrent` 를 **오늘 값(row.currentMonth)** 으로 간주 → `dailyDiff = 0`
 - 즉, 첫 날(또는 이전 파일이 없는 상황)에는 `*-diff` 값이 0이 됩니다.
 
-### 4.4 신규 설계사 vs 기존 설계사
+### 5.4 신규 설계사 vs 기존 설계사
 
-#### 4.4.1 기존 설계사(`agents`에 이미 존재)
+#### 5.4.1 기존 설계사(`agents`에 이미 존재)
 
 ```js
 await supabase
@@ -195,7 +229,7 @@ await supabase
 - `performance` / `weekly` 만 갱신합니다.
 - 이름/지사/매니저 정보 등은 바꾸지 않습니다.
 
-#### 4.4.2 신규 설계사(처음 등장)
+#### 5.4.2 신규 설계사(처음 등장)
 
 ```js
 await supabase.from("agents").insert({
@@ -218,7 +252,7 @@ await supabase.from("agents").insert({
 
 ---
 
-## 5. agent-order.json (MC_LIST 순서 반영)
+## 6. agent-order.json (MC_LIST 순서 반영)
 
 모든 행을 순회하면서 설계사 코드를 `orderedCodes` 배열에 쌓습니다.
 
@@ -260,7 +294,7 @@ return [...agents].sort((a, b) => {
 
 ---
 
-## 6. "내일 3월 MC_LIST" 시나리오 정리
+## 7. "내일 3월 MC_LIST" 시나리오 정리
 
 가정:
 
@@ -269,7 +303,7 @@ return [...agents].sort((a, b) => {
   **3월 첫 파일** `0301MC_LIST_OUT_202603.xlsx` 가 `data/daily` 폴더에 추가됨
 - 이후 `node scripts/supabase-upload-daily.js` 실행
 
-### 6.1 2월 마지막 날 (예: 0228) MC_LIST가 들어오는 경우
+### 7.1 2월 마지막 날 (예: 0228) MC_LIST가 들어오는 경우
 
 1. `data/daily`에서 가장 마지막 파일을 `latest` 로 선택  
    - 예: `0228MC_LIST_OUT_202602.xlsx`
@@ -285,7 +319,7 @@ return [...agents].sort((a, b) => {
    - `updateDate: "0228"`
    - `codes`: 0228 MC_LIST 기준 설계사 순서로 갱신
 
-### 6.2 3월 첫 MC_LIST (예: 0301) 가 들어오는 경우
+### 7.2 3월 첫 MC_LIST (예: 0301) 가 들어오는 경우
 
 1. `latest` = `0301MC_LIST_OUT_202603.xlsx`
 2. `updateDate = "0301"` → `config.app.update_date = "0301"`
@@ -313,33 +347,33 @@ return [...agents].sort((a, b) => {
 
 ---
 
-## 7. 발생 이슈 및 조치 (참고)
+## 8. 발생 이슈 및 조치 (참고)
 
 데일리 배치·대시보드 운영 중 발생한 이슈와 조치를 정리했습니다.  
 **내일부터는 아래 점검 포인트로 동일 이슈가 반복되지 않도록 확인할 것.**
 
-### 7.1 Supabase API 1000행 제한으로 상위 실적자가 목록에 안 보임
+### 8.1 Supabase API 1000행 제한으로 상위 실적자가 목록에 안 보임
 
 - **증상**: 김정리, 이현승 등 매출 상위자·Supabase agents 1페이지에 있는 사람이 대시보드 설계사 선택 목록에 아예 안 나옴.
 - **원인**: PostgREST 기본이 **요청당 최대 1000행**. `supabaseAgentsListAll` 이 1000명만 가져와서, id 순 앞쪽(1페이지) 설계사만 응답에 포함됨.
 - **조치**: `src/lib/supabase-server.ts` 의 `supabaseAgentsListAll` 에서 **1000행씩 페이지네이션**으로 전부 수집 (0–999, 1000–1999, … 병합).
 - **점검**: 배치/배포 후 대시보드에서 **매출 1위·2위**가 설계사 선택 드롭다운 상위에 보이는지 확인.
 
-### 7.2 엑셀 인정실적(K열)이 DB에 반영 안 됨
+### 8.2 엑셀 인정실적(K열)이 DB에 반영 안 됨
 
 - **증상**: MC_LIST 엑셀 K열이 인정실적인데 대시보드/Supabase에 0 또는 예전 값만 보임.
 - **원인**: 컬럼을 헤더 텍스트로만 찾다 보니, 엑셀 형식이 다르면 잘못된 열을 읽음.
 - **조치**: **고정 인덱스** 사용. `DAILY_EXCEL_MAPPING.md` 기준으로 F=5, G=6, **K=10**(인정실적), S=18, AL=37 등 고정. 헤더 검색 제거.
 - **점검**: 배치 로그에 `[파싱] 고정 인덱스 | 인정실적: 10` 확인. 특정 코드(예: 725070184)로 디버그 로그에 엑셀 당월 실적 값이 찍히는지 확인.
 
-### 7.3 방금 등록한 설계사가 리스트에서 사라짐
+### 8.3 방금 등록한 설계사가 리스트에서 사라짐
 
 - **증상**: Supabase에만 있고 MC_LIST 엑셀에는 없는 “방금 등록한” 설계사가 대시보드 목록에서 안 보임.
 - **원인**: `agent-order.json` 을 **엑셀에 있는 코드만**으로 덮어써서, DB에만 있는 코드가 순서 목록에서 빠짐.
 - **조치**: `agent-order.json` 저장 시 **엑셀 순서(중복 제거) + DB에만 있는 코드**를 뒤에 붙여서 저장. 리스트 정렬은 API에서 **3월 매출 순**으로 하므로 이 파일은 “누가 나올지”만 보장.
 - **점검**: 신규 등록 후 배치 돌린 뒤, 해당 설계사가 목록 맨 뒤라도 보이는지 확인.
 
-### 7.4 리스트 순서가 3월 매출 순이 아님
+### 8.4 리스트 순서가 3월 매출 순이 아님
 
 - **증상**: 설계사 선택 목록이 MC_LIST 순서나 예전 순서로만 보임.
 - **조치**: 대시보드/agents API에서 **`sortByMarchPerformance`** 사용 (performance['2026-03'] 내림차순). `agent-order.json` 은 정렬에 사용하지 않음.
@@ -347,7 +381,7 @@ return [...agents].sort((a, b) => {
 
 ---
 
-## 8. 데일리 배치 후 점검 포인트 (매일 확인)
+## 9. 데일리 배치 후 점검 포인트 (매일 확인)
 
 **배치 실행 후** 아래 순서로 확인하면 이슈 재발을 막을 수 있습니다.
 
@@ -368,6 +402,7 @@ return [...agents].sort((a, b) => {
    - 상단 업데이트 날짜가 방금 반영한 날짜로 보이는지.
    - **설계사 선택 드롭다운**에서 **매출 1위·2위**(예: 김정리 등)가 **상위에** 보이는지 (Supabase 1000행 이슈 재발 여부).
    - 3월 탭에서 실적/순위/카드가 최신 MC_LIST와 맞는지.
+   - 3월 탭 **1주차 상품** 카드가 PRIZE_SUM 기준으로 보이는지 (해당일 PRIZE_SUM 파일을 넣었다면).
 
 5. **신규 등록자**
    - 당일 Supabase에만 추가한 설계사가 있다면, 목록 맨 뒤라도 노출되는지 확인.

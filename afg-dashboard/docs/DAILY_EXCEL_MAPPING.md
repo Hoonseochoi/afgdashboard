@@ -98,3 +98,12 @@
 - **항상 3월(2026-03) 매출 순**으로 정렬됩니다.
 - `performance['2026-03']` 값이 **큰 순** → 같으면 코드 오름차순.
 - `agent-order.json`은 “MC_LIST 순서 + DB전용”만 저장하고, **화면 정렬에는 사용하지 않습니다.**
+
+---
+
+## 7. PRIZE_SUM (1주차 상품) 엑셀
+
+- **파일 패턴**: `data/daily/` 아래 `NNNNPRIZE_SUM*.xlsx` (예: `0305PRIZE_SUM_OUT_202603.xlsx`).
+- **스크립트**: `supabase-upload-march-product-week1.js` (데일리 업데이트 시 `run-daily-update.py`에서 MC_LIST 후 자동 실행).
+- **고정 인덱스** (0-based): K열(10)=설계사코드, AC열(28)=상품 1주차 실적.
+- **Supabase 반영**: `agents.product_week1`, `agents.weekly.productWeek1`.
