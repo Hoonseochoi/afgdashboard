@@ -19,6 +19,10 @@ import type { PartnerPrizeData } from "@/lib/supabase-server";
 import { MarchCards } from "@/app/MarchCards";
 import { NonPartnerCards } from "@/app/NonPartnerCards";
 import LoadingLines from "@/app/LoadingLines";
+import { RANK_EXCLUDE_CODE } from "./dashboard/constants";
+import { formatMan, branchDisplayLabel, displayBranch } from "./dashboard/utils";
+import { PartnerPrizeCardFull, PartnerWeekCombinedCard, MeritzClubPlusCard, ContinuousRun12Card, ContinuousRun23Card } from "./dashboard/partner/PartnerCards";
+import { PerformanceChart } from "./dashboard/PerformanceChart";
 
 const januaryClosed = januaryClosedData as Record<
   string,
@@ -36,815 +40,12 @@ const februaryClosed = februaryClosedData as Record<
     weekly: { week1: number; week2: number; week3: number; week4: number };
   }
 >;
-const RANK_EXCLUDE_CODE = "712345678"; // 테스트용 노연지 계정 — 랭킹·실적 순위에서 제외
-
-const PARTNER_TIERS = [100000, 200000, 300000, 500000]; // 10만, 20만, 30만, 50만 (시상 구간)
-
-// 파트너 전용 Apple 스타일 기본 카드 컨테이너
-const APPLE_CARD_BASE =
-  "relative rounded-2xl p-4 md:p-5 flex flex-col overflow-hidden bg-gradient-to-br from-white to-gray-50/90 dark:from-[#050509] dark:to-[#050509] border border-gray-200/80 dark:border-gray-800 shadow-[0_18px_45px_rgba(15,23,42,0.45)] transition-all duration-200 hover:-translate-y-0.5";
-
-/** 지점명 표시 (스튜디오/지사명 전용):
- * - "주식회사 어센틱금융그룹" 문구 제거
- * - "(엔타스3스튜디오)"처럼 괄호 안에 스튜디오명이 있으면 그 안의 텍스트만 표시
- * - 최종적으로 스튜디오명만 표시 (예: 엔타스3스튜디오, 송도스튜디오)
- */
-function branchDisplayLabel(branch: string | null | undefined): string {
-  let b = String(branch ?? "").trim();
-  if (!b) return "";
-
-  // 회사명 제거
-  b = b.replace("주식회사 어센틱금융그룹", "").trim();
-
-  // 괄호 안 스튜디오명만 추출: "(...)" 패턴이 있으면 안쪽만 사용
-  const parenMatch = b.match(/\(([^)]+)\)/);
-  if (parenMatch && parenMatch[1]) {
-    return parenMatch[1].trim();
-  }
-
-  // 양 끝 괄호 제거
-  if (b.startsWith("(") && b.endsWith(")")) {
-    b = b.slice(1, -1).trim();
-  }
-
-  return b || String(branch ?? "").trim();
-}
-
-/** 화면 표시용 지점명:
- * - agent.gaBranch 가 "우리"/"WOORI"를 포함하면 → "WOORI BRANCH"
- * - 그 외에는 Supabase branch(스튜디오/지사명)를 branchDisplayLabel로 가공해서 사용
- */
-function displayBranch(agent: { branch?: string | null; gaBranch?: string | null }): string {
-  const ga = String((agent as any).gaBranch ?? "").trim();
-  if (ga && (ga.includes("우리") || ga.toUpperCase().includes("WOORI"))) {
-    return "WOORI BRANCH";
-  }
-  return branchDisplayLabel(agent.branch ?? null);
-}
-
-/** 금액 표시: 원 단위를 '만원' 기준 소수 첫째 자리(천원 단위)까지, 반올림 없이 표시 */
-function formatMan(amount: number | null | undefined): string {
-  const v = typeof amount === "number" ? amount : Number(amount ?? 0);
-  if (!Number.isFinite(v) || v === 0) return "0";
-  const manTimes10 = Math.floor((v / 10000) * 10); // 0.1만원(=천원 단위) 내림
-  const man = manTimes10 / 10;
-  const hasDecimal = manTimes10 % 10 !== 0;
-  return man.toLocaleString(undefined, hasDecimal ? { minimumFractionDigits: 1, maximumFractionDigits: 1 } : { maximumFractionDigits: 0 });
-}
 
 function PartnerPrizeCard({ title, value }: { title: string; value: number }) {
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-white/5 dark:bg-gray-800/50">
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{title}</p>
       <p className="text-base font-bold text-primary">{formatMan(value)}만원</p>
-    </div>
-  );
-}
-
-type PartnerCardVariant = "green" | "sky" | "purple" | "yellow";
-
-function PartnerPrizeCardFull({
-  index,
-  title,
-  badges,
-  subtext,
-  showTierButtons,
-  tierPerf,
-  tierPerfB,
-  expectedPrize,
-  variant,
-  emphasizePrize,
-  prizeBadge,
-  isMCPlus,
-  mcPlusCurrent,
-  mcPlusTarget,
-  mcPlusProgress,
-}: {
-  index: number;
-  title: string;
-  /** 타이틀 오른쪽 라인 배지: [익월], [13회차], [#%], [최대#%] 등 */
-  badges?: string[];
-  /** 타이틀 아래 해당 기간 달성 실적 서브텍스트 */
-  subtext?: string;
-  showTierButtons: boolean;
-  tierPerf: number;
-  tierPerfB?: number;
-  expectedPrize: number;
-  variant: PartnerCardVariant;
-  /** 1번 시상 등 시상금 강조(큰 글자) */
-  emphasizePrize?: boolean;
-  /** 시상금 라인 오른쪽 배지 (예: 3월 8일까지 10만 달성시 완성) */
-  prizeBadge?: string;
-  isMCPlus?: boolean;
-  mcPlusCurrent?: number;
-  mcPlusTarget?: number;
-  mcPlusProgress?: number;
-}) {
-  const variantAccent = {
-    green: "bg-emerald-500 dark:bg-emerald-500 text-white shadow-sm",
-    sky: "bg-sky-500 dark:bg-sky-500 text-white shadow-sm",
-    purple: "bg-violet-500 dark:bg-violet-500 text-white shadow-sm",
-    yellow: "bg-amber-500 dark:bg-amber-500 text-white shadow-sm",
-  };
-  const badgeStyle = {
-    green: "bg-emerald-100 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 shadow-sm",
-    sky: "bg-sky-100 dark:bg-sky-800/50 text-sky-800 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-sm",
-    purple: "bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700 shadow-sm",
-    yellow: "bg-amber-100 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 shadow-sm",
-  };
-  const achieved = showTierButtons
-    ? PARTNER_TIERS.filter((t) => (tierPerfB != null ? tierPerf >= t && tierPerfB >= t : tierPerf >= t))
-    : [];
-  const tierAreaHeight = "min-h-[52px] flex items-center";
-
-  return (
-    <div className={APPLE_CARD_BASE}>
-      {/* 상단 입체감 하이라이트 */}
-      <div
-        className={`absolute top-0 left-0 right-0 h-px opacity-60 ${
-          variant === "green"
-            ? "bg-gradient-to-r from-transparent via-emerald-300 to-transparent dark:via-emerald-600"
-            : variant === "sky"
-              ? "bg-gradient-to-r from-transparent via-sky-300 to-transparent dark:via-sky-600"
-              : variant === "purple"
-                ? "bg-gradient-to-r from-transparent via-violet-300 to-transparent dark:via-violet-600"
-                : "bg-gradient-to-r from-transparent via-amber-300 to-transparent dark:via-amber-600"
-            }`}
-        />
-      {/* 배지: 카드 최상단 한 줄 고정(11번 등 긴 타이틀 잘림 방지), 모든 카드 동일 세로 위치 */}
-      <div className="flex flex-wrap gap-1 justify-end min-h-[22px] mb-1">
-        {badges?.map((b) => (
-          <span key={b} className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold border ${badgeStyle[variant]}`}>
-            {b}
-          </span>
-        ))}
-      </div>
-      <div className="flex items-center gap-2.5 relative min-w-0">
-        <span
-          className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold ${variantAccent[variant]}`}
-        >
-          {index}
-        </span>
-        <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white tracking-tight break-words min-w-0">
-          {title}
-        </p>
-      </div>
-      {subtext && (
-        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 mb-2 pl-9 relative">{subtext}</p>
-      )}
-      {/* 시상 구간 게이지바 영역 — 높이 통일로 카드 정렬 */}
-      <div className={tierAreaHeight}>
-        {showTierButtons && (
-          <div className="grid grid-cols-4 gap-2 w-full">
-            {PARTNER_TIERS.map((t) => {
-              const isAchieved = achieved.includes(t);
-              return (
-                <span
-                  key={t}
-                  className={`flex items-center justify-center px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all ${
-                    isAchieved
-                      ? "bg-primary text-white dark:bg-primary dark:text-gray-900 shadow-md"
-                      : "bg-white/80 dark:bg-gray-800/70 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-gray-700"
-                  }`}
-                >
-                  {t / 10000}만
-                </span>
-              );
-            })}
-          </div>
-        )}
-        {isMCPlus && mcPlusTarget != null && (
-          <div className="w-full">
-            <div className="h-2.5 bg-white/60 dark:bg-gray-700 rounded-full overflow-hidden border border-gray-200/80 dark:border-gray-600">
-              <div
-                className="h-full bg-primary dark:bg-meritz-gold rounded-full transition-all shadow-sm"
-                style={{ width: `${Math.min(100, mcPlusProgress ?? 0)}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5">
-              {formatMan(mcPlusCurrent ?? 0)}만 / 목표 {formatMan(mcPlusTarget ?? 0)}만
-            </p>
-          </div>
-        )}
-      </div>
-      <div className="mt-auto pt-3 flex items-center justify-between gap-2 flex-wrap border-t border-gray-200/60 dark:border-gray-600/50">
-        <p className={`font-bold text-primary ${emphasizePrize ? "text-xl sm:text-2xl" : "text-base"} drop-shadow-sm`}>
-          {formatMan(expectedPrize)}만원
-        </p>
-        {prizeBadge && (
-          <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-semibold whitespace-nowrap ${badgeStyle[variant]}`}>
-            {prizeBadge}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-type PartnerWeekCombinedCardProps = {
-  index: number;
-  title: string;
-  badges?: string[];
-  line1Label: string;
-  line2Label: string;
-  tierPerf1: number;
-  tierPerf2: number;
-  prize1: number;
-  prize2: number;
-  rateLabel1?: string;
-  rateLabel2?: string;
-  variant?: PartnerCardVariant;
-};
-
-function PartnerWeekCombinedCard({
-  index,
-  title,
-  badges,
-  line1Label,
-  line2Label,
-  tierPerf1,
-  tierPerf2,
-  prize1,
-  prize2,
-  rateLabel1,
-  rateLabel2,
-  variant = "sky",
-}: PartnerWeekCombinedCardProps) {
-  const variantAccent = {
-    green: "bg-emerald-500 dark:bg-emerald-500 text-white shadow-sm",
-    sky: "bg-sky-500 dark:bg-sky-500 text-white shadow-sm",
-    purple: "bg-violet-500 dark:bg-violet-500 text-white shadow-sm",
-    yellow: "bg-amber-500 dark:bg-amber-500 text-white shadow-sm",
-  };
-
-  const headerBadgeStyle = {
-    green: "bg-emerald-100 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 shadow-sm",
-    sky: "bg-sky-100 dark:bg-sky-800/50 text-sky-800 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-sm",
-    purple: "bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700 shadow-sm",
-    yellow: "bg-amber-100 dark:bg-amber-800/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 shadow-sm",
-  };
-
-  const achieved1 = PARTNER_TIERS.filter((t) => tierPerf1 >= t);
-  const achieved2 = PARTNER_TIERS.filter((t) => tierPerf2 >= t);
-
-  const tierBadgeBase = "inline-flex items-center justify-center flex-1 min-w-0 px-2 py-1 rounded-md text-[10px] font-semibold";
-  const tierBadgeOn = "bg-primary text-white shadow-sm";
-  const tierBadgeOff =
-    "bg-white/80 dark:bg-gray-800/70 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-gray-700";
-
-  return (
-    <div className={APPLE_CARD_BASE}>
-      {/* 상단 배지 라인 — 옆으로 넓혀 공간 활용 */}
-      <div className="flex flex-wrap gap-1.5 justify-end min-h-[22px] mb-1">
-        {badges?.map((b) => (
-          <span
-            key={b}
-            className={`inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-1 rounded-md text-[10px] font-semibold border ${headerBadgeStyle[variant]}`}
-          >
-            {b}
-          </span>
-        ))}
-      </div>
-      {/* 인덱스 + 타이틀 */}
-      <div className="flex items-center gap-2.5 relative min-w-0 mb-2">
-        <span
-          className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold ${variantAccent[variant]}`}
-        >
-          {index}
-        </span>
-        <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white tracking-tight break-words min-w-0">
-          {title}
-        </p>
-      </div>
-
-      <div className="space-y-3 text-[11px] text-gray-700 dark:text-gray-100">
-        {/* 윗 블록 */}
-        <div>
-          <div className="flex items-baseline justify-between gap-2">
-            <div className="min-w-0">
-              <p className="font-semibold text-gray-900 dark:text-gray-50">{line1Label}</p>
-              {rateLabel1 && (
-                <p className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400 break-keep">{rateLabel1}</p>
-              )}
-            </div>
-            <span className="text-xs font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-              시상금 {formatMan(prize1)}만
-            </span>
-          </div>
-          <div className="mt-1 flex gap-1.5">
-            {PARTNER_TIERS.map((t) => {
-              const on = achieved1.includes(t);
-              return (
-                <span key={t} className={`${tierBadgeBase} ${on ? tierBadgeOn : tierBadgeOff}`}>
-                  {t / 10000}만
-                </span>
-              );
-            })}
-          </div>
-          <p className="mt-0.5 text-[10px] text-gray-600 dark:text-gray-400">
-            실적 {formatMan(tierPerf1)}만
-          </p>
-        </div>
-
-        {/* 아랫 블록 */}
-        <div className="pt-2 border-t border-gray-200/70 dark:border-gray-700/70">
-          <div className="flex items-baseline justify-between gap-2">
-            <div className="min-w-0">
-              <p className="font-semibold text-gray-900 dark:text-gray-50">{line2Label}</p>
-              {rateLabel2 && (
-                <p className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400 break-keep">{rateLabel2}</p>
-              )}
-            </div>
-            <span className="text-xs font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-              시상금 {formatMan(prize2)}만
-            </span>
-          </div>
-          <div className="mt-1 flex gap-1.5">
-            {PARTNER_TIERS.map((t) => {
-              const on = achieved2.includes(t);
-              return (
-                <span key={t} className={`${tierBadgeBase} ${on ? tierBadgeOn : tierBadgeOff}`}>
-                  {t / 10000}만
-                </span>
-              );
-            })}
-          </div>
-          <p className="mt-0.5 text-[10px] text-gray-600 dark:text-gray-400">
-            실적 {formatMan(tierPerf2)}만
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type MeritzClubPlusCardProps = {
-  janPerf: number;
-  febPerf: number;
-  marchPerf: number;
-  plusTarget: number;
-  plusProgress: number;
-  currentMonthNum: number;
-};
-
-function MeritzClubPlusCard({
-  janPerf,
-  febPerf,
-  marchPerf,
-  plusTarget,
-  plusProgress,
-  currentMonthNum,
-}: MeritzClubPlusCardProps) {
-  const janTarget = 200000;
-  const febTarget = 500000;
-  const marTarget = plusTarget || 200000;
-
-  const janDone = janPerf >= janTarget;
-  const febDone = febPerf >= febTarget;
-  const marDone = marTarget > 0 && marchPerf >= marTarget;
-
-  const Row = ({
-    label,
-    perf,
-    target,
-    done,
-  }: {
-    label: string;
-    perf: number;
-    target: number;
-    done: boolean;
-  }) => (
-    <div className="flex items-center justify-between gap-3 rounded-xl px-2.5 py-2 bg-white/70 dark:bg-gray-900/40 border border-gray-100/80 dark:border-gray-800">
-      <div className="flex items-center gap-2 min-w-0">
-        <span
-          className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-semibold border ${
-            done
-              ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-100 dark:border-emerald-700"
-              : "bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-900/40 dark:text-gray-300 dark:border-gray-700"
-          }`}
-        >
-          {done ? "✓" : "…"}
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-gray-800 dark:text-gray-50">{label}</p>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
-            {formatMan(perf)}만 / {formatMan(target)}만
-          </p>
-        </div>
-      </div>
-      <span
-        className={`text-[10px] font-semibold whitespace-nowrap ${
-          done ? "text-emerald-600 dark:text-emerald-300" : "text-red-500 dark:text-red-300"
-        }`}
-      >
-        {done ? "달성" : "진행중"}
-      </span>
-    </div>
-  );
-
-  return (
-    <div className={APPLE_CARD_BASE}>
-      {/* 헤더 */}
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center shadow-md border border-gray-700/80">
-            <span className="text-[11px] font-semibold tracking-tight text-meritz-gold">MC+</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">Meritz Club Plus</p>
-            <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">메리츠클럽 플러스 (Q1)</p>
-          </div>
-        </div>
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-900 text-meritz-gold border border-meritz-gold/40 shadow-sm">
-          Q1
-        </span>
-      </div>
-
-      {/* 1·2·3월 리스트 */}
-      <div className="space-y-2.5 text-[11px]">
-        <Row label="1월 실적" perf={janPerf} target={janTarget} done={janDone} />
-        <Row label="2월 실적" perf={febPerf} target={febTarget} done={febDone} />
-        <Row label="3월 실적" perf={marchPerf} target={marTarget} done={marDone && currentMonthNum >= 3} />
-      </div>
-
-      {/* 하단 진행 바 (Q1 전체 진행도) */}
-      <div className="mt-3 pt-2 border-t border-gray-200/70 dark:border-gray-700/70">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] text-gray-500 dark:text-gray-400">Q1 진행도</span>
-          <span className="text-[10px] font-semibold text-gray-800 dark:text-gray-100">
-            {Math.min(100, Math.round(plusProgress))}%
-          </span>
-        </div>
-        <div className="h-2 bg-gray-100 dark:bg-gray-900 rounded-full overflow-hidden border border-gray-200/80 dark:border-gray-700/70">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-meritz-gold via-amber-300 to-primary shadow-sm"
-            style={{ width: `${Math.min(100, plusProgress)}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type ContinuousRun12Props = {
-  baseJan: number;
-  baseFeb: number;
-  basePrize: number;
-  extraJan: number;
-  extraFeb: number;
-  extraPrize: number;
-};
-
-function ContinuousRun12Card({
-  baseJan,
-  baseFeb,
-  basePrize,
-  extraJan,
-  extraFeb,
-  extraPrize,
-}: ContinuousRun12Props) {
-  const janTarget = 500000; // 50만
-  const febTarget = 100000; // 10만
-
-  const janProgress = Math.min(100, (baseJan / janTarget) * 100 || 0);
-  const baseProgress = Math.min(100, (baseFeb / febTarget) * 100 || 0);
-  const extraProgress = Math.min(100, (extraFeb / febTarget) * 100 || 0);
-
-  const baseStatus =
-    baseJan >= 100000 && baseFeb >= 100000 ? "조건 달성" : baseFeb >= 50000 ? "달성 가능성 높음" : "진행 중";
-
-  const extraStatus =
-    extraJan >= 100000 && extraFeb >= 100000 ? "조건 달성" : extraFeb >= 50000 ? "달성 가능성 높음" : "진행 중";
-
-  const janTicks = [100000, 200000, 300000, 500000];
-  const maxTickReached = janTicks.reduce((acc, t) => (baseJan >= t ? t : acc), 0);
-
-  return (
-    <div className={`${APPLE_CARD_BASE} gap-2`}>
-      <div className="absolute top-0 left-0 right-0 h-px opacity-60 bg-gradient-to-r from-transparent via-violet-300/70 to-transparent dark:via-violet-500/70" />
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-violet-700 dark:text-violet-200">연속가동 시상</p>
-          <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white tracking-tight">
-            1~2월 연속가동 · 추가 연속가동
-          </h3>
-          <p className="mt-0.5 text-[11px] text-gray-600 dark:text-gray-400 leading-tight">
-            1월 구간 실적과 2월 완성도를 한 눈에 보고, 연속·추가 연속가동 예상 시상금을 비교합니다.
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex flex-wrap gap-1 justify-end">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700 shadow-sm">
-              13회차
-            </span>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700 shadow-sm">
-              최대 300%
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative grid grid-cols-[1fr_2fr] gap-0 min-h-[128px]">
-        {/* 가운데 세로 라인 */}
-        <div className="pointer-events-none absolute inset-y-2 left-[33.33%] border-l border-violet-200/70 dark:border-violet-700/70" />
-        {/* 우측만 가로 라인 */}
-        <div className="pointer-events-none absolute top-1/2 left-[33.33%] right-3 border-t border-violet-200/70 dark:border-violet-700/70" />
-
-        {/* 좌측: 1월 세로 그래프 (10,20,30,50 눈금) */}
-        <div className="pr-3 flex flex-col justify-center">
-          <div className="flex items-end gap-2 h-16">
-            <div className="flex flex-col justify-between h-full text-[10px] text-gray-500 dark:text-gray-400">
-              {janTicks
-                .slice()
-                .reverse()
-                .map((t) => (
-                  <span
-                    key={t}
-                    className={
-                      t === maxTickReached && maxTickReached > 0
-                        ? "font-semibold text-red-600 dark:text-red-300 drop-shadow-sm"
-                        : undefined
-                    }
-                  >
-                    {t / 10000}만
-                  </span>
-                ))}
-            </div>
-            <div className="relative flex-1 h-full flex items-end">
-              <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col justify-between">
-                {janTicks.map((t) => (
-                  <div key={t} className="h-px w-full bg-violet-100/80 dark:bg-violet-900/60" />
-                ))}
-              </div>
-              <div className="relative w-6 mx-auto flex items-end">
-                <div className="w-full h-full bg-white/40 dark:bg-gray-900/40 border border-violet-200/70 dark:border-violet-800/70 rounded-full" />
-                <div
-                  className="absolute bottom-0 left-0 right-0 mx-auto w-4 rounded-full bg-violet-500 dark:bg-violet-400 shadow-md transition-all"
-                  style={{ height: `${janProgress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-            <span>1월 연속가동 구간</span>
-            <span className="font-semibold text-violet-700 dark:text-violet-200">
-              {formatMan(baseJan)}만
-            </span>
-          </div>
-        </div>
-
-        {/* 우측: 위/아래 2월 게이지 (연속·추가 연속) */}
-        <div className="pl-4 flex flex-col justify-between">
-          {/* 연속가동 */}
-          <div className="flex flex-col gap-2 pt-1 pb-3">
-            <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/60 text-violet-800 dark:text-violet-100">
-                  연속가동
-                </span>
-                <span>2월 1~18일 · 10만 목표</span>
-              </div>
-              <span
-                className={`font-semibold text-xs ${
-                  baseStatus === "조건 달성" ? "text-emerald-600 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200"
-                }`}
-              >
-                {baseStatus}
-              </span>
-            </div>
-            <div className="h-3.5 bg-white/70 dark:bg-gray-900/60 rounded-full overflow-hidden border border-gray-200/80 dark:border-gray-700/70">
-              <div
-                className="h-full bg-violet-500 dark:bg-violet-400 rounded-full transition-all shadow-sm"
-                style={{ width: `${baseProgress}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <span>2월 연속가동 구간</span>
-              <span className="font-semibold text-violet-700 dark:text-violet-200">
-                {formatMan(baseFeb)}만 / 10만
-              </span>
-            </div>
-            <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <span>예상 시상금</span>
-              <span className="font-bold text-violet-700 dark:text-violet-200 text-sm">
-                {formatMan(basePrize)}만원
-              </span>
-            </div>
-          </div>
-
-          {/* 추가 연속가동 */}
-          <div className="flex flex-col gap-1.5 pt-1.5 pb-0.5 border-t border-violet-100/80 dark:border-violet-800/60">
-            <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/60 text-violet-800 dark:text-violet-100">
-                  추가 연속가동
-                </span>
-                <span>2월 1~18일 · 10만 목표</span>
-              </div>
-              <span
-                className={`font-semibold text-xs ${
-                  extraStatus === "조건 달성" ? "text-emerald-600 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200"
-                }`}
-              >
-                {extraStatus}
-              </span>
-            </div>
-            <div className="h-3.5 bg-white/70 dark:bg-gray-900/60 rounded-full overflow-hidden border border-gray-200/80 dark:border-gray-700/70">
-              <div
-                className="h-full bg-violet-500 dark:bg-violet-400 rounded-full transition-all shadow-sm"
-                style={{ width: `${extraProgress}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <span>2월 추가 구간</span>
-              <span className="font-semibold text-violet-700 dark:text-violet-200">
-                {formatMan(extraFeb)}만 / 10만
-              </span>
-            </div>
-            <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <span>예상 시상금</span>
-              <span className="font-bold text-violet-700 dark:text-violet-200 text-sm">
-                {formatMan(extraPrize)}만원
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type ContinuousRun23Props = {
-  febPerf: number;
-  febExtraPerf: number;
-  march15Perf: number;
-  march8Perf: number;
-  basePrize: number;
-  extraPrize: number;
-};
-
-function ContinuousRun23Card({
-  febPerf,
-  febExtraPerf,
-  march15Perf,
-  march8Perf,
-  basePrize,
-  extraPrize,
-}: ContinuousRun23Props) {
-  const febTarget = 500000; // 50만
-  const marchTarget = 100000; // 10만
-
-  const febProgress = Math.min(100, (febPerf / febTarget) * 100 || 0);
-  const march15Progress = Math.min(100, (march15Perf / marchTarget) * 100 || 0);
-  const march8Progress = Math.min(100, (march8Perf / marchTarget) * 100 || 0);
-
-  const febStatus = febPerf >= 100000 ? "선행 구간 충족" : febPerf >= 50000 ? "선행 구간 근접" : "선행 구간 진행 중";
-  const baseStatus = febPerf >= 100000 && march15Perf >= 100000 ? "조건 달성" : "진행 중";
-  const extraStatus = febExtraPerf >= 100000 && march8Perf >= 100000 ? "조건 달성" : "진행 중";
-
-  const febTicks = [100000, 200000, 300000, 500000];
-  const maxTickReached = febTicks.reduce((acc, t) => (febPerf >= t ? t : acc), 0);
-
-  return (
-    <div className={`${APPLE_CARD_BASE} gap-2`}>
-      <div className="absolute top-0 left-0 right-0 h-px opacity-60 bg-gradient-to-r from-transparent via-violet-300/70 to-transparent dark:via-violet-500/70" />
-
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-violet-700 dark:text-violet-200">연속가동 시상</p>
-          <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white tracking-tight">
-            2~3월 연속가동 · 추가 연속가동
-          </h3>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex flex-wrap gap-1 justify-end">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700 shadow-sm">
-              13회차
-            </span>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/50 text-violet-800 dark:text-violet-200 border border-violet-300 dark:border-violet-700 shadow-sm">
-              최대 300%
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative grid grid-cols-[1fr_2fr] gap-0 min-h-[128px]">
-        {/* 가운데 세로 라인 (좌·우 영역 경계) */}
-        <div className="pointer-events-none absolute inset-y-2 left-[33.33%] border-l border-violet-200/70 dark:border-violet-700/70" />
-        {/* 우측만 가운데 가로 라인 */}
-        <div className="pointer-events-none absolute top-1/2 left-[33.33%] right-3 border-t border-violet-200/70 dark:border-violet-700/70" />
-
-        {/* 좌측: 2월 세로 그래프 (10,20,30,50 눈금) */}
-        <div className="pr-3 flex flex-col justify-center">
-          <div className="flex items-end gap-2 h-16">
-            <div className="flex flex-col justify-between h-full text-[10px] text-gray-500 dark:text-gray-400">
-              {febTicks
-                .slice()
-                .reverse()
-                .map((t) => (
-                  <span
-                    key={t}
-                    className={
-                      t === maxTickReached && maxTickReached > 0
-                        ? "font-semibold text-red-600 dark:text-red-300 drop-shadow-sm"
-                        : undefined
-                    }
-                  >
-                    {t / 10000}만
-                  </span>
-                ))}
-            </div>
-            <div className="relative flex-1 h-full flex items-end">
-              <div className="absolute inset-x-0 top-0 bottom-0 flex flex-col justify-between">
-                {febTicks.map((t) => (
-                  <div key={t} className="h-px w-full bg-violet-100/80 dark:bg-violet-900/60" />
-                ))}
-              </div>
-              <div className="relative w-6 mx-auto flex items-end">
-                <div className="w-full h-full bg-white/40 dark:bg-gray-900/40 border border-violet-200/70 dark:border-violet-800/70 rounded-full" />
-                <div
-                  className="absolute bottom-0 left-0 right-0 mx-auto w-4 rounded-full bg-violet-500 dark:bg-violet-400 shadow-md transition-all"
-                  style={{ height: `${febProgress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-            <span>2월 16~28일 선행 구간</span>
-            <span className="font-semibold text-violet-700 dark:text-violet-200">
-              {formatMan(febPerf)}만 · {febStatus}
-            </span>
-          </div>
-        </div>
-
-        {/* 우측: 위/아래 3월 게이지 (3/15, 3/8 마감) */}
-        <div className="pl-4 flex flex-col justify-between">
-          <div className="flex flex-col gap-1.5 pt-0.5 pb-2">
-            <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/60 text-violet-800 dark:text-violet-100">
-                  연속가동
-                </span>
-                <span>3월 1~15일 · 10만 목표</span>
-              </div>
-              <span className={`font-semibold text-xs ${baseStatus === "조건 달성" ? "text-emerald-600 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200"}`}>
-                {baseStatus}
-              </span>
-            </div>
-            <div className="h-3.5 bg-white/70 dark:bg-gray-900/60 rounded-full overflow-hidden border border-gray-200/80 dark:border-gray-700/70">
-              <div
-                className="h-full bg-violet-500 dark:bg-violet-400 rounded-full transition-all shadow-sm"
-                style={{ width: `${march15Progress}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <span>현재 3월 실적</span>
-              <span className="font-semibold text-violet-700 dark:text-violet-200">
-                {formatMan(march15Perf)}만 / 10만
-              </span>
-            </div>
-            <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <span>예상 시상금</span>
-              <span className="font-bold text-violet-700 dark:text-violet-200 text-sm">
-                {formatMan(basePrize)}만원
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5 pt-1.5 pb-0.5">
-            <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/60 text-violet-800 dark:text-violet-100">
-                  추가 연속가동
-                </span>
-                <span>3월 1~8일 · 10만 목표</span>
-              </div>
-              <span className={`font-semibold text-xs ${extraStatus === "조건 달성" ? "text-emerald-600 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200"}`}>
-                {extraStatus}
-              </span>
-            </div>
-            <div className="h-3.5 bg-white/70 dark:bg-gray-900/60 rounded-full overflow-hidden border border-gray-200/80 dark:border-gray-700/70">
-              <div
-                className="h-full bg-violet-500 dark:bg-violet-400 rounded-full transition-all shadow-sm"
-                style={{ width: `${march8Progress}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <span>현재 3월 실적</span>
-              <span className="font-semibold text-violet-700 dark:text-violet-200">
-                {formatMan(march8Perf)}만 / 10만
-              </span>
-            </div>
-            <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-              <span>예상 시상금</span>
-              <span className="font-bold text-violet-700 dark:text-violet-200 text-sm">
-                {formatMan(extraPrize)}만원
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -885,6 +86,12 @@ export function Dashboard({
   const [isMobile, setIsMobile] = useState(false);
   const [showPWAInstallPrompt, setShowPWAInstallPrompt] = useState(false);
   const deferredPromptRef = useRef<{ prompt: () => void; userChoice: Promise<{ outcome: string }> } | null>(null);
+
+  // 브라우저(클라이언트) 기준 현재 월 — 서버/빌드 시점이 아닌 사용자 로컬 날짜 사용
+  const [currentMonthNum, setCurrentMonthNum] = useState(1);
+  useEffect(() => {
+    setCurrentMonthNum(new Date().getMonth() + 1);
+  }, []);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1337,7 +544,6 @@ export function Dashboard({
   let plusTargetMinPerf = 0; // 3월 메리츠클럽+ 달성목표 표기용 min(1월,2월) 실적
   let plusNext = "";
   let plusProgress = 0;
-  let currentMonthNum = new Date().getMonth() + 1;
   let febPerf = 0;
   let marchPerf = 0;
   let viewW1 = 0;
@@ -2357,7 +1563,8 @@ export function Dashboard({
                     <>
                       <PartnerPrizeCardFull
                         index={1}
-                        title="정규+파트너 추가"
+                        subtitle="익월 정률시상"
+                        title="정규+ 파트너 추가 시상"
                         badges={["익월", "450%"]}
                         subtext={`1월 실적 ${formatMan(currentMonthPerf)}만`}
                         showTierButtons={false}
@@ -2365,10 +1572,12 @@ export function Dashboard({
                         expectedPrize={regularPrize}
                         variant="green"
                         emphasizePrize
+                        centerPrize
                       />
                       <PartnerWeekCombinedCard
                         index={2}
-                        title="1주차 인보험 · 상품"
+                        subtitle="13회차 주차시상"
+                        title="1주차 인보험 - 상품"
                         badges={["13회차", "100%"]}
                         line1Label="1주차 인보험"
                         line2Label="1주차 상품"
@@ -2382,7 +1591,8 @@ export function Dashboard({
                       />
                       <PartnerWeekCombinedCard
                         index={3}
-                        title="2주차 인보험 · 상품"
+                        subtitle="13회차 주차시상"
+                        title="2주차 인보험 - 상품"
                         badges={["13회차", "100%"]}
                         line1Label="2주차 인보험"
                         line2Label="2주차 상품"
@@ -2422,11 +1632,11 @@ export function Dashboard({
                         variant="sky"
                       />
                       <ContinuousRun12Card
-                        baseJan={p?.continuous12Jan ?? 0}
-                        baseFeb={p?.continuous12Feb ?? 0}
+                        baseJan={p?.continuous12Jan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
+                        baseFeb={p?.continuous12Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
                         basePrize={p?.continuous12Prize ?? 0}
-                        extraJan={p?.continuous12ExtraJan ?? 0}
-                        extraFeb={p?.continuous12ExtraFeb ?? 0}
+                        extraJan={p?.continuous12ExtraJan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
+                        extraFeb={p?.continuous12ExtraFeb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
                         extraPrize={p?.continuous12ExtraPrize ?? 0}
                       />
                       <MeritzClubPlusCard
@@ -2571,7 +1781,8 @@ export function Dashboard({
                     <>
                       <PartnerPrizeCardFull
                         index={1}
-                        title="정규+파트너 추가"
+                        subtitle="익월 정률시상"
+                        title="정규+ 파트너 추가 시상"
                         badges={["익월", "450%"]}
                         subtext={`2월 실적 ${formatMan(currentMonthPerf)}만`}
                         showTierButtons={false}
@@ -2579,10 +1790,12 @@ export function Dashboard({
                         expectedPrize={regularPrize}
                         variant="green"
                         emphasizePrize
+                        centerPrize
                       />
                       <PartnerWeekCombinedCard
                         index={2}
-                        title="1주차 인보험 · 상품"
+                        subtitle="13회차 주차시상"
+                        title="1주차 인보험 - 상품"
                         badges={["13회차", "200% · 100%"]}
                         line1Label="1주차 인보험"
                         line2Label="1주차 상품"
@@ -2596,7 +1809,8 @@ export function Dashboard({
                       />
                       <PartnerWeekCombinedCard
                         index={3}
-                        title="2주차 인보험 · 상품"
+                        subtitle="13회차 주차시상"
+                        title="2주차 인보험 - 상품"
                         badges={["13회차", "100%"]}
                         line1Label="2주차 인보험"
                         line2Label="2주차 상품"
@@ -2609,16 +1823,17 @@ export function Dashboard({
                         variant="sky"
                       />
                       <ContinuousRun12Card
-                        baseJan={p?.continuous12Jan ?? 0}
-                        baseFeb={p?.continuous12Feb ?? 0}
+                        baseJan={p?.continuous12Jan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
+                        baseFeb={p?.continuous12Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
                         basePrize={p?.continuous12Prize ?? 0}
-                        extraJan={p?.continuous12ExtraJan ?? 0}
-                        extraFeb={p?.continuous12ExtraFeb ?? 0}
+                        extraJan={p?.continuous12ExtraJan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
+                        extraFeb={p?.continuous12ExtraFeb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
                         extraPrize={p?.continuous12ExtraPrize ?? 0}
                       />
                       <PartnerWeekCombinedCard
                         index={5}
-                        title="3·3~4주차 인보험"
+                        subtitle="13회차 주차시상"
+                        title="3주차-3-4주차 인보험"
                         badges={["13회차", "100%"]}
                         line1Label="3주차 인보험"
                         line2Label="3~4주 인보험"
@@ -2631,12 +1846,12 @@ export function Dashboard({
                         variant="sky"
                       />
                       <ContinuousRun23Card
-                        febPerf={p?.continuous23Feb ?? 0}
-                        febExtraPerf={p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? 0}
-                        march15Perf={0}
-                        march8Perf={0}
-                        basePrize={p?.continuous23Prize ?? getPartnerContinuousPrize(p?.continuous23Feb ?? 0)}
-                        extraPrize={p?.continuous23ExtraPrize ?? getPartnerContinuousPrize(p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? 0)}
+                        febPerf={p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
+                        febExtraPerf={p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
+                        march15Perf={marchPerf}
+                        march8Perf={marchPerf}
+                        basePrize={p?.continuous23Prize ?? getPartnerContinuousPrize(p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0)}
+                        extraPrize={p?.continuous23ExtraPrize ?? getPartnerContinuousPrize(p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0)}
                       />
                       <MeritzClubPlusCard
                         janPerf={selectedAgent?.performance?.["2026-01"] ?? 0}
@@ -2782,13 +1997,15 @@ export function Dashboard({
               {showDirectContent && nonPartnerCardsEl}
             </div>
 
+            {/* 다이렉트 전용 하단 그리드: 3월 정규시상 · MY HOT · 최근 7개월 실적 추이 (파트너 모드에서는 미표시) */}
+            {showDirectContent && (
             <div className={`grid gap-3 md:gap-5 mb-6 lg:items-stretch ${
-              showPartnerContent ? "grid-cols-1" : selectedViewMonth === 3
+              selectedViewMonth === 3
                 ? `grid-cols-2 ${isStandalone ? "lg:grid-cols-[4fr_6fr_1fr]" : "lg:grid-cols-[200px_280px_1fr]"}`
                 : "grid-cols-1 lg:grid-cols-[280px_1fr]"
             }`}>
               {/* 3월 탭: 앱(standalone)에서만 정규시상·MY HOT 가로폭 4:6, 웹은 200px/280px 고정 */}
-              {showDirectContent && selectedViewMonth === 3 && (
+              {selectedViewMonth === 3 && (
                 <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none w-full lg:h-full flex flex-col">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
@@ -2808,9 +2025,8 @@ export function Dashboard({
                   </div>
                 </div>
               )}
-              {/* 2026 MY HOT - 비파트너만 표시 (파트너는 MY HOT 없음) */}
-              {showDirectContent && (
-                <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none w-full lg:h-full flex flex-col">
+              {/* 2026 MY HOT */}
+              <div className="rounded-xl shadow-lg border border-gray-700/50 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 dark:from-black dark:via-gray-900 dark:to-black relative min-w-0 lg:max-w-none w-full lg:h-full flex flex-col">
                   <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-meritz-gold/10 via-transparent to-transparent pointer-events-none" />
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-12 -mt-12 pointer-events-none" />
                   <div className="relative z-10 p-2.5 md:p-5 flex flex-col items-center flex-1">
@@ -2880,8 +2096,7 @@ export function Dashboard({
                     </p>
                   </div>
                 </div>
-              )}
-              <div className={`bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0 ${showDirectContent && selectedViewMonth === 3 ? "col-span-2 lg:col-span-1" : ""}`}>
+              <div className={`bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0 ${selectedViewMonth === 3 ? "col-span-2 lg:col-span-1" : ""}`}>
                 <div className="flex justify-between items-center mb-4 shrink-0">
                   <div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
@@ -2892,100 +2107,20 @@ export function Dashboard({
                   </div>
                 </div>
                 <div className="flex-1 min-h-[200px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={performanceData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                      <YAxis
-                        yAxisId="left"
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(val) => `${formatMan(val as number)}만`}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(val) => `${formatMan(val as number)}만`}
-                      />
-                      <Tooltip
-                        content={({ active, payload, label }) => {
-                          if (active && payload && payload.length) {
-                            const value = payload.find((p) => p.dataKey === "value")?.value as number | undefined;
-                            const prize = payload.find((p) => p.dataKey === "prize")?.value as number | undefined;
-                            let rank = "-";
-                            const monthMap: Record<string, string> = {
-                              "8월": "2025-08",
-                              "9월": "2025-09",
-                              "10월": "2025-10",
-                              "11월": "2025-11",
-                              "12월": "2025-12",
-                              "1월": "2026-01",
-                              "2월": "2026-02",
-                              "3월": "2026-03",
-                            };
-                            const monthKey = label != null ? monthMap[label] : undefined;
-                            if (value != null && monthKey) {
-                              if (showPartnerContent && partnerRanksByMonth[monthKey] != null) {
-                                rank = String(partnerRanksByMonth[monthKey]);
-                              } else if (globalRanks[monthKey]) {
-                                const rankIndex = globalRanks[monthKey].indexOf(value);
-                                if (rankIndex !== -1) rank = (rankIndex + 1).toString();
-                              }
-                            }
-                            return (
-                              <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-md">
-                                {value != null && (
-                                  <p className="text-sm font-bold text-primary mb-1">
-                                    실적 {formatMan(value)}만원
-                                  </p>
-                                )}
-                                {prize != null && prize > 0 && (
-                                  <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mb-1">
-                                    시상금 {formatMan(prize)}만원
-                                  </p>
-                                )}
-                                {value != null && (
-                                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                    RANK : {rank}위
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Bar yAxisId="right" dataKey="prize" fill="#D4A574" radius={[4, 4, 0, 0]} />
-                      <Line
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="value"
-                        stroke="#EF3B24"
-                        strokeWidth={3}
-                        dot={(props: any) => {
-                          const { cx, cy, payload } = props;
-                          const isClickable = payload?.name === "1월" || payload?.name === "2월" || payload?.name === "3월";
-                          const monthNum = payload?.name === "1월" ? 1 : payload?.name === "2월" ? 2 : payload?.name === "3월" ? 3 : null;
-                          return (
-                            <circle
-                              cx={cx}
-                              cy={cy}
-                              r={isClickable ? 6 : 4}
-                              fill="#EF3B24"
-                              style={isClickable ? { cursor: "pointer" } : undefined}
-                              onClick={monthNum != null ? () => setSelectedViewMonth(monthNum) : undefined}
-                            />
-                          );
-                        }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                  <PerformanceChart
+                    data={performanceData}
+                    onMonthClick={setSelectedViewMonth}
+                    getRank={(value, monthKey) => {
+                      const arr = globalRanks[monthKey];
+                      if (!arr) return "-";
+                      const idx = arr.indexOf(value);
+                      return idx !== -1 ? String(idx + 1) : "-";
+                    }}
+                  />
                 </div>
               </div>
-          </div>
+            </div>
+            )}
 
           {/* 고정 하단 바: 면책문구(왼쪽) + 업데이트 날짜(오른쪽). 모바일에서만 2줄·작은 폰트 */}
             <div className="fixed bottom-0 left-0 right-0 z-50 flex flex-col gap-0.5 md:flex-row md:items-center md:justify-between px-3 py-2 md:px-4 md:py-2.5 bg-white/95 dark:bg-gray-900/95 border-t border-gray-200 dark:border-gray-700 text-[10px] md:text-xs text-gray-500 dark:text-gray-400 backdrop-blur-sm">
