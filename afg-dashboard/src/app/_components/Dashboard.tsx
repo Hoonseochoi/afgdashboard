@@ -21,7 +21,14 @@ import { NonPartnerCards } from "@/app/NonPartnerCards";
 import LoadingLines from "@/app/LoadingLines";
 import { RANK_EXCLUDE_CODE } from "./dashboard/constants";
 import { formatMan, branchDisplayLabel, displayBranch } from "./dashboard/utils";
-import { PartnerPrizeCardFull, PartnerWeekCombinedCard, MeritzClubPlusCard, ContinuousRun12Card, ContinuousRun23Card } from "./dashboard/partner/PartnerCards";
+import {
+  PartnerPrizeCardFull,
+  PartnerWeekCombinedCard,
+  MeritzClubPlusCard,
+  PartnerDoubleMeritzCard,
+  ContinuousRun12Card,
+  ContinuousRun23Card,
+} from "./dashboard/partner/PartnerCards";
 import { PerformanceChart } from "./dashboard/PerformanceChart";
 
 const januaryClosed = januaryClosedData as Record<
@@ -734,7 +741,7 @@ export function Dashboard({
     }
     if (isPartnerBranch && p) {
       if (isJanuaryView) {
-        totalEstimatedPrize = (p.productWeek1PrizeJan ?? 0) + (p.productWeek2PrizeJan ?? 0) + (p.continuous121Prize ?? 0) + (p.week3PrizeJan ?? 0) + (p.week4PrizeJan ?? 0) + (p.continuous12Prize ?? 0) + (p.continuous12ExtraPrize ?? 0) + meritzClubPlusPrize + regularPrize;
+        totalEstimatedPrize = (p.productWeek1PrizeJan ?? 0) + (p.productWeek2PrizeJan ?? 0) + (p.continuous121Prize ?? 0) + (p.week3PrizeJan ?? 0) + (p.week4PrizeJan ?? 0) + (p.continuous12Prize ?? 0) + (p.continuous12ExtraPrize ?? 0) + doubleMeritzPrize + meritzClubPlusPrize + regularPrize;
       } else {
         const pw1 = p.productWeek1Prize ?? 0;
         const pw2 = getPartnerTierPrize(viewW2);
@@ -744,7 +751,7 @@ export function Dashboard({
         const c23ExtraFeb = p?.continuous23ExtraFeb ?? c23Feb;
         const w23 = p?.continuous23Prize ?? getPartnerContinuousPrize(c23Feb);
         const w23Extra = p?.continuous23ExtraPrize ?? getPartnerContinuousPrize(c23ExtraFeb);
-        totalEstimatedPrize = pw1 + pw2 + (p.continuous12Prize ?? 0) + (p.continuous12ExtraPrize ?? 0) + w3 + w34 + w23 + w23Extra + meritzClubPlusPrize + regularPrize;
+        totalEstimatedPrize = pw1 + pw2 + (p.continuous12Prize ?? 0) + (p.continuous12ExtraPrize ?? 0) + w3 + w34 + w23 + w23Extra + doubleMeritzPrize + meritzClubPlusPrize + regularPrize;
       }
     }
 
@@ -1558,96 +1565,106 @@ export function Dashboard({
               </div>
               {/* 파트너 시상: 3열 그리드 — 비파트너와 완전 분리 */}
               {showPartnerContent && (
-                <div className="grid grid-cols-1 gap-4 md:gap-5 mb-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:gap-5 mb-6 sm:grid-cols-2 lg:grid-cols-6">
                   {selectedViewMonth === 1 && (
                     <>
-                      <PartnerPrizeCardFull
-                        index={1}
-                        subtitle="익월 정률시상"
-                        title="정규+ 파트너 추가 시상"
-                        badges={["익월", "450%"]}
-                        subtext={`1월 실적 ${formatMan(currentMonthPerf)}만`}
-                        showTierButtons={false}
-                        tierPerf={0}
-                        expectedPrize={regularPrize}
-                        variant="green"
-                        emphasizePrize
-                        centerPrize
-                      />
-                      <PartnerWeekCombinedCard
-                        index={2}
-                        subtitle="13회차 주차시상"
-                        title="1주차 인보험 - 상품"
-                        badges={["13회차", "100%"]}
-                        line1Label="1주차 인보험"
-                        line2Label="1주차 상품"
-                        tierPerf1={viewW1}
-                        tierPerf2={viewW1}
-                        prize1={p?.productWeek1PrizeJan ?? 0}
-                        prize2={p?.productWeek1PrizeJan ?? 0}
-                        rateLabel1="인보험"
-                        rateLabel2="상품"
-                        variant="sky"
-                      />
-                      <PartnerWeekCombinedCard
-                        index={3}
-                        subtitle="13회차 주차시상"
-                        title="2주차 인보험 - 상품"
-                        badges={["13회차", "100%"]}
-                        line1Label="2주차 인보험"
-                        line2Label="2주차 상품"
-                        tierPerf1={viewW2}
-                        tierPerf2={viewW2}
-                        prize1={p?.productWeek2PrizeJan ?? 0}
-                        prize2={p?.productWeek2PrizeJan ?? 0}
-                        rateLabel1="인보험"
-                        rateLabel2="상품"
-                        variant="sky"
-                      />
-                      <PartnerPrizeCardFull
-                        index={4}
-                        title="12~1월 연속가동"
-                        badges={["13회차", "최대300%"]}
-                        subtext={`12월 구간 ${formatMan(p?.continuous121Dec ?? 0)}만 · 1월 구간 ${formatMan(
-                          p?.continuous121Jan ?? 0,
-                        )}만`}
-                        showTierButtons
-                        tierPerf={p?.continuous121Dec ?? 0}
-                        tierPerfB={p?.continuous121Jan ?? 0}
-                        expectedPrize={p?.continuous121Prize ?? 0}
-                        variant="purple"
-                      />
-                      <PartnerWeekCombinedCard
-                        index={5}
-                        title="3·4주차 인보험"
-                        badges={["13회차", "100%"]}
-                        line1Label="3주차 인보험"
-                        line2Label="4주차 인보험"
-                        tierPerf1={viewW3}
-                        tierPerf2={p?.week4Jan ?? 0}
-                        prize1={p?.week3PrizeJan ?? 0}
-                        prize2={p?.week4PrizeJan ?? 0}
-                        rateLabel1="3주차 100%"
-                        rateLabel2="4주차 100%"
-                        variant="sky"
-                      />
-                      <ContinuousRun12Card
-                        baseJan={p?.continuous12Jan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
-                        baseFeb={p?.continuous12Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
-                        basePrize={p?.continuous12Prize ?? 0}
-                        extraJan={p?.continuous12ExtraJan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
-                        extraFeb={p?.continuous12ExtraFeb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
-                        extraPrize={p?.continuous12ExtraPrize ?? 0}
-                      />
-                      <MeritzClubPlusCard
-                        janPerf={selectedAgent?.performance?.["2026-01"] ?? 0}
-                        febPerf={febPerf}
-                        marchPerf={marchPerf}
-                        plusTarget={plusTarget}
-                        plusProgress={plusProgress}
-                        currentMonthNum={currentMonthNum}
-                      />
-                      <div className="sm:col-span-2 lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0">
+                      {/* 1행: 1주차 · 2주차 · 3주차 인보험 */}
+                      <div className="lg:col-span-2">
+                        <PartnerWeekCombinedCard
+                          index={2}
+                          subtitle="13회차 주차시상"
+                          title="1주차 인보험 - 상품"
+                          badges={["13회차", "100%"]}
+                          line1Label="1주차 인보험"
+                          line2Label="1주차 상품"
+                          tierPerf1={viewW1}
+                          tierPerf2={viewW1}
+                          prize1={p?.productWeek1PrizeJan ?? 0}
+                          prize2={p?.productWeek1PrizeJan ?? 0}
+                          rateLabel1="인보험"
+                          rateLabel2="상품"
+                          variant="sky"
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <PartnerWeekCombinedCard
+                          index={3}
+                          subtitle="13회차 주차시상"
+                          title="2주차 인보험 - 상품"
+                          badges={["13회차", "100%"]}
+                          line1Label="2주차 인보험"
+                          line2Label="2주차 상품"
+                          tierPerf1={viewW2}
+                          tierPerf2={viewW2}
+                          prize1={p?.productWeek2PrizeJan ?? 0}
+                          prize2={p?.productWeek2PrizeJan ?? 0}
+                          rateLabel1="인보험"
+                          rateLabel2="상품"
+                          variant="sky"
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <PartnerWeekCombinedCard
+                          index={5}
+                          title="3·4주차 인보험"
+                          badges={["13회차", "100%"]}
+                          line1Label="3주차 인보험"
+                          line2Label="4주차 인보험"
+                          tierPerf1={viewW3}
+                          tierPerf2={p?.week4Jan ?? 0}
+                          prize1={p?.week3PrizeJan ?? 0}
+                          prize2={p?.week4PrizeJan ?? 0}
+                          rateLabel1="3주차 100%"
+                          rateLabel2="4주차 100%"
+                          variant="sky"
+                        />
+                      </div>
+                      {/* 2행: 1-2월 연속 (1월은 1장만, 높이 2-3월 기준) */}
+                      <div className="lg:col-span-6 h-full min-h-0 flex flex-col">
+                        <ContinuousRun12Card
+                          baseJan={p?.continuous12Jan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
+                          baseFeb={p?.continuous12Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
+                          basePrize={p?.continuous12Prize ?? 0}
+                          extraJan={p?.continuous12ExtraJan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
+                          extraFeb={p?.continuous12ExtraFeb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
+                          extraPrize={p?.continuous12ExtraPrize ?? 0}
+                        />
+                      </div>
+                      {/* 3행: 정규시상 · 2배메리츠 · MC플러스 (높이 통일) */}
+                      <div className="lg:col-span-2 h-full min-h-0 flex flex-col">
+                        <PartnerPrizeCardFull
+                          index={1}
+                          subtitle="익월 정률시상"
+                          title="정규+ 파트너 추가 시상"
+                          badges={["익월", "450%"]}
+                          subtext={`1월 실적 ${formatMan(currentMonthPerf)}만`}
+                          showTierButtons={false}
+                          tierPerf={0}
+                          expectedPrize={regularPrize}
+                          variant="green"
+                          emphasizePrize
+                          centerPrize
+                        />
+                      </div>
+                      <div className="lg:col-span-2 h-full min-h-0 flex flex-col">
+                        <PartnerDoubleMeritzCard
+                          prevMonthPerf={prevMonthPerf}
+                          currentMonthPerf={currentMonthPerf}
+                          doubleMeritzPrize={doubleMeritzPrize}
+                        />
+                      </div>
+                      <div className="lg:col-span-2 h-full min-h-0 flex flex-col">
+                        <MeritzClubPlusCard
+                          janPerf={selectedAgent?.performance?.["2026-01"] ?? 0}
+                          febPerf={febPerf}
+                          marchPerf={marchPerf}
+                          plusTarget={plusTarget}
+                          plusProgress={plusProgress}
+                          currentMonthNum={currentMonthNum}
+                        />
+                      </div>
+                      {/* 4행: 7개월 실적 추이 */}
+                      <div className="sm:col-span-2 lg:col-span-6 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0">
                         <div className="flex justify-between items-center mb-4 shrink-0">
                           <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
@@ -1779,89 +1796,114 @@ export function Dashboard({
                   )}
                   {selectedViewMonth === 2 && (
                     <>
-                      <PartnerPrizeCardFull
-                        index={1}
-                        subtitle="익월 정률시상"
-                        title="정규+ 파트너 추가 시상"
-                        badges={["익월", "450%"]}
-                        subtext={`2월 실적 ${formatMan(currentMonthPerf)}만`}
-                        showTierButtons={false}
-                        tierPerf={0}
-                        expectedPrize={regularPrize}
-                        variant="green"
-                        emphasizePrize
-                        centerPrize
-                      />
-                      <PartnerWeekCombinedCard
-                        index={2}
-                        subtitle="13회차 주차시상"
-                        title="1주차 인보험 - 상품"
-                        badges={["13회차", "200% · 100%"]}
-                        line1Label="1주차 인보험"
-                        line2Label="1주차 상품"
-                        tierPerf1={viewW1}
-                        tierPerf2={viewW1}
-                        prize1={p?.productWeek1InsPrize ?? p?.productWeek1Prize ?? 0}
-                        prize2={p?.productWeek1Prize ?? 0}
-                        rateLabel1="인보험 200%"
-                        rateLabel2="상품 100%"
-                        variant="sky"
-                      />
-                      <PartnerWeekCombinedCard
-                        index={3}
-                        subtitle="13회차 주차시상"
-                        title="2주차 인보험 - 상품"
-                        badges={["13회차", "100%"]}
-                        line1Label="2주차 인보험"
-                        line2Label="2주차 상품"
-                        tierPerf1={viewW2}
-                        tierPerf2={viewW2}
-                        prize1={p?.productWeek2InsPrize ?? getPartnerTierPrize(viewW2)}
-                        prize2={p?.productWeek2Prize ?? getPartnerTierPrize(viewW2)}
-                        rateLabel1="인보험 100%"
-                        rateLabel2="상품 100%"
-                        variant="sky"
-                      />
-                      <ContinuousRun12Card
-                        baseJan={p?.continuous12Jan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
-                        baseFeb={p?.continuous12Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
-                        basePrize={p?.continuous12Prize ?? 0}
-                        extraJan={p?.continuous12ExtraJan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
-                        extraFeb={p?.continuous12ExtraFeb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
+                      {/* 1행: 1주차 · 2주차 · 3주차 인보험 */}
+                      <div className="lg:col-span-2">
+                        <PartnerWeekCombinedCard
+                          index={2}
+                          subtitle="13회차 주차시상"
+                          title="1주차 인보험 - 상품"
+                          badges={["13회차", "200% · 100%"]}
+                          line1Label="1주차 인보험"
+                          line2Label="1주차 상품"
+                          tierPerf1={viewW1}
+                          tierPerf2={viewW1}
+                          prize1={p?.productWeek1InsPrize ?? p?.productWeek1Prize ?? 0}
+                          prize2={p?.productWeek1Prize ?? 0}
+                          rateLabel1="인보험 200%"
+                          rateLabel2="상품 100%"
+                          variant="sky"
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <PartnerWeekCombinedCard
+                          index={3}
+                          subtitle="13회차 주차시상"
+                          title="2주차 인보험 - 상품"
+                          badges={["13회차", "100%"]}
+                          line1Label="2주차 인보험"
+                          line2Label="2주차 상품"
+                          tierPerf1={viewW2}
+                          tierPerf2={viewW2}
+                          prize1={p?.productWeek2InsPrize ?? getPartnerTierPrize(viewW2)}
+                          prize2={p?.productWeek2Prize ?? getPartnerTierPrize(viewW2)}
+                          rateLabel1="인보험 100%"
+                          rateLabel2="상품 100%"
+                          variant="sky"
+                        />
+                      </div>
+                      <div className="lg:col-span-2">
+                        <PartnerWeekCombinedCard
+                          index={5}
+                          subtitle="13회차 주차시상"
+                          title="3주차-3-4주차 인보험"
+                          badges={["13회차", "100%"]}
+                          line1Label="3주차 인보험"
+                          line2Label="3~4주 인보험"
+                          tierPerf1={viewW3Feb}
+                          tierPerf2={p?.week34Sum ?? 0}
+                          prize1={p?.week3Prize ?? getPartnerTierPrize(viewW3Feb)}
+                          prize2={p?.week34Prize ?? getPartnerTierPrize(p?.week34Sum ?? 0)}
+                          rateLabel1="3주차 100%"
+                          rateLabel2="3~4주 100%"
+                          variant="sky"
+                        />
+                      </div>
+                      {/* 2행: 1-2월 연속 · 2-3월 연속 (높이 2-3월에 맞춤, 늘리지 않음) */}
+                      <div className="lg:col-span-3 h-full min-h-0 flex flex-col">
+                        <ContinuousRun12Card
+                          baseJan={p?.continuous12Jan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
+                          baseFeb={p?.continuous12Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
+                          basePrize={p?.continuous12Prize ?? 0}
+                          extraJan={p?.continuous12ExtraJan ?? selectedAgent?.performance?.["2026-01"] ?? 0}
+                          extraFeb={p?.continuous12ExtraFeb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
                         extraPrize={p?.continuous12ExtraPrize ?? 0}
                       />
-                      <PartnerWeekCombinedCard
-                        index={5}
-                        subtitle="13회차 주차시상"
-                        title="3주차-3-4주차 인보험"
-                        badges={["13회차", "100%"]}
-                        line1Label="3주차 인보험"
-                        line2Label="3~4주 인보험"
-                        tierPerf1={viewW3Feb}
-                        tierPerf2={p?.week34Sum ?? 0}
-                        prize1={p?.week3Prize ?? getPartnerTierPrize(viewW3Feb)}
-                        prize2={p?.week34Prize ?? getPartnerTierPrize(p?.week34Sum ?? 0)}
-                        rateLabel1="3주차 100%"
-                        rateLabel2="3~4주 100%"
-                        variant="sky"
-                      />
-                      <ContinuousRun23Card
-                        febPerf={p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
-                        febExtraPerf={p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
-                        march15Perf={marchPerf}
-                        march8Perf={marchPerf}
-                        basePrize={p?.continuous23Prize ?? getPartnerContinuousPrize(p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0)}
-                        extraPrize={p?.continuous23ExtraPrize ?? getPartnerContinuousPrize(p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0)}
-                      />
-                      <MeritzClubPlusCard
-                        janPerf={selectedAgent?.performance?.["2026-01"] ?? 0}
-                        febPerf={febPerf}
-                        marchPerf={marchPerf}
-                        plusTarget={plusTarget}
-                        plusProgress={plusProgress}
-                        currentMonthNum={currentMonthNum}
-                      />
-                      <div className="sm:col-span-2 lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0">
+                      </div>
+                      <div className="lg:col-span-3 h-full min-h-0 flex flex-col">
+                        <ContinuousRun23Card
+                          febPerf={p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
+                          febExtraPerf={p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0}
+                          march15Perf={marchPerf}
+                          march8Perf={marchPerf}
+                          basePrize={p?.continuous23Prize ?? getPartnerContinuousPrize(p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0)}
+                          extraPrize={p?.continuous23ExtraPrize ?? getPartnerContinuousPrize(p?.continuous23ExtraFeb ?? p?.continuous23Feb ?? selectedAgent?.performance?.["2026-02"] ?? 0)}
+                        />
+                      </div>
+                      {/* 3행: 정규시상 · 2배메리츠 · MC플러스 (높이 통일) */}
+                      <div className="lg:col-span-2 h-full min-h-0 flex flex-col">
+                        <PartnerPrizeCardFull
+                          index={1}
+                          subtitle="익월 정률시상"
+                          title="정규+ 파트너 추가 시상"
+                          badges={["익월", "450%"]}
+                          subtext={`2월 실적 ${formatMan(currentMonthPerf)}만`}
+                          showTierButtons={false}
+                          tierPerf={0}
+                          expectedPrize={regularPrize}
+                          variant="green"
+                          emphasizePrize
+                          centerPrize
+                        />
+                      </div>
+                      <div className="lg:col-span-2 h-full min-h-0 flex flex-col">
+                        <PartnerDoubleMeritzCard
+                          prevMonthPerf={prevMonthPerf}
+                          currentMonthPerf={currentMonthPerf}
+                          doubleMeritzPrize={doubleMeritzPrize}
+                        />
+                      </div>
+                      <div className="lg:col-span-2 h-full min-h-0 flex flex-col">
+                        <MeritzClubPlusCard
+                          janPerf={selectedAgent?.performance?.["2026-01"] ?? 0}
+                          febPerf={febPerf}
+                          marchPerf={marchPerf}
+                          plusTarget={plusTarget}
+                          plusProgress={plusProgress}
+                          currentMonthNum={currentMonthNum}
+                        />
+                      </div>
+                      {/* 4행: 7개월 실적 추이 */}
+                      <div className="sm:col-span-2 lg:col-span-6 bg-surface-light dark:bg-surface-dark rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 md:p-6 lg:h-full flex flex-col min-h-0">
                         <div className="flex justify-between items-center mb-4 shrink-0">
                           <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">

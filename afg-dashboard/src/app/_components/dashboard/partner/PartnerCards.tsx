@@ -73,7 +73,7 @@ export function PartnerPrizeCardFull({
   const tierAreaHeight = "min-h-[47px] flex items-center";
 
   return (
-    <div className={APPLE_CARD_BASE}>
+    <div className={`${APPLE_CARD_BASE} h-full`}>
       {/* 상단 입체감 하이라이트 */}
       <div
         className={`absolute top-0 left-0 right-0 h-px opacity-60 ${
@@ -375,7 +375,7 @@ export function MeritzClubPlusCard({
   );
 
   return (
-    <div className={APPLE_CARD_BASE}>
+    <div className={`${APPLE_CARD_BASE} h-full`}>
       {/* 헤더: 2~3월 연속가동과 동일 구조 — 좌(서브타이틀+타이틀) / 우(배지) */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -397,6 +397,75 @@ export function MeritzClubPlusCard({
         <Row label="1월 실적" perf={janPerf} target={janTarget} done={janDone} isCurrentMonth={currentMonthNum === 1} />
         <Row label="2월 실적" perf={febPerf} target={febTarget} done={febDone} isCurrentMonth={currentMonthNum === 2} />
         <Row label="3월 실적" perf={marchPerf} target={marTarget} done={marDone && currentMonthNum >= 3} isCurrentMonth={currentMonthNum === 3} />
+      </div>
+    </div>
+  );
+}
+
+type PartnerDoubleMeritzCardProps = {
+  prevMonthPerf: number;
+  currentMonthPerf: number;
+  doubleMeritzPrize: number;
+};
+
+const DOUBLE_MERITZ_TIERS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]; // 만원 단위
+
+export function PartnerDoubleMeritzCard({
+  prevMonthPerf,
+  currentMonthPerf,
+  doubleMeritzPrize,
+}: PartnerDoubleMeritzCardProps) {
+  const eligible = prevMonthPerf >= 200000 && currentMonthPerf >= 200000;
+
+  return (
+    <div className={`${APPLE_CARD_BASE} h-full border-amber-300/80 dark:border-amber-600/80`}>
+      {/* 헤더: Only AFG CLUB / 2배 메리츠 클럽 (서브타이틀 없음) */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-200 tracking-tight">Only AFG CLUB</p>
+          <h3 className="text-[15.5px] font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
+            2배 메리츠 클럽
+          </h3>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className="inline-flex items-center justify-center w-9 h-9 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-400 text-white text-xs font-extrabold shadow-md">
+            X2
+          </span>
+          <span
+            className={`text-[10px] font-semibold whitespace-nowrap ${
+              eligible ? "text-emerald-600 dark:text-emerald-300" : "text-gray-600 dark:text-gray-300"
+            }`}
+          >
+            {eligible ? "조건 충족" : "도전중"}
+          </span>
+        </div>
+      </div>
+
+      {/* 10~100만 구간 뱃지 2행 (5열) */}
+      <div className="mt-2 grid grid-cols-5 gap-1.5">
+        {DOUBLE_MERITZ_TIERS.map((tierMan) => {
+          const tierValue = tierMan * 100000;
+          const achieved = eligible && currentMonthPerf >= tierValue;
+          return (
+            <span
+              key={tierMan}
+              className={`inline-flex items-center justify-center rounded-xl px-2 py-1.5 text-[11px] font-semibold transition-all ${
+                achieved
+                  ? "bg-amber-500 text-white dark:bg-amber-400 dark:text-gray-900 shadow-sm"
+                  : "bg-white/80 dark:bg-gray-800/70 text-gray-500 dark:text-gray-400 border border-gray-200/80 dark:border-gray-700"
+              }`}
+            >
+              {tierMan}만
+            </span>
+          );
+        })}
+      </div>
+
+      <div className="mt-2 pt-2 border-t border-gray-100/80 dark:border-gray-700/80 flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
+        <span>예상 시상금</span>
+        <span className="text-base font-bold text-amber-600 dark:text-amber-300">
+          {formatMan(doubleMeritzPrize)}만원
+        </span>
       </div>
     </div>
   );
@@ -436,7 +505,7 @@ export function ContinuousRun12Card({
   const maxTickReached = janTicks.reduce((acc, t) => (baseJan >= t ? t : acc), 0);
 
   return (
-    <div className={`${APPLE_CARD_BASE} gap-1.5`}>
+    <div className={`${APPLE_CARD_BASE} h-full gap-1.5`}>
       <div className="absolute top-0 left-0 right-0 h-px opacity-60 bg-gradient-to-r from-transparent via-violet-300/70 to-transparent dark:via-violet-500/70" />
 
       <div className="flex items-start justify-between gap-3">
@@ -622,7 +691,7 @@ export function ContinuousRun23Card({
   const maxTickReached = febTicks.reduce((acc, t) => (febPerf >= t ? t : acc), 0);
 
   return (
-    <div className={`${APPLE_CARD_BASE} gap-1.5`}>
+    <div className={`${APPLE_CARD_BASE} h-full gap-1.5`}>
       <div className="absolute top-0 left-0 right-0 h-px opacity-60 bg-gradient-to-r from-transparent via-violet-300/70 to-transparent dark:via-violet-500/70" />
 
       <div className="flex items-start justify-between gap-3">
