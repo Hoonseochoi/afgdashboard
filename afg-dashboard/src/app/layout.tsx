@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_KR, Nunito } from "next/font/google";
 import "./globals.css";
 import { RegisterSW } from "./RegisterSW";
+import Footer from "./_components/Footer";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
@@ -38,9 +39,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-background-light dark:bg-background-dark min-h-screen text-gray-800 dark:text-gray-200 transition-colors duration-200" suppressHydrationWarning>
+      <body className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col text-gray-800 dark:text-gray-200 transition-colors duration-200" suppressHydrationWarning>
         <RegisterSW />
-        {children}
+        <main className="flex-1 min-h-0">{children}</main>
+        <Footer />
       </body>
     </html>
   );
