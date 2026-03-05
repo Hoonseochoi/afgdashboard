@@ -76,6 +76,8 @@ export type SupabaseAgentRecord = {
   role?: string | null;
   performance?: Record<string, number> | null;
   weekly?: Record<string, number> | null;
+  /** 3월 상품 1주차 실적 (agents.product_week1 또는 weekly.productWeek1) */
+  productWeek1?: number | null;
   partner?: PartnerPrizeData | null;
   managerCode?: string | null;
   managerName?: string | null;
@@ -85,7 +87,18 @@ export type SupabaseAgentRecord = {
   targetManagerCode?: string | null;
 };
 
+function safeNumber(v: unknown): number | null {
+  if (v == null) return null;
+  const n = typeof v === 'bigint' ? Number(v) : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 function rowToAgent(row: any): SupabaseAgentRecord {
+  const raw =
+    row?.product_week1 != null
+      ? row.product_week1
+      : row?.weekly?.productWeek1;
+  const productWeek1 = safeNumber(raw);
   return {
     id: row.id,
     code: row.code,
@@ -94,6 +107,7 @@ function rowToAgent(row: any): SupabaseAgentRecord {
     role: row.role ?? undefined,
     performance: (row.performance || null) as Record<string, number> | null,
     weekly: (row.weekly || null) as Record<string, number> | null,
+    productWeek1: productWeek1 ?? null,
     partner: (row.partner || null) as PartnerPrizeData | null,
     managerCode: row.manager_code ?? null,
     managerName: row.manager_name ?? null,

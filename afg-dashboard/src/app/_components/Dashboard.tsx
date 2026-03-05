@@ -2046,9 +2046,9 @@ export function Dashboard({
                             line1Label="1주차 인보험"
                             line2Label="1주차 상품"
                             tierPerf1={viewW1}
-                            tierPerf2={viewW1}
+                            tierPerf2={selectedAgent?.productWeek1 ?? selectedAgent?.weekly?.productWeek1 ?? viewW1}
                             prize1={getPartnerTierPrize(viewW1)}
-                            prize2={getPartnerTierPrize(viewW1)}
+                            prize2={getPartnerTierPrize(selectedAgent?.productWeek1 ?? selectedAgent?.weekly?.productWeek1 ?? viewW1)}
                             rateLabel1="인보험 100%"
                             rateLabel2="상품 100%"
                             variant="sky"
