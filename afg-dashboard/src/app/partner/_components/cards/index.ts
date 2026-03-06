@@ -1,6 +1,9 @@
 export { PartnerPrizeCardFull } from "./PartnerPrizeCardFull";
 export type { PartnerCardVariant } from "./PartnerPrizeCardFull";
 
+export { PartnerRegularPlusCard } from "./PartnerRegularPlusCard";
+export type { PartnerRegularPlusCardProps } from "./PartnerRegularPlusCard";
+
 export { PartnerWeekCombinedCard } from "./PartnerWeekCombinedCard";
 export type { PartnerWeekCombinedCardProps } from "./PartnerWeekCombinedCard";
 

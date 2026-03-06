@@ -175,7 +175,11 @@
 | **BS** | 1–2월 추가 연속가동 실적 (2월) | `continuous12ExtraFeb` |
 | **BT** | 1–2월 추가 연속가동 시상금 | `continuous12ExtraPrize` |
 | **BX** | 2–3월 연속가동 실적 (2월) | `continuous23Feb` |
+| **BY** | 2–3월 연속가동 실적 (3월, 3/1~3/15) | `continuous23Mar` |
+| **BZ** | 2–3월 연속가동 시상금 | `continuous23Prize` |
 | **CB** | 2–3월 추가 연속가동 실적 (2월) | `continuous23ExtraFeb` |
+| **CC** | 2–3월 추가 연속가동 실적 (3월, 3/1~3/8) | `continuous23ExtraMar` |
+| **CD** | 2–3월 추가 연속가동 시상금 | `continuous23ExtraPrize` |
 
 ### 3.4 업로드 시 사용 흐름
 
@@ -185,9 +189,10 @@
 4. **AL, AM, AN** → 3주차 인보험 시상금, 3–4주차 합산 실적, 3–4주차 인보험 시상금 → `week3Prize`, `week34Sum`, `week34Prize`.
 5. **BL, BM, BN** → 1–2월 연속가동 구간 실적·시상금 → `continuous12Jan`, `continuous12Feb`, `continuous12Prize`.
 6. **BR, BS, BT** → 1–2월 추가 연속가동 구간 실적·시상금 → `continuous12ExtraJan`, `continuous12ExtraFeb`, `continuous12ExtraPrize`.
-7. **BX, CB** → 2–3월 연속가동 2월 실적, 2–3월 추가 연속가동 2월 실적 → `continuous23Feb`, `continuous23ExtraFeb`.
+7. **BX, BY, BZ** → 2–3월 연속가동 2월 실적, 3월 실적, 시상금 → `continuous23Feb`, `continuous23Mar`, `continuous23Prize`.
+8. **CB, CC, CD** → 2–3월 추가 연속가동 2월 실적, 3월 실적, 시상금 → `continuous23ExtraFeb`, `continuous23ExtraMar`, `continuous23ExtraPrize`.
 
-필드명: `productWeek1`, `productWeek1InsPrize`, `productWeek1Prize`, `productWeek2`, `productWeek2InsPrize`, `productWeek2Prize`, `week3Prize`, `week34Sum`, `week34Prize`, `continuous12Jan`, `continuous12Feb`, `continuous12Prize`, `continuous12ExtraJan`, `continuous12ExtraFeb`, `continuous12ExtraPrize`, `continuous23Feb`, `continuous23ExtraFeb` (JSON 객체를 `partner` 문자열 속성으로 저장)
+필드명: `productWeek1`, `productWeek1InsPrize`, `productWeek1Prize`, `productWeek2`, `productWeek2InsPrize`, `productWeek2Prize`, `week3Prize`, `week34Sum`, `week34Prize`, `continuous12Jan`, `continuous12Feb`, `continuous12Prize`, `continuous12ExtraJan`, `continuous12ExtraFeb`, `continuous12ExtraPrize`, `continuous23Feb`, `continuous23Mar`, `continuous23Prize`, `continuous23ExtraFeb`, `continuous23ExtraMar`, `continuous23ExtraPrize` (JSON 객체를 `partner` 문자열 속성으로 저장)
 
 ### 3.5 Appwrite 컬렉션 설정
 

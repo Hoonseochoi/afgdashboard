@@ -47,7 +47,11 @@ const COL_BR = 69;         // BR: 1-2월 추가 연속가동 실적 (1월)
 const COL_BS = 70;         // BS: 1-2월 추가 연속가동 실적 (2월)
 const COL_BT = 71;         // BT: 1-2월 추가 연속가동 시상금
 const COL_BX = 75;         // BX: 2-3월 연속가동 실적 (2월)
+const COL_BY = 76;         // BY: 2-3월 연속가동 실적 (3월, 3/1~3/15)
+const COL_BZ = 77;         // BZ: 2-3월 연속가동 시상금
 const COL_CB = 79;         // CB: 2-3월 추가 연속가동 실적 (2월)
+const COL_CC = 80;         // CC: 2-3월 추가 연속가동 실적 (3월, 3/1~3/8)
+const COL_CD = 81;         // CD: 2-3월 추가 연속가동 시상금
 // 1월 파일 전용 (12~1월 연속가동, 2주차 인보험)
 const COL_BJ = 61;         // BJ: 12-1 연속가동 12월 구간
 const COL_BK = 62;         // BK: 12-1 연속가동 1월 실적
@@ -118,8 +122,11 @@ function parsePrizeSumXlsx(filePath) {
       continuous12ExtraFeb: toNum(row[COL_BS]),
       continuous12ExtraPrize: toNum(row[COL_BT]),
       continuous23Feb: toNum(row[COL_BX]),
-      // 2~3월 추가는 동일 기간 동일 실적: CB 없으면 BX와 동일하게
+      continuous23Mar: toNum(row[COL_BY]),
+      continuous23Prize: toNum(row[COL_BZ]),
       continuous23ExtraFeb: toNum(row[COL_CB]) ?? toNum(row[COL_BX]),
+      continuous23ExtraMar: toNum(row[COL_CC]),
+      continuous23ExtraPrize: toNum(row[COL_CD]),
     };
     result.push({ code, partner });
   }

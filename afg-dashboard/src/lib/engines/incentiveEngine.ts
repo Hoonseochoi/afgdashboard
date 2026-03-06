@@ -80,17 +80,19 @@ export function getWeekDataForMonth(
     }
     return ZERO_WEEK_DATA_3;
   }
+  // 3월: weekly_data 또는 weekly 사용. 상품별 1주차 실적은 Supabase product_week1 우선(파트너 등).
+  const w1 = raw.productWeek1 != null ? Number(raw.productWeek1) : undefined;
   if (agent.weekly_data?.length) {
     const w = agent.weekly_data;
     return [
-      { week: 1, performance: w.find((x) => x.week === 1)?.performance ?? 0 },
+      { week: 1, performance: w1 ?? w.find((x) => x.week === 1)?.performance ?? 0 },
       { week: 2, performance: w.find((x) => x.week === 2)?.performance ?? 0 },
       { week: 3, performance: w.find((x) => x.week === 3)?.performance ?? 0 },
       { week: 4, performance: w.find((x) => x.week === 4)?.performance ?? 0 },
     ];
   }
   return [
-    { week: 1, performance: stdWeekly.week1 ?? 0 },
+    { week: 1, performance: w1 ?? stdWeekly.week1 ?? 0 },
     { week: 2, performance: stdWeekly.week2 ?? 0 },
     { week: 3, performance: stdWeekly.week3 ?? 0 },
     { week: 4, performance: stdWeekly.week4 ?? 0 },
@@ -505,8 +507,7 @@ export const calculateIncentiveData = (
 
   const monthlyPrize = calculateMonthlyPrize(currentPerf);
 
-  // 2배 메리츠클럽
-  const prevMonthKey = `2026-${String(selectedMonth - 1).padStart(2, "0")}`;
+  const prevMonthKey = selectedMonth === 1 ? "2025-12" : `2026-${String(selectedMonth - 1).padStart(2, "0")}`;
   const prevPerf = agent.performance?.[prevMonthKey] ?? 0;
   const doubleMeritzPrize = calculateDoubleMeritzPrize(prevPerf, currentPerf);
 

@@ -99,6 +99,19 @@ function rowToAgent(row: any): SupabaseAgentRecord {
       ? row.product_week1
       : row?.weekly?.productWeek1;
   const productWeek1 = safeNumber(raw);
+  let partner: PartnerPrizeData | null = null;
+  if (row.partner != null) {
+    if (typeof row.partner === 'string') {
+      try {
+        partner = JSON.parse(row.partner) as PartnerPrizeData;
+      } catch {
+        partner = null;
+      }
+    } else if (typeof row.partner === 'object') {
+      partner = row.partner as PartnerPrizeData;
+    }
+  }
+
   return {
     id: row.id,
     code: row.code,
@@ -108,7 +121,7 @@ function rowToAgent(row: any): SupabaseAgentRecord {
     performance: (row.performance || null) as Record<string, number> | null,
     weekly: (row.weekly || null) as Record<string, number> | null,
     productWeek1: productWeek1 ?? null,
-    partner: (row.partner || null) as PartnerPrizeData | null,
+    partner,
     managerCode: row.manager_code ?? null,
     managerName: row.manager_name ?? null,
     branch: row.branch ?? null,
