@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Dashboard } from "@/app/_components/Dashboard";
-import LoadingLines from "@/app/LoadingLines";
+import LoadingLines from "@/app/_components/shared/LoadingLines";
 
 function DirectContent() {
   const searchParams = useSearchParams();
