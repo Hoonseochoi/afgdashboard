@@ -20,6 +20,9 @@
 # production
 /build
 
+# bulk capture output (날짜/지사/매니저/설계사.png)
+/OUTPUT
+
 # misc
 .DS_Store
 *.pem

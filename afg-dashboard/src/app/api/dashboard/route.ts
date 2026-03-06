@@ -244,6 +244,42 @@ export async function GET() {
       });
     }
 
+    // 특수 코드: 102203009 (손영상 지점장) → "엔타스5스튜디오" 지사 설계사만 조회
+    if (session.code === '102203009') {
+      const allowedBranches = ['엔타스5스튜디오'];
+      let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
+      allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
+      allItems = applyMcListBranch(allItems);
+      const filtered = allItems.filter((a) => {
+        if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
+        const branchName = String(a.branch);
+        return allowedBranches.some((b) => branchName.includes(b));
+      });
+      let agentsData = filtered.map(toSafeAgent);
+      agentsData = sortByMarchPerformance(agentsData);
+
+      let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
+      allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
+      allForRanks = applyMcListBranch(allForRanks);
+      const ranks = computeRanks(allForRanks);
+      const partnerAgents = allForRanks
+        .filter(
+          (a) =>
+            a.code !== RANK_EXCLUDE_CODE &&
+            a.branch &&
+            String(a.branch).includes('파트너'),
+        )
+        .map(toSafeAgent);
+
+      return NextResponse.json({
+        user,
+        agents: agentsData,
+        updateDate,
+        ranks,
+        partnerAgents,
+      });
+    }
+
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
       let items = await supabaseAgentsListAll({ filterRole: 'agent' });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];

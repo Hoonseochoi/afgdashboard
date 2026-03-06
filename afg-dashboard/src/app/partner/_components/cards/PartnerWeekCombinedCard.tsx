@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { PARTNER_TIERS, APPLE_CARD_BASE, type PartnerCardVariant } from "../../constants";
-import { formatMan } from "../../utils";
+import { PARTNER_TIERS, APPLE_CARD_BASE, type PartnerCardVariant } from "@/app/_components/dashboard/constants";
+import { formatMan } from "@/app/_components/dashboard/utils";
 
 export type PartnerWeekCombinedCardProps = {
   index: number;

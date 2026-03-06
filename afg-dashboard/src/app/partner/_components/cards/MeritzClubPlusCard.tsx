@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { APPLE_CARD_BASE } from "../../constants";
-import { formatMan } from "../../utils";
+import { APPLE_CARD_BASE } from "@/app/_components/dashboard/constants";
+import { formatMan } from "@/app/_components/dashboard/utils";
 
 const MC_PLUS_TIERS = [200000, 400000, 600000, 800000, 1000000]; // 20/40/60/80/100만
 

@@ -11,6 +11,7 @@
     "capture:bulk": "node scripts/bulk-capture.js",
     "capture:bulk:test": "node scripts/bulk-capture.js 10",
     "capture:branch": "node scripts/bulk-capture-branch.js",
+    "capture:branches": "node scripts/bulk-capture-branches.js",
     "upload-daily": "node scripts/supabase-upload-daily.js"
   },
   "dependencies": {

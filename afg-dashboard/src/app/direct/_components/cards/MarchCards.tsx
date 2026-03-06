@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { TierBadges } from "./TierBadges";
+import { TierBadges } from "@/app/_components/shared/cards/TierBadges";
 
 /** 금액 표시: 원 단위를 '만원' 기준 소수 첫째 자리(천원 단위)까지, 반올림 없이 표시 */
 function formatMan(amount: number | null | undefined): string {

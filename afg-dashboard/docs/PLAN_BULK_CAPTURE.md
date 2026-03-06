@@ -115,3 +115,15 @@
 
 3. **캡처 데이터 API** (로그인 없음)  
    - `GET /api/capture-data` → `data/capture/dashboard.json` 내용 반환.
+
+4. **지사별 벌크 캡처 (엔타스4스튜디오 + 파트너채널)**  
+   ```bash
+   npm run capture:branches
+   # 또는: node scripts/bulk-capture-branches.js [출력베이스폴더]
+   ```
+   - 대상: 지사명에 **엔타스4스튜디오** 또는 **파트너채널** 포함, 3월 실적 > 0인 설계사만.
+   - 출력 경로: **날짜 > 지사 > 매니저 > 설계사.png**
+     - 기본 베이스: `afg-dashboard/OUTPUT` (또는 프로젝트 기준 `OUTPUT` 폴더).
+     - 예: `OUTPUT/20260306/엔타스4스튜디오/매니저명/설계사명.png`, `OUTPUT/20260306/파트너채널/...`
+     - 날짜는 실행일 기준 YYYYMMDD.
+   - 데이터·진입 경로: 위 1~2와 동일 (`data/capture/dashboard.json`, dev 서버 `/direct?capture=1`).

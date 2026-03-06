@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { APPLE_CARD_BASE } from "../../constants";
-import { formatMan } from "../../utils";
+import { APPLE_CARD_BASE } from "@/app/_components/dashboard/constants";
+import { formatMan } from "@/app/_components/dashboard/utils";
 
 const DOUBLE_MERITZ_TIERS = [20, 30, 40, 50, 60, 70, 80, 90, 100]; // 만원 단위 (10 제외)
 
