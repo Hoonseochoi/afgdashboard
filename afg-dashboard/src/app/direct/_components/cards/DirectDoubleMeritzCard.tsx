@@ -71,7 +71,8 @@ export function DirectDoubleMeritzCard({
         </div>
       </div>
 
-      <div className="mt-1.5 grid grid-cols-3 gap-x-1.5 gap-y-1.5">
+      <div className="flex-1 flex items-center justify-center min-h-0 pt-1">
+        <div className="grid grid-cols-3 gap-x-1.5 gap-y-3 w-full">
         {DOUBLE_MERITZ_TIERS.map((tierMan) => {
           const tierValue = tierMan * 10000;
           const isAchieved = achieved && currentMonthPerf >= tierValue;
@@ -91,6 +92,7 @@ export function DirectDoubleMeritzCard({
             </span>
           );
         })}
+        </div>
       </div>
 
       <div className="mt-auto pt-2 border-t border-gray-100/80 dark:border-gray-700/80">
