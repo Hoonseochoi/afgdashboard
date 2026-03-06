@@ -246,7 +246,7 @@ export async function GET() {
 
     // 특수 코드: 102203009 (손영상 지점장) → "엔타스5스튜디오" 지사 설계사만 조회
     if (session.code === '102203009') {
-      const allowedBranches = ['엔타스5스튜디오'];
+      const allowedBranches = ['엔타스5'];
       let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
       allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
       allItems = applyMcListBranch(allItems);
