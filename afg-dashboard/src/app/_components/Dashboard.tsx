@@ -1,14 +1,14 @@
 'use client';
 
 import React, { Suspense, useRef } from 'react';
-import LoadingLines from '@/app/_components/shared/LoadingLines';
-import { Header } from '@/app/_components/shared/Header';
-import { AgentBanner } from '@/app/_components/shared/cards/AgentBanner';
-import { PerformanceChart } from '@/app/_components/shared/PerformanceChart';
-import { PasswordModal } from '@/app/_components/shared/modals/PasswordModal';
-import { PrizeGuideModal } from '@/app/_components/shared/modals/PrizeGuideModal';
-import { PartnerCards } from '@/app/partner/_components/PartnerCards';
-import { DirectCards } from '@/app/direct/_components/cards/DirectCards';
+import LoadingLines from './shared/LoadingLines';
+import { Header } from './shared/Header';
+import { AgentBanner } from './shared/cards/AgentBanner';
+import { PerformanceChart } from './shared/PerformanceChart';
+import { PasswordModal } from './shared/modals/PasswordModal';
+import { PrizeGuideModal } from './shared/modals/PrizeGuideModal';
+import { PartnerCards } from '../partner/_components/PartnerCards';
+import { DirectCards } from '../direct/_components/cards/DirectCards';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { DashboardMode } from '@/types';
 

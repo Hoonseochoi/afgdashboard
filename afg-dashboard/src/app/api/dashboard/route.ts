@@ -244,17 +244,26 @@ export async function GET() {
       });
     }
 
-    // 특수 코드: 102203009 (손영상 지점장) → "엔타스5스튜디오" 지사 설계사만 조회
-    if (session.code === '102203009') {
-      const allowedBranches = ['엔타스5'];
+    // 특수 코드: 102203009 (손영상 지점장) → 지정된 지사 전체 설계사 조회
+    if (String(session.code).trim() === '102203009') {
+      console.log('[DashboardAPI] Special user 102203009 detected');
+      const allowedBranches = ['주식회사 어센틱금융그룹(엔타스5스튜디오)', '엔타스5스튜디오', '엔타스5'];
       let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
+      console.log(`[DashboardAPI] Total agents fetched: ${allItems.length}`);
+      
       allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
       allItems = applyMcListBranch(allItems);
       const filtered = allItems.filter((a) => {
         if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
         const branchName = String(a.branch);
-        return allowedBranches.some((b) => branchName.includes(b));
+        const match = allowedBranches.some((b) => branchName.includes(b));
+        if (match && allItems.length < 50) { // 로그 너무 많아지면 안되니 적을때만
+           console.log(`[DashboardAPI] Branch Match: ${branchName}`);
+        }
+        return match;
       });
+      console.log(`[DashboardAPI] Filtered agents: ${filtered.length}`);
+      
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
 
