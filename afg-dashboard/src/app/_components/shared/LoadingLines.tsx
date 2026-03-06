@@ -10,20 +10,20 @@ const LoadingLines: React.FC = () => {
         <motion.div
           animate={{ x: [0, 28, 0], scale: [1, 0.6, 1] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-6 h-6 rounded-full bg-[#ef3b24] dark:bg-red-500"
-          style={{ left: "8px" }}
+          className="absolute w-6 h-6 rounded-full dark:opacity-80"
+          style={{ left: "8px", backgroundColor: "#ef3b24" }}
         />
         <motion.div
           animate={{ scale: [1, 1.4, 1] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-6 h-6 rounded-full bg-[#ef3b24] dark:bg-red-500"
-          style={{ left: "36px" }}
+          className="absolute w-6 h-6 rounded-full dark:opacity-80"
+          style={{ left: "36px", backgroundColor: "#f59e0b" }}
         />
         <motion.div
           animate={{ x: [0, -28, 0], scale: [1, 0.6, 1] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute w-6 h-6 rounded-full bg-[#ef3b24] dark:bg-red-500"
-          style={{ left: "64px" }}
+          className="absolute w-6 h-6 rounded-full dark:opacity-80"
+          style={{ left: "64px", backgroundColor: "#3b82f6" }}
         />
       </div>
 
