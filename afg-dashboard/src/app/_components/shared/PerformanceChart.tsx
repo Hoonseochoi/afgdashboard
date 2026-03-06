@@ -46,8 +46,8 @@ export function PerformanceChart({
           </p>
         </div>
       </div>
-      <div className="flex-1 min-h-[250px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="flex-1 min-h-[250px] w-full mt-2">
+        <ResponsiveContainer width="100%" height={250}>
           <ComposedChart data={performanceData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" axisLine={false} tickLine={false} />
