@@ -443,6 +443,7 @@ export const calculateIncentiveData = (
     viewW3: week3?.performance || 0,
     monthlyNext: monthlyPrize.nextLevel || "",
     monthlyProgress: monthlyPrize.progress || 0,
+    performanceData: preparePerformanceChartData(agent),
     updateDate
   };
 };
