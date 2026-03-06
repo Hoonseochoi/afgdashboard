@@ -6,6 +6,7 @@ import { TierBadges } from "@/app/_components/shared/cards/TierBadges";
 import { DirectDoubleMeritzCard } from "./DirectDoubleMeritzCard";
 import { DirectMeritzClubPlusCard } from "./DirectMeritzClubPlusCard";
 import { DirectRegularPrizeCard } from "./DirectRegularPrizeCard";
+import { MarchEarlyRunCard } from "./MarchEarlyRunCard";
 
 /** 금액 표시: 원 단위를 '만원' 기준 소수 첫째 자리(천원 단위)까지, 반올림 없이 표시 */
 function formatMan(amount: number | null | undefined): string {
@@ -65,6 +66,8 @@ export interface MarchCardsProps {
   currentMonthNum: number;
   regularPrize?: number;
   dailyDiff?: number;
+  earlyRunWeekPrizes?: number[];
+  earlyRunWeekPerfs?: number[];
 }
 
 export function MarchCards(props: MarchCardsProps) {
@@ -85,6 +88,8 @@ export function MarchCards(props: MarchCardsProps) {
     currentMonthNum,
     regularPrize = 0,
     dailyDiff = 0,
+    earlyRunWeekPrizes = [0, 0, 0, 0],
+    earlyRunWeekPerfs = [0, 0, 0, 0],
   } = props;
 
   return (
@@ -94,10 +99,11 @@ export function MarchCards(props: MarchCardsProps) {
       animate="visible"
       className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 auto-rows-fr"
     >
+      {/* 1행: 파타야 여행시상 2칸 | AFG 조기가동 1칸 */}
       {/* ── 파타야 여행시상 ── */}
       <motion.div
         variants={itemVariants}
-        className="md:row-span-2 rounded-2xl p-[3px] overflow-hidden"
+        className="md:col-span-2 rounded-2xl p-[3px] overflow-hidden"
         animate={{
           background: [
             "conic-gradient(from 0deg at 50% 50%, #06b6d4, #0d9488, #14b8a6, #22d3ee, #06b6d4)",
@@ -157,6 +163,15 @@ export function MarchCards(props: MarchCardsProps) {
         </div>
       </motion.div>
 
+      {/* ── 3월 AFG 조기가동 ── */}
+      <motion.div variants={itemVariants} className="h-full">
+        <MarchEarlyRunCard
+          weekPrizes={earlyRunWeekPrizes}
+          weekPerfs={earlyRunWeekPerfs}
+        />
+      </motion.div>
+
+      {/* 2행: 1주차 특별 | 1주차 PATTAYA | 3월 정규 */}
       {/* ── 1주차 특별 현금시상 ── */}
       <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col h-full`}>
         {(() => {
@@ -227,7 +242,21 @@ export function MarchCards(props: MarchCardsProps) {
         })()}
       </motion.div>
 
-      {/* ── 2배 메리츠클럽 (리팩토링됨) ── */}
+      {/* ── 3월 정규시상 ── */}
+      <motion.div variants={itemVariants} className="h-full">
+        <DirectRegularPrizeCard
+          title="3월 정규 시상"
+          perf={currentMonthPerf}
+          prize={currentMonthPerf}
+          dailyDiff={dailyDiff}
+          monthLabel="3월"
+          variant="indigo"
+          hideSubtitle
+        />
+      </motion.div>
+
+      {/* 3행: 2배 메리츠클럽 | 메리츠 클럽+ */}
+      {/* ── 2배 메리츠클럽 ── */}
       <motion.div variants={itemVariants} className="h-full">
         <DirectDoubleMeritzCard
           prevMonthPerf={prevMonthPerf}
@@ -236,7 +265,7 @@ export function MarchCards(props: MarchCardsProps) {
         />
       </motion.div>
 
-      {/* ── 메리츠 클럽+ (리팩토링됨) ── */}
+      {/* ── 메리츠 클럽+ ── */}
       <motion.div variants={itemVariants} className="h-full">
         <DirectMeritzClubPlusCard
           janPerf={janPerf}
@@ -246,18 +275,6 @@ export function MarchCards(props: MarchCardsProps) {
           plusProgress={plusProgress}
           currentMonthNum={currentMonthNum}
           meritzClubPlusPrize={meritzClubPlusPrize}
-        />
-      </motion.div>
-
-      {/* ── 3월 정규시상 (신규 추가 및 리팩토링됨) ── */}
-      <motion.div variants={itemVariants} className="h-full">
-        <DirectRegularPrizeCard
-          title="3월 정규 시상"
-          perf={currentMonthPerf}
-          prize={regularPrize}
-          dailyDiff={dailyDiff}
-          monthLabel="3월"
-          variant="indigo"
         />
       </motion.div>
     </motion.section>

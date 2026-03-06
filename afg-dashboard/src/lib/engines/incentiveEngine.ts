@@ -28,6 +28,11 @@ export const MAR_W1_PATAYA_PRIZES: [number, number][] = [[1000000, 5000000], [70
 export const MONTHLY_TIERS = [1000000, 1200000, 1500000, 1800000, 2000000, 2500000];
 export const PLUS_TIERS = [200000, 400000, 600000, 800000, 1000000];
 
+/** 3월 AFG 조기가동: 구간(만원) 10/20/30/40/50 → 시상률에 따라 시상금 */
+export const EARLY_RUN_TIERS = [100000, 200000, 300000, 400000, 500000];
+/** 1주 400%, 2주 300%, 3주 250%, 4주 200% */
+export const EARLY_RUN_WEEK_RATES = [400, 300, 250, 200];
+
 // --- Calculation Functions ---
 
 /**
@@ -130,6 +135,18 @@ export const getPartnerContinuousPrize = (perf: number): number => {
 };
 
 /**
+ * 3월 AFG 조기가동 시상금: 실적 구간(10/20/30/40/50만 이상) × 시상률(%)
+ * 예: 20만이상 구간, 400% → 200000 × 4 = 80만원
+ */
+export const getEarlyRunPrize = (perf: number, ratePercent: number): number => {
+  const sorted = [...EARLY_RUN_TIERS].sort((a, b) => b - a);
+  for (const tier of sorted) {
+    if (perf >= tier) return Math.floor((tier * ratePercent) / 100);
+  }
+  return 0;
+};
+
+/**
  * 파타야 여행 시상금 로직 (3월 특별)
  */
 export const calculatePatayaTravelIncentive = (w1Perf: number): any => {
@@ -192,9 +209,24 @@ export const preparePerformanceChartData = (agent: Agent): ChartDataItem[] => {
     { label: "3월", key: "2026-03", month: 3 },
   ];
 
+  // 3월 주차 실적 (차트 3월 시상금에 파타야·조기가동 반영용)
+  const rawAgent = agent as any;
+  const weekDataMarch =
+    agent.weekly_data?.length &&
+    agent.weekly_data.some((w) => w.week >= 1 && w.week <= 4)
+      ? [1, 2, 3, 4].map((n) => agent.weekly_data!.find((w) => w.week === n)?.performance ?? 0)
+      : [
+          rawAgent.weekly?.week1 ?? 0,
+          rawAgent.weekly?.week2 ?? 0,
+          rawAgent.weekly?.week3 ?? 0,
+          rawAgent.weekly?.week4 ?? 0,
+        ];
+  const marchPatayaPrize = calculatePatayaTravelIncentive(weekDataMarch[0]).prize;
+  const marchEarlyRunTotal = weekDataMarch
+    .map((p, i) => getEarlyRunPrize(p, EARLY_RUN_WEEK_RATES[i]))
+    .reduce((a, b) => a + b, 0);
+
   const computePrize = (monthNum: number, perf: number): number => {
-    // weekly performance for the current view month (from .weekly for current session,
-    // but for chart we only have performance totals for past months, so estimate from totals)
     const w1 = monthly?.week1 ?? 0;
     const w2 = monthly?.week2 ?? 0;
     const w3 = monthly?.week3 ?? 0;
@@ -208,7 +240,8 @@ export const preparePerformanceChartData = (agent: Agent): ChartDataItem[] => {
       weekPrizeSum = getWeekPrize(w1, FEB_W1_PRIZES).prize +
                     getWeekPrize(w2, FEB_W2_PRIZES).prize;
     } else if (monthNum === 3) {
-      weekPrizeSum = calculateMarW1SpecialPrize(w1).prize;
+      // 상단과 동일 소스(weekDataMarch) 사용
+      weekPrizeSum = calculateMarW1SpecialPrize(weekDataMarch[0]).prize;
     }
 
     const monthly_ = calculateMonthlyPrize(perf).prize;
@@ -216,10 +249,11 @@ export const preparePerformanceChartData = (agent: Agent): ChartDataItem[] => {
     const prevPerf = performance[prevKey] ?? 0;
     const dm = calculateDoubleMeritzPrize(prevPerf, perf);
     const cp = calculateMeritzClubPlusPrize(perf);
-    const regular = perf; // non-partner estimate
+    const regular = perf; // non-partner estimate (다이렉트)
 
     if (monthNum === 3) {
-      return weekPrizeSum + dm + cp + regular;
+      // 상단 총예상 시상금과 동일: 1주 특별 + 파타야 + 조기가동 + 2배 + 클럽+ + 정규
+      return weekPrizeSum + marchPatayaPrize + marchEarlyRunTotal + dm + cp + regular;
     }
     return weekPrizeSum + monthly_ + dm + cp + regular;
   };
@@ -436,8 +470,22 @@ export const calculateIncentiveData = (
   // 정규 시상
   const regularPrizeSize = calculateRegularPrize(currentPerf, isPartner);
 
-  // 총 합계
-  const totalPrize = calculateTotalPrizeForMonth({
+  // 파타야 및 3월 특별 시상 (3월 1주차 기준) — 총합 계산 전에 필요
+  const week1Perf = weekData.find(w => w.week === 1)?.performance ?? 0;
+  const patayaResult = selectedMonth === 3 ? calculatePatayaTravelIncentive(week1Perf) : null;
+  const marchW1SpecialResult = selectedMonth === 3 ? calculateMarW1SpecialPrize(week1Perf) : null;
+  const patayaPrize = patayaResult ? patayaResult.prize : 0;
+  const marchW1SpecialPrize = marchW1SpecialResult ? marchW1SpecialResult.prize : 0;
+
+  // 3월 AFG 조기가동: 1주 400%, 2주 300%, 3주 250%, 4주 200% × 구간(10/20/30/40/50만)
+  const earlyRunWeekPerfs = [1, 2, 3, 4].map((wNum) => weekData.find(w => w.week === wNum)?.performance ?? 0);
+  const earlyRunWeekPrizes = selectedMonth === 3
+    ? earlyRunWeekPerfs.map((perf, i) => getEarlyRunPrize(perf, EARLY_RUN_WEEK_RATES[i]))
+    : [0, 0, 0, 0];
+  const earlyRunTotalPrize = earlyRunWeekPrizes.reduce((a, b) => a + b, 0);
+
+  // 총 합계 (카드에 표시되는 시상금 합과 동일하게)
+  let totalPrize = calculateTotalPrizeForMonth({
     month: selectedMonth,
     weekPrizes,
     monthlyPrize,
@@ -445,6 +493,10 @@ export const calculateIncentiveData = (
     clubPlus: clubPlusPrize,
     regular: regularPrizeSize
   });
+  // 3월 다이렉트: 파타야 + 조기가동 시상이 카드에 있으므로 총합에 포함
+  if (selectedMonth === 3 && !isPartner) {
+    totalPrize += patayaPrize + earlyRunTotalPrize;
+  }
 
   // 순위 및 목표
   const monthRanks = globalRanks[monthKey] || [];
@@ -454,13 +506,6 @@ export const calculateIncentiveData = (
 
   // MY HOT
   const myHotData = calculateMYHOTRank(agent.code, allAgents, selectedMonth, "exclude_code_placeholder");
-
-  // 파타야 및 3월 특별 시상 (3월 1주차 기준)
-  const week1Perf = weekData.find(w => w.week === 1)?.performance ?? 0;
-  const patayaResult = selectedMonth === 3 ? calculatePatayaTravelIncentive(week1Perf) : null;
-  const marchW1SpecialResult = selectedMonth === 3 ? calculateMarW1SpecialPrize(week1Perf) : null;
-  const patayaPrize = patayaResult ? patayaResult.prize : 0;
-  const marchW1SpecialPrize = marchW1SpecialResult ? marchW1SpecialResult.prize : 0;
 
   // 메리츠클럽 PLUS 상세
   const janPerf = agent.performance?.["2026-01"] ?? 0;
@@ -487,6 +532,9 @@ export const calculateIncentiveData = (
     myHotData,
     patayaPrize,
     marchW1SpecialPrize,
+    earlyRunWeekPrizes,
+    earlyRunWeekPerfs,
+    earlyRunTotalPrize,
     janPerf,
     febPerf,
     marchPerf,

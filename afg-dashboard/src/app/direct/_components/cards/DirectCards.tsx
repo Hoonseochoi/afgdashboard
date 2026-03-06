@@ -33,6 +33,8 @@ export function DirectCards({
         febPerf={incentiveData.febPerf}
         marchPerf={incentiveData.marchPerf}
         currentMonthNum={selectedViewMonth}
+        earlyRunWeekPrizes={incentiveData.earlyRunWeekPrizes ?? [0, 0, 0, 0]}
+        earlyRunWeekPerfs={incentiveData.earlyRunWeekPerfs ?? [0, 0, 0, 0]}
       />
     );
   }

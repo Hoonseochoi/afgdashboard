@@ -12,6 +12,8 @@ export type DirectRegularPrizeCardProps = {
   dailyDiff?: number;
   monthLabel?: string;
   variant?: "slate" | "sky" | "indigo";
+  /** true면 타이틀 하단 서브텍스트 미표시 */
+  hideSubtitle?: boolean;
 };
 
 export function DirectRegularPrizeCard({
@@ -21,6 +23,7 @@ export function DirectRegularPrizeCard({
   dailyDiff = 0,
   monthLabel = "당월",
   variant = "slate",
+  hideSubtitle = false,
 }: DirectRegularPrizeCardProps) {
   const themes = {
     slate: "border-slate-200/60 dark:border-slate-500/30 bg-gradient-to-br from-white/90 via-white/50 to-slate-50/40 dark:from-white/10 dark:via-white/5 dark:to-slate-900/10",
@@ -57,7 +60,11 @@ export function DirectRegularPrizeCard({
           </span>
         </div>
 
-        <p className="text-[11px] text-gray-400 dark:text-white/50 mb-auto italic">실적과 시상금 1:1 매칭 구간</p>
+        {!hideSubtitle ? (
+          <p className="text-[11px] text-gray-400 dark:text-white/50 mb-auto italic">실적과 시상금 1:1 매칭 구간</p>
+        ) : (
+          <div className="flex-1 min-h-0" aria-hidden />
+        )}
 
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10 flex items-end justify-between gap-4">
           <div className="min-w-0">

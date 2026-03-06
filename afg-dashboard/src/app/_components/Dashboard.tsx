@@ -5,6 +5,7 @@ import LoadingLines from './shared/LoadingLines';
 import { Header } from './shared/Header';
 import { AgentBanner } from './shared/cards/AgentBanner';
 import { PerformanceChart } from './shared/PerformanceChart';
+import { MyHotCard } from './shared/cards/MyHotCard';
 import { PasswordModal } from './shared/modals/PasswordModal';
 import { PrizeGuideModal } from './shared/modals/PrizeGuideModal';
 import { PartnerCards } from '../partner/_components/PartnerCards';
@@ -217,15 +218,44 @@ export const Dashboard: React.FC<DashboardProps> = ({
             )}
           </div>
 
-          <PerformanceChart
-            performanceData={incentiveData.performanceData}
-            showPartnerContent={isPartner}
-            directRanks={directRanks}
-            partnerRanks={partnerRanks}
-            selectedAgent={selectedAgent}
-            agents={agents}
-            setSelectedViewMonth={setSelectedViewMonth}
-          />
+          {showPartnerContent ? (
+            <PerformanceChart
+              performanceData={incentiveData.performanceData}
+              showPartnerContent={true}
+              directRanks={directRanks}
+              partnerRanks={partnerRanks}
+              selectedAgent={selectedAgent}
+              agents={agents}
+              setSelectedViewMonth={setSelectedViewMonth}
+            />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-[min(100%,280px)_1fr] gap-3 md:gap-5 items-stretch">
+              <div className="min-h-[200px] lg:min-h-0">
+                <MyHotCard
+                  myHotData={incentiveData.myHotData ?? {
+                    myHotSum: 0,
+                    myHotRank: 999,
+                    myHotIsChamp: false,
+                    myHotNextTier: 5000000,
+                    myHotProgress: 0,
+                    myHotLabel: "meritz 500",
+                  }}
+                  selectedViewMonth={selectedViewMonth as 1 | 2 | 3}
+                />
+              </div>
+              <div className="min-h-[400px]">
+                <PerformanceChart
+                  performanceData={incentiveData.performanceData}
+                  showPartnerContent={false}
+                  directRanks={directRanks}
+                  partnerRanks={partnerRanks}
+                  selectedAgent={selectedAgent}
+                  agents={agents}
+                  setSelectedViewMonth={setSelectedViewMonth}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </Suspense>
