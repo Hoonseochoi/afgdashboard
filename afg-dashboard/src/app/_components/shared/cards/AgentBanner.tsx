@@ -135,6 +135,12 @@ export function AgentBanner({
               selectedViewMonth === 3 ? "text-gray-600 dark:text-gray-300" : isTop3 ? "text-gray-400" : isTop30 ? "text-gray-500 dark:text-gray-400" : "text-gray-600 dark:text-gray-300"
             }`}>
               {displayBranch(selectedAgent as any)}
+              {selectedAgent.managerName && (
+                <>
+                  <span className="mx-1 opacity-70" aria-hidden>·</span>
+                  <span>{selectedAgent.managerName} 매니저</span>
+                </>
+              )}
             </p>
             <div className="flex flex-wrap gap-2">
               {totalEstimatedPrize > 0 && (

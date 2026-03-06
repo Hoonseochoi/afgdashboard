@@ -72,6 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     handleLogout,
     displayBranch,
     isCaptureMode,
+    updateDate,
   } = useDashboardData({ mode, initialCode, exportAreaRef });
 
   if (loading) return <LoadingLines />;
@@ -214,6 +215,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 selectedViewMonth={selectedViewMonth}
                 selectedAgent={selectedAgent}
                 incentiveData={incentiveData}
+                updateDate={updateDate}
               />
             )}
           </div>
@@ -257,7 +259,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           )}
         </div>
+
+        {/* 면책문구 · 푸터 바로 위 */}
+        <aside className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-2 border-t border-gray-200/40 dark:border-gray-700/30 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="flex-1 min-w-0">
+            * 본 자료는 전일 기준으로 작성됩니다. 실제 지급되는 시상금과 상이할 수 있습니다. 참고용으로만 활용하세요.
+          </p>
+          <p className="flex-shrink-0 whitespace-nowrap">
+            최종 업데이트날짜 : {formatUpdateDateLabel(updateDate)}
+          </p>
+        </aside>
       </main>
     </Suspense>
   );
 };
+
+/** API updateDate(MMDD 또는 '0000') → "M월 D일" */
+function formatUpdateDateLabel(updateDate: string): string {
+  const s = String(updateDate ?? "").trim();
+  if (!s || s === "0000") return "-";
+  const mm = s.length >= 2 ? parseInt(s.slice(0, 2), 10) : 0;
+  const dd = s.length >= 4 ? parseInt(s.slice(2, 4), 10) : 0;
+  if (!Number.isFinite(mm) || mm < 1 || mm > 12) return "-";
+  const day = Number.isFinite(dd) && dd >= 1 && dd <= 31 ? dd : 0;
+  return day ? `${mm}월 ${day}일` : `${mm}월`;
+}

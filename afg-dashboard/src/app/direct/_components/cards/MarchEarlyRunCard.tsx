@@ -14,24 +14,45 @@ const WEEK_LABELS = [
   { week: 4, rate: "200%" },
 ];
 
+/** updateDate(MMDD) 기준 3월 현재 주차 1~4. 없거나 비3월이면 0 */
+function getMarchCurrentWeek(updateDate: string | undefined): number {
+  const s = String(updateDate ?? "").trim();
+  if (!s || s === "0000" || s.length < 4) return 0;
+  const mm = parseInt(s.slice(0, 2), 10);
+  const dd = parseInt(s.slice(2, 4), 10);
+  if (mm !== 3 || !Number.isFinite(dd) || dd < 1 || dd > 31) return 0;
+  return Math.min(4, Math.ceil(dd / 7));
+}
+
 export type MarchEarlyRunCardProps = {
   weekPrizes: number[];
   weekPerfs: number[];
+  /** MMDD, 현재 주차 강조용 */
+  updateDate?: string;
 };
 
-export function MarchEarlyRunCard({ weekPrizes, weekPerfs }: MarchEarlyRunCardProps) {
+export function MarchEarlyRunCard({ weekPrizes, weekPerfs, updateDate }: MarchEarlyRunCardProps) {
   const total = weekPrizes.reduce((a, b) => a + b, 0);
+  const currentWeek = getMarchCurrentWeek(updateDate);
 
   return (
     <motion.div className={`${card} ${glass} p-2 flex flex-col h-full`}>
+      <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-1">
-        <div>
-          <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 tracking-tight uppercase">
-            AFG 조기가동
-          </p>
-          <h3 className="text-[14px] font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
-            3월 조기가동
-          </h3>
+        <div className="flex items-center gap-2 min-w-0">
+          <img
+            src="/logo.png"
+            alt=""
+            className="w-9 h-9 flex-shrink-0 rounded-lg object-contain bg-white/50 dark:bg-white/10 border border-slate-200/60 dark:border-slate-600/60 shadow-sm"
+          />
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 tracking-tight uppercase">
+              AFG 조기가동
+            </p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
+              3월 조기가동
+            </h3>
+          </div>
         </div>
         {total > 0 && (
           <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-400/30 dark:border-emerald-500/30 px-2 py-0.5 rounded-full whitespace-nowrap">
@@ -44,19 +65,24 @@ export function MarchEarlyRunCard({ weekPrizes, weekPerfs }: MarchEarlyRunCardPr
         {WEEK_LABELS.map(({ week, rate }, i) => {
           const perf = weekPerfs[i] ?? 0;
           const prize = weekPrizes[i] ?? 0;
+          const isCurrentWeek = currentWeek > 0 && week === currentWeek;
           return (
             <div
               key={week}
-              className="flex items-center justify-between text-xs py-1 px-1.5 rounded-md bg-gray-50/80 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06]"
+              className={`flex items-center justify-between rounded-md border transition-all ${
+                isCurrentWeek
+                  ? "bg-red-50/80 dark:bg-red-950/30 border-2 border-red-500 dark:border-red-400 shadow-sm py-1.5 px-2 text-[13px]"
+                  : "bg-gray-50/80 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06] text-xs py-1 px-1.5"
+              }`}
             >
-              <span className="font-semibold text-gray-600 dark:text-gray-300">
+              <span className={isCurrentWeek ? "font-semibold text-red-600 dark:text-red-400" : "font-semibold text-gray-600 dark:text-gray-300"}>
                 {week}주차 {rate}
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-gray-500 dark:text-gray-400">
+                <span className={isCurrentWeek ? "text-red-500 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}>
                   실적 {formatMan(perf)}만
                 </span>
-                <span className="font-bold text-gray-900 dark:text-white min-w-[3rem] text-right">
+                <span className={`font-bold min-w-[3rem] text-right ${isCurrentWeek ? "text-red-600 dark:text-red-300" : "text-gray-900 dark:text-white"}`}>
                   {formatMan(prize)}만원
                 </span>
               </div>
@@ -68,6 +94,7 @@ export function MarchEarlyRunCard({ weekPrizes, weekPerfs }: MarchEarlyRunCardPr
       <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1.5 pt-1.5 border-t border-gray-100 dark:border-white/[0.06] italic">
         *ACFP기준으로 지급되며 대시보드는 FP기준으로 표시됩니다.
       </p>
+      </div>
     </motion.div>
   );
 }

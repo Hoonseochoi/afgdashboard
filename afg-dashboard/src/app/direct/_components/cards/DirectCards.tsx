@@ -9,16 +9,20 @@ interface DirectCardsProps {
   selectedAgent: Agent;
   selectedViewMonth: number;
   incentiveData: any;
+  /** MMDD, 조기가동 현재 주차 강조용 */
+  updateDate?: string;
 }
 
 export function DirectCards({
   selectedAgent,
   selectedViewMonth,
   incentiveData,
+  updateDate,
 }: DirectCardsProps) {
   if (selectedViewMonth === 3) {
     return (
-      <MarchCards 
+      <MarchCards
+        updateDate={updateDate}
         viewW1={incentiveData.week1Perf}
         week1SpecialPrize={incentiveData.marchW1SpecialPrize}
         week1PatayaPrize={incentiveData.patayaPrize}

@@ -364,5 +364,6 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     isCaptureMode,
     retryKey,
     setRetryKey,
+    updateDate,
   };
 }

@@ -7,6 +7,7 @@ import { DirectDoubleMeritzCard } from "./DirectDoubleMeritzCard";
 import { DirectMeritzClubPlusCard } from "./DirectMeritzClubPlusCard";
 import { DirectRegularPrizeCard } from "./DirectRegularPrizeCard";
 import { MarchEarlyRunCard } from "./MarchEarlyRunCard";
+import { MovingBorderCard } from "@/components/ui/moving-border";
 
 /** 금액 표시: 원 단위를 '만원' 기준 소수 첫째 자리(천원 단위)까지, 반올림 없이 표시 */
 function formatMan(amount: number | null | undefined): string {
@@ -49,6 +50,8 @@ const labelCls = "text-[11px] font-medium tracking-wide uppercase text-gray-600 
 const prizeCls = "text-xl font-bold tracking-tight text-red-600 dark:text-red-400";
 
 export interface MarchCardsProps {
+  /** MMDD, 조기가동 현재 주차 강조용 */
+  updateDate?: string;
   viewW1: number;
   week1SpecialPrize: number;
   week1PatayaPrize: number;
@@ -72,6 +75,7 @@ export interface MarchCardsProps {
 
 export function MarchCards(props: MarchCardsProps) {
   const {
+    updateDate,
     viewW1,
     week1SpecialPrize,
     week1PatayaPrize,
@@ -163,12 +167,15 @@ export function MarchCards(props: MarchCardsProps) {
         </div>
       </motion.div>
 
-      {/* ── 3월 AFG 조기가동 ── */}
+      {/* ── 3월 AFG 조기가동 (빙글빙글 컬러 테두리) ── */}
       <motion.div variants={itemVariants} className="h-full">
-        <MarchEarlyRunCard
-          weekPrizes={earlyRunWeekPrizes}
-          weekPerfs={earlyRunWeekPerfs}
-        />
+        <MovingBorderCard borderRadius="1.5rem" duration={3500}>
+          <MarchEarlyRunCard
+            weekPrizes={earlyRunWeekPrizes}
+            weekPerfs={earlyRunWeekPerfs}
+            updateDate={updateDate}
+          />
+        </MovingBorderCard>
       </motion.div>
 
       {/* 2행: 1주차 특별 | 1주차 PATTAYA | 3월 정규 — 세로 패딩 10% 증가, 하단 블록 동일량 하단으로 */}
