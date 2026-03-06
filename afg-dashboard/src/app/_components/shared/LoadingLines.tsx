@@ -6,21 +6,24 @@ import { motion } from "framer-motion";
 const LoadingLines: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm">
-      <div className="relative w-20 h-10" style={{ filter: "url(#goo)" }}>
+      <div className="relative w-24 h-12 flex items-center justify-center p-2" style={{ filter: "url(#goo)" }}>
         <motion.div
           animate={{ x: [0, 28, 0], scale: [1, 0.6, 1] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1 left-0 w-6 h-6 rounded-full bg-meritz-red dark:bg-red-500"
+          className="absolute w-6 h-6 rounded-full bg-[#ef3b24] dark:bg-red-500"
+          style={{ left: "8px" }}
         />
         <motion.div
           animate={{ scale: [1, 1.4, 1] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1 left-7 w-6 h-6 rounded-full bg-meritz-red dark:bg-red-500"
+          className="absolute w-6 h-6 rounded-full bg-[#ef3b24] dark:bg-red-500"
+          style={{ left: "36px" }}
         />
         <motion.div
           animate={{ x: [0, -28, 0], scale: [1, 0.6, 1] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-1 left-14 w-6 h-6 rounded-full bg-meritz-red dark:bg-red-500"
+          className="absolute w-6 h-6 rounded-full bg-[#ef3b24] dark:bg-red-500"
+          style={{ left: "64px" }}
         />
       </div>
 
