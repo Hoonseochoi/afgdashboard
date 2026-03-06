@@ -126,8 +126,12 @@ export function MarchCards(props: MarchCardsProps) {
       >
         <div className={`relative rounded-[14px] overflow-hidden ${card} ${accentCyan} p-2 flex flex-col justify-between min-h-0 w-full h-full`}>
           <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-300/20 dark:bg-cyan-400/10 blur-2xl pointer-events-none" />
-          <div className="absolute -left-3 -right-3 top-0 bottom-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
-            <img src="/meritzair.png" alt="" className="w-full h-[115%] max-h-none object-cover object-center -translate-y-[7%]" />
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+            <img
+              src="/meritzair.png"
+              alt=""
+              className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover object-center"
+            />
           </div>
           <div className="relative z-10 md:drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
             <div className="flex items-center gap-2 mb-1">
