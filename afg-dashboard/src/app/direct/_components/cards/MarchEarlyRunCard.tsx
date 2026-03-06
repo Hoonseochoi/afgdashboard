@@ -23,13 +23,13 @@ export function MarchEarlyRunCard({ weekPrizes, weekPerfs }: MarchEarlyRunCardPr
   const total = weekPrizes.reduce((a, b) => a + b, 0);
 
   return (
-    <motion.div className={`${card} ${glass} p-3 flex flex-col h-full`}>
-      <div className="flex items-center justify-between mb-2">
+    <motion.div className={`${card} ${glass} p-2 flex flex-col h-full`}>
+      <div className="flex items-center justify-between mb-1">
         <div>
-          <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 tracking-tight uppercase">
+          <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 tracking-tight uppercase">
             AFG 조기가동
           </p>
-          <h3 className="text-[15.5px] font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
+          <h3 className="text-[14px] font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
             3월 조기가동
           </h3>
         </div>
@@ -40,14 +40,14 @@ export function MarchEarlyRunCard({ weekPrizes, weekPerfs }: MarchEarlyRunCardPr
         )}
       </div>
 
-      <div className="space-y-2 flex-1 min-h-0">
+      <div className="space-y-1 flex-1 min-h-0">
         {WEEK_LABELS.map(({ week, rate }, i) => {
           const perf = weekPerfs[i] ?? 0;
           const prize = weekPrizes[i] ?? 0;
           return (
             <div
               key={week}
-              className="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-gray-50/80 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06]"
+              className="flex items-center justify-between text-xs py-1 px-1.5 rounded-md bg-gray-50/80 dark:bg-white/[0.04] border border-gray-100 dark:border-white/[0.06]"
             >
               <span className="font-semibold text-gray-600 dark:text-gray-300">
                 {week}주차 {rate}
@@ -65,7 +65,7 @@ export function MarchEarlyRunCard({ weekPrizes, weekPerfs }: MarchEarlyRunCardPr
         })}
       </div>
 
-      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2 pt-2 border-t border-gray-100 dark:border-white/[0.06] italic">
+      <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1.5 pt-1.5 border-t border-gray-100 dark:border-white/[0.06] italic">
         *ACFP기준으로 지급되며 대시보드는 FP기준으로 표시됩니다.
       </p>
     </motion.div>

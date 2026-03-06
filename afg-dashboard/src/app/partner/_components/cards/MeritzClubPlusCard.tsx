@@ -3,13 +3,7 @@
 import React from "react";
 import { APPLE_CARD_BASE } from "@/app/_components/dashboard/constants";
 import { formatMan } from "@/app/_components/dashboard/utils";
-
-const MC_PLUS_TIERS = [200000, 400000, 600000, 800000, 1000000]; // 20/40/60/80/100만
-
-function getAchievedTier(perf: number): number {
-  const t = MC_PLUS_TIERS.filter((x) => perf >= x).pop();
-  return t ?? 0;
-}
+import { snapDownToMeritzTier } from "@/lib/engines/incentiveEngine";
 
 export type MeritzClubPlusCardProps = {
   janPerf: number;
@@ -27,20 +21,17 @@ export function MeritzClubPlusCard({
   currentMonthNum,
 }: MeritzClubPlusCardProps) {
   const janTarget = 200000;
-  const janTier = getAchievedTier(janPerf);
-  const febTier = getAchievedTier(febPerf);
-  const marTier = getAchievedTier(marchPerf);
-  const febTarget = janTier > 0 ? janTier : 200000;
-  const marTarget = Math.min(janTier, febTier) || 200000;
+  const febTarget = snapDownToMeritzTier(janPerf);
+  const quarterTarget = snapDownToMeritzTier(Math.min(janPerf, febPerf));
+  const marTarget = quarterTarget;
 
-  const isDisqualified = janPerf < 200000 || febPerf < 200000;
+  const isDisqualified = quarterTarget === 0;
   const janDone = janPerf >= janTarget;
-  const febDone = febTier > 0 && febPerf >= febTarget;
+  const febDone = febTarget > 0 && febPerf >= febTarget;
   const marDone = marTarget > 0 && marchPerf >= marTarget;
   const marchShortfall = marTarget >= 200000 && marchPerf < marTarget ? marTarget - marchPerf : 0;
 
-  const achievedTier = Math.min(janTier, febTier, marTier);
-  const prizeAmount = achievedTier * 3;
+  const prizeAmount = quarterTarget * 3;
 
   const Row = ({
     label,

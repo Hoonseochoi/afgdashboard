@@ -315,10 +315,11 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
 
   const incentiveData = useMemo(() => {
     if (!selectedAgent) return null;
-    const data = calculateIncentiveData(selectedAgent, agents, selectedViewMonth, globalRanks, updateDate);
+    const ranksForMode = mode === "direct" ? directRanks : mode === "partner" ? partnerRanks : globalRanks;
+    const data = calculateIncentiveData(selectedAgent, agents, selectedViewMonth, ranksForMode, updateDate);
     const performanceData = preparePerformanceChartData(selectedAgent);
     return { ...data, performanceData };
-  }, [selectedAgent, agents, selectedViewMonth, globalRanks, updateDate]);
+  }, [selectedAgent, agents, selectedViewMonth, globalRanks, directRanks, partnerRanks, mode, updateDate]);
 
   return {
     agents,

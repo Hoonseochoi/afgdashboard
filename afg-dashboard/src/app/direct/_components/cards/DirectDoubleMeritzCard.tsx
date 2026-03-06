@@ -12,6 +12,8 @@ export type DirectDoubleMeritzCardProps = {
   doubleMeritzPrize: number;
   monthLabel?: string;
   prevMonthLabel?: string;
+  /** 표시 중인 월(1–12). 미대상 시 "N월 2배 메리츠클럽 진입" 등 문구에 사용 */
+  currentMonthNum?: number;
 };
 
 export function DirectDoubleMeritzCard({
@@ -20,10 +22,15 @@ export function DirectDoubleMeritzCard({
   doubleMeritzPrize,
   monthLabel = "당월",
   prevMonthLabel = "전월",
+  currentMonthNum,
 }: DirectDoubleMeritzCardProps) {
   const eligible = prevMonthPerf >= 200000;
   const achieved = eligible && currentMonthPerf >= 200000;
-  
+  const nextMonthNum = currentMonthNum != null
+    ? (currentMonthNum % 12) + 1
+    : (new Date().getMonth() + 2 > 12 ? 1 : new Date().getMonth() + 2);
+  const nextMonthLabel = `${nextMonthNum}월`;
+
   const nextTierMan = DOUBLE_MERITZ_TIERS.find((tierMan) => {
     const tierValue = tierMan * 10000;
     return !(achieved && currentMonthPerf >= tierValue);
@@ -31,20 +38,20 @@ export function DirectDoubleMeritzCard({
 
   return (
     <div className={`${APPLE_CARD_BASE} h-full border-amber-300/80 dark:border-amber-600/80 bg-gradient-to-br from-white/80 via-white/40 to-amber-50/30 dark:from-white/10 dark:via-white/5 dark:to-amber-900/10`}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-200 tracking-tight">Only AFG CLUB</p>
-          <h3 className="text-[15.5px] font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
+          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-200 tracking-tight">Only AFG CLUB</p>
+          <h3 className="text-[14px] font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
             2배 메리츠 클럽
           </h3>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">
             {prevMonthLabel}·{monthLabel} 각 20만 이상 시
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="relative w-9 h-9 flex-shrink-0">
-            <div className="absolute inset-0 bg-amber-500 rounded-2xl rotate-6 opacity-20 animate-pulse" />
-            <span className="relative flex items-center justify-center w-9 h-9 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-400 text-white text-xs font-extrabold shadow-md border border-amber-300/50">
+        <div className="flex flex-col items-end gap-0.5">
+          <div className="relative w-8 h-8 flex-shrink-0">
+            <div className="absolute inset-0 bg-amber-500 rounded-xl rotate-6 opacity-20 animate-pulse" />
+            <span className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-amber-400 text-white text-[10px] font-extrabold shadow-md border border-amber-300/50">
               X2
             </span>
           </div>
@@ -64,7 +71,7 @@ export function DirectDoubleMeritzCard({
         </div>
       </div>
 
-      <div className="mt-2.5 grid grid-cols-5 gap-1.5">
+      <div className="mt-1.5 grid grid-cols-3 gap-1">
         {DOUBLE_MERITZ_TIERS.map((tierMan) => {
           const tierValue = tierMan * 10000;
           const isAchieved = achieved && currentMonthPerf >= tierValue;
@@ -72,7 +79,7 @@ export function DirectDoubleMeritzCard({
           return (
             <span
               key={tierMan}
-              className={`inline-flex items-center justify-center rounded-xl px-2 py-1.5 text-[11px] font-semibold transition-all ${
+              className={`inline-flex items-center justify-center rounded-lg px-1.5 py-1 text-[10px] font-semibold transition-all ${
                 isAchieved
                   ? "bg-amber-500 text-white dark:bg-amber-600 dark:text-white shadow-sm ring-2 ring-amber-400/30"
                   : isNextTarget
@@ -86,24 +93,43 @@ export function DirectDoubleMeritzCard({
         })}
       </div>
 
-      <div className="mt-auto pt-2.5 border-t border-gray-100/80 dark:border-gray-700/80">
-        <div className="flex items-center justify-between text-[11px] text-gray-600 dark:text-gray-400">
-          <span>{monthLabel} {formatMan(currentMonthPerf)}만 / 예상 시상금</span>
-          <span className="text-base font-bold text-amber-600 dark:text-amber-300">
-            {formatMan(doubleMeritzPrize)}만원
-          </span>
-        </div>
-        {eligible && (() => {
-          if (nextTierMan == null) return null;
-          const nextTierValue = nextTierMan * 10000;
-          const remaining = Math.max(0, nextTierValue - currentMonthPerf);
-          if (remaining <= 0) return null;
-          return (
-            <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-              {nextTierMan}만까지 <span className="font-bold underlineDecoration">{formatMan(remaining)}만원</span> 남음
-            </p>
-          );
-        })()}
+      <div className="mt-auto pt-2 border-t border-gray-100/80 dark:border-gray-700/80">
+        {!eligible ? (
+          <>
+            <div className="text-[12px] text-gray-600 dark:text-gray-400">
+              <span>{monthLabel} 실적 {formatMan(currentMonthPerf)}만</span>
+            </div>
+            {currentMonthPerf <= 200000 ? (
+              <p className="mt-0.5 text-[12px] font-semibold text-red-600 dark:text-red-400 whitespace-nowrap overflow-hidden text-ellipsis">
+                {formatMan(Math.max(0, 200000 - currentMonthPerf))}만원 더하면 {nextMonthLabel} 2배 메리츠클럽 진입
+              </p>
+            ) : (
+              <p className="mt-0.5 text-[12px] font-semibold text-amber-600 dark:text-amber-400">
+                {nextMonthLabel}부터 2배 메리츠클럽 시작!
+              </p>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-[12px] text-gray-600 dark:text-gray-400">
+              <span>{monthLabel} {formatMan(currentMonthPerf)}만 / 예상 시상금</span>
+              <span className="text-[17px] font-bold text-amber-600 dark:text-amber-300">
+                {formatMan(doubleMeritzPrize)}만원
+              </span>
+            </div>
+            {(() => {
+              if (nextTierMan == null) return null;
+              const nextTierValue = nextTierMan * 10000;
+              const remaining = Math.max(0, nextTierValue - currentMonthPerf);
+              if (remaining <= 0) return null;
+              return (
+                <p className="mt-0.5 text-[12px] text-amber-600 dark:text-amber-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+                  {nextTierMan}만까지 <span className="font-bold underlineDecoration">{formatMan(remaining)}만원</span> 남음
+                </p>
+              );
+            })()}
+          </>
+        )}
       </div>
     </div>
   );

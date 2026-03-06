@@ -14,6 +14,10 @@ export type DirectRegularPrizeCardProps = {
   variant?: "slate" | "sky" | "indigo";
   /** true면 타이틀 하단 서브텍스트 미표시 */
   hideSubtitle?: boolean;
+  /** true면 타이틀을 메리츠클럽플러스와 동일 크기(text-[14px])로 */
+  compactTitle?: boolean;
+  /** true면 세로 패딩 10% 증가, 현재금액~독려 블록 동일량 하단으로 */
+  moreVerticalPadding?: boolean;
 };
 
 export function DirectRegularPrizeCard({
@@ -24,6 +28,8 @@ export function DirectRegularPrizeCard({
   monthLabel = "당월",
   variant = "slate",
   hideSubtitle = false,
+  compactTitle = false,
+  moreVerticalPadding = false,
 }: DirectRegularPrizeCardProps) {
   const themes = {
     slate: "border-slate-200/60 dark:border-slate-500/30 bg-gradient-to-br from-white/90 via-white/50 to-slate-50/40 dark:from-white/10 dark:via-white/5 dark:to-slate-900/10",
@@ -39,7 +45,7 @@ export function DirectRegularPrizeCard({
 
   return (
     <div
-      className={`${APPLE_CARD_BASE} h-full ${themes[variant]} shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300 border`}
+      className={`${APPLE_CARD_BASE} h-full ${themes[variant]} shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300 border ${moreVerticalPadding ? "!py-[0.6875rem] md:!py-[0.825rem]" : ""}`}
     >
       <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
         <svg viewBox="0 0 24 24" className="w-16 h-16 fill-current text-gray-400 dark:text-white/40" aria-hidden>
@@ -48,10 +54,10 @@ export function DirectRegularPrizeCard({
       </div>
 
       <div className="relative z-10 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold text-gray-500 dark:text-white/60 tracking-tight uppercase">{monthLabel} 마감 목표</p>
-            <h3 className={`text-[15.5px] font-bold ${accentColors[variant]} truncate leading-tight tracking-tight`}>
+            <p className="text-[10px] font-bold text-gray-500 dark:text-white/60 tracking-tight uppercase">{monthLabel} 마감 목표</p>
+            <h3 className={`${compactTitle ? "text-[14px]" : "text-lg"} font-bold ${accentColors[variant]} truncate leading-tight tracking-tight`}>
               {title}
             </h3>
           </div>
@@ -60,30 +66,29 @@ export function DirectRegularPrizeCard({
           </span>
         </div>
 
-        {!hideSubtitle ? (
-          <p className="text-[11px] text-gray-400 dark:text-white/50 mb-auto italic">실적과 시상금 1:1 매칭 구간</p>
-        ) : (
-          <div className="flex-1 min-h-0" aria-hidden />
+        {!hideSubtitle && (
+          <p className="text-[11px] text-gray-400 dark:text-white/50 italic">실적과 시상금 1:1 매칭 구간</p>
         )}
 
-        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10 flex items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[10px] text-gray-500 dark:text-white/60 font-medium uppercase tracking-wider mb-0.5">현재 실적</p>
-            <p className="text-sm font-bold text-gray-900 dark:text-white tracking-tight">{formatMan(perf)}<span className="text-[10px] font-normal ml-0.5 opacity-80">만원</span></p>
+        <div className="mt-auto pt-1.5">
+          <div className="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-white/10 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] text-gray-500 dark:text-white/60 font-medium uppercase tracking-wider mb-0.5">현재 실적</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white tracking-tight">{formatMan(perf)}<span className="text-[10px] font-normal ml-0.5 opacity-80">만원</span></p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-[10px] text-gray-500 dark:text-white/60 font-medium uppercase tracking-wider mb-0.5">예상 시상금</p>
+              <p className="text-xl font-black text-gray-900 dark:text-white leading-none tracking-tight drop-shadow-sm">
+                {formatMan(prize)}<span className="text-xs font-bold ml-0.5">만원</span>
+              </p>
+            </div>
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-[10px] text-gray-500 dark:text-white/60 font-medium uppercase tracking-wider mb-0.5">예상 시상금</p>
-            <p className="text-2xl font-black text-gray-900 dark:text-white leading-none tracking-tight drop-shadow-sm">
-              {formatMan(prize)}<span className="text-xs font-bold ml-0.5">만원</span>
-            </p>
-          </div>
-        </div>
 
-        {dailyDiff !== 0 && (
+          {dailyDiff !== 0 && (
           <motion.div 
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
-            className="mt-2.5 flex justify-end"
+            className="mt-1.5 flex justify-end"
           >
             <div className={`inline-flex items-center gap-1.5 text-[10.5px] font-bold rounded-lg px-2.5 py-1 ${
               dailyDiff > 0
@@ -94,7 +99,8 @@ export function DirectRegularPrizeCard({
               {`전일비 ${dailyDiff > 0 ? "+" : ""}${formatMan(dailyDiff)}만원`}
             </div>
           </motion.div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

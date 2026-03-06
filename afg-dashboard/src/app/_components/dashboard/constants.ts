@@ -9,4 +9,4 @@ export type PartnerCardVariant = "green" | "sky" | "purple" | "yellow";
 
 /** 파트너 전용 Apple 스타일 기본 카드 컨테이너 클래스 */
 export const APPLE_CARD_BASE =
-  "relative rounded-2xl p-4 md:p-5 flex flex-col overflow-hidden bg-gradient-to-br from-white to-gray-50/90 dark:from-[#050509] dark:to-[#050509] border border-gray-200/80 dark:border-gray-800 shadow-[0_18px_45px_rgba(15,23,42,0.45)] transition-all duration-200 hover:-translate-y-0.5";
+  "relative rounded-2xl p-2.5 md:p-3 flex flex-col overflow-hidden bg-gradient-to-br from-white to-gray-50/90 dark:from-[#050509] dark:to-[#050509] border border-gray-200/80 dark:border-gray-800 shadow-[0_18px_45px_rgba(15,23,42,0.45)] transition-all duration-200 hover:-translate-y-0.5";
