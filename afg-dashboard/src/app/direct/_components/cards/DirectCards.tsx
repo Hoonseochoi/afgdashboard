@@ -28,7 +28,6 @@ export function DirectCards({
         meritzClubPlusPrize={incentiveData.clubPlusPrize}
         plusTarget={incentiveData.plusTargetMinPerf}
         plusTargetMinPerf={incentiveData.plusTargetMinPerf}
-        plusNext=""
         plusProgress={incentiveData.plusProgress}
         janPerf={incentiveData.janPerf}
         febPerf={incentiveData.febPerf}
@@ -37,38 +36,46 @@ export function DirectCards({
       />
     );
   }
+
+  // 1월 또는 2월
+  const prevMonthPerf = selectedViewMonth === 1
+    ? (selectedAgent.performance?.["2025-12"] ?? 0)
+    : (selectedAgent.performance?.["2026-01"] ?? 0);
+
   return (
     <NonPartnerCards 
+      viewW1={incentiveData.viewW1}
+      viewW2={incentiveData.viewW2}
+      viewW3={incentiveData.viewW3}
       week1Prize={incentiveData.week1Prize}
       week1Next={incentiveData.week1Next}
-      week1Past={selectedViewMonth > 1} // Placeholder logic
+      week1Past={selectedViewMonth > 1 || (selectedViewMonth === 1 && incentiveData.currentWeek > 1)}
       week1Progress={incentiveData.week1Progress}
-      viewW1={incentiveData.viewW1}
       week2Prize={incentiveData.week2Prize}
       week2Next={incentiveData.week2Next}
-      week2Past={selectedViewMonth > 1}
+      week2Past={selectedViewMonth > 2 || (selectedViewMonth === 2 && incentiveData.currentWeek > 2)}
       week2Progress={incentiveData.week2Progress}
-      viewW2={incentiveData.viewW2}
       week3Prize={incentiveData.week3Prize}
       week3Next={incentiveData.week3Next}
       week3Progress={incentiveData.week3Progress}
-      viewW3={incentiveData.viewW3}
       selectedViewMonth={selectedViewMonth as any}
       monthlyPrize={incentiveData.monthlyPrize.prize}
       monthlyNext={incentiveData.monthlyNext}
       monthlyProgress={incentiveData.monthlyProgress}
       currentMonthPerf={incentiveData.currentPerf}
       doubleMeritzPrize={incentiveData.doubleMeritzPrize}
-      prevMonthPerf={selectedAgent.performance?.["2026-02"] ?? 0}
+      prevMonthPerf={prevMonthPerf}
       meritzClubPlusPrize={incentiveData.clubPlusPrize}
       currentMonthNum={selectedViewMonth}
-      plusTarget={incentiveData.plusTargetMinPerf}
+      plusTarget={incentiveData.plusGoal}
+      plusNext={incentiveData.plusNext}
+      janPerf={incentiveData.janPerf}
       febPerf={incentiveData.febPerf}
       marchPerf={incentiveData.marchPerf}
-      plusNext=""
       plusProgress={incentiveData.plusProgress}
       regularPrize={incentiveData.regularPrizeSize}
       dailyDiff={0}
     />
   );
 }
+

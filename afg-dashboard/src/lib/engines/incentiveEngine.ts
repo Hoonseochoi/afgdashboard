@@ -1,5 +1,10 @@
 import { Agent, PerformanceData, WeeklyPerformance } from "@/types";
 
+const formatMan = (v: number) => {
+  if (!v) return "0";
+  return String(Math.floor(v / 10000));
+};
+
 // --- Constants ---
 
 export const ALL_REWARD_TIERS = [200000, 300000, 400000, 500000, 600000, 800000, 1000000, 1200000, 1500000, 1800000, 2000000, 2500000];
@@ -175,23 +180,57 @@ export interface ChartDataItem {
 
 export const preparePerformanceChartData = (agent: Agent): ChartDataItem[] => {
   const performance = agent.performance || {};
+  const monthly = (agent as any).weekly || {};
   const months = [
-    { label: "8월", key: "2025-08" },
-    { label: "9월", key: "2025-09" },
-    { label: "10월", key: "2025-10" },
-    { label: "11월", key: "2025-11" },
-    { label: "12월", key: "2025-12" },
-    { label: "1월", key: "2026-01" },
-    { label: "2월", key: "2026-02" },
-    { label: "3월", key: "2026-03" },
+    { label: "8월", key: "2025-08", month: null as null | number },
+    { label: "9월", key: "2025-09", month: null },
+    { label: "10월", key: "2025-10", month: null },
+    { label: "11월", key: "2025-11", month: null },
+    { label: "12월", key: "2025-12", month: null },
+    { label: "1월", key: "2026-01", month: 1 },
+    { label: "2월", key: "2026-02", month: 2 },
+    { label: "3월", key: "2026-03", month: 3 },
   ];
 
-  return months.map((m) => ({
-    name: m.label,
-    value: performance[m.key] || 0,
-    prize: 0, // Simplified for now
-  }));
+  const computePrize = (monthNum: number, perf: number): number => {
+    // weekly performance for the current view month (from .weekly for current session,
+    // but for chart we only have performance totals for past months, so estimate from totals)
+    const w1 = monthly?.week1 ?? 0;
+    const w2 = monthly?.week2 ?? 0;
+    const w3 = monthly?.week3 ?? 0;
+
+    let weekPrizeSum = 0;
+    if (monthNum === 1) {
+      weekPrizeSum = getWeekPrize(w1, JAN_W1_PRIZES).prize +
+                    getWeekPrize(w2, JAN_W2_PRIZES).prize +
+                    getWeekPrize(w3, JAN_W3_PRIZES).prize;
+    } else if (monthNum === 2) {
+      weekPrizeSum = getWeekPrize(w1, FEB_W1_PRIZES).prize +
+                    getWeekPrize(w2, FEB_W2_PRIZES).prize;
+    } else if (monthNum === 3) {
+      weekPrizeSum = calculateMarW1SpecialPrize(w1).prize;
+    }
+
+    const monthly_ = calculateMonthlyPrize(perf).prize;
+    const prevKey = monthNum === 1 ? "2025-12" : `2026-${String(monthNum - 1).padStart(2, "0")}`;
+    const prevPerf = performance[prevKey] ?? 0;
+    const dm = calculateDoubleMeritzPrize(prevPerf, perf);
+    const cp = calculateMeritzClubPlusPrize(perf);
+    const regular = perf; // non-partner estimate
+
+    if (monthNum === 3) {
+      return weekPrizeSum + dm + cp + regular;
+    }
+    return weekPrizeSum + monthly_ + dm + cp + regular;
+  };
+
+  return months.map((m) => {
+    const value = performance[m.key] || 0;
+    const prize = m.month !== null ? computePrize(m.month, value) : 0;
+    return { name: m.label, value, prize };
+  });
 };
+
 
 /**
  * 특정 월의 총 예상 시상금 합산 (비파트너 기준)
@@ -344,8 +383,32 @@ export const calculateIncentiveData = (
   const monthKey = `2026-${String(selectedMonth).padStart(2, "0")}`;
   const currentPerf = agent.performance?.[monthKey] ?? 0;
   
-  // 주간 실적 데이터
-  const weekData = agent.weekly_data || [];
+  // 주간 실적 데이터: 선택 월에 따라 올바른 소스 사용
+  let weekData = agent.weekly_data || [];
+  if (weekData.length === 0) {
+    const rawAgent = agent as any;
+    // 1월 선택 시: january_closed.json의 _janWeekly 필드 우선 사용
+    // 2월 선택 시: february_closed.json의 _febWeekly 필드 우선 사용
+    // 3월(현재월): agent.weekly (실시간 데이터)
+    const janWeekly = rawAgent._janWeekly;
+    const febWeekly = rawAgent._febWeekly;
+    const stdWeekly = rawAgent.weekly ?? {};
+    const src =
+      selectedMonth === 1 && janWeekly ? janWeekly :
+      selectedMonth === 2 && febWeekly ? febWeekly :
+      stdWeekly;
+    const w1 = src.week1 ?? 0;
+    const w2 = src.week2 ?? 0;
+    const w3 = src.week3 ?? 0;
+    weekData = [
+      { week: 1, performance: w1 },
+      { week: 2, performance: w2 },
+      { week: 3, performance: w3 },
+    ];
+  }
+
+
+  
   const weekPrizes = weekData.map(w => {
     if (selectedMonth === 1) {
       if (w.week === 1) return getWeekPrize(w.performance, JAN_W1_PRIZES);
@@ -394,8 +457,10 @@ export const calculateIncentiveData = (
 
   // 파타야 및 3월 특별 시상 (3월 1주차 기준)
   const week1Perf = weekData.find(w => w.week === 1)?.performance ?? 0;
-  const patayaPrize = selectedMonth === 3 ? calculatePatayaTravelIncentive(week1Perf) : 0;
-  const marchW1SpecialPrize = selectedMonth === 3 ? calculateMarW1SpecialPrize(week1Perf) : 0;
+  const patayaResult = selectedMonth === 3 ? calculatePatayaTravelIncentive(week1Perf) : null;
+  const marchW1SpecialResult = selectedMonth === 3 ? calculateMarW1SpecialPrize(week1Perf) : null;
+  const patayaPrize = patayaResult ? patayaResult.prize : 0;
+  const marchW1SpecialPrize = marchW1SpecialResult ? marchW1SpecialResult.prize : 0;
 
   // 메리츠클럽 PLUS 상세
   const janPerf = agent.performance?.["2026-01"] ?? 0;
@@ -443,6 +508,8 @@ export const calculateIncentiveData = (
     viewW3: week3?.performance || 0,
     monthlyNext: monthlyPrize.nextLevel || "",
     monthlyProgress: monthlyPrize.progress || 0,
+    plusNext: currentPerf >= plusTargetMinPerf ? "완성" : `${formatMan(plusTargetMinPerf - currentPerf)}만 더`,
+    plusGoal: plusTargetMinPerf,
     performanceData: preparePerformanceChartData(agent),
     updateDate
   };

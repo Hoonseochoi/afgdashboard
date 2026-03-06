@@ -26,6 +26,8 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [globalRanks, setGlobalRanks] = useState<Record<string, number[]>>({});
+  const [directRanks, setDirectRanks] = useState<Record<string, number[]>>({});
+  const [partnerRanks, setPartnerRanks] = useState<Record<string, number[]>>({});
   const [updateDate, setUpdateDate] = useState<string>("");
   const [selectedViewMonth, setSelectedViewMonth] = useState<ViewMonth>(3);
   const [prizeMonthDropdownOpen, setPrizeMonthDropdownOpen] = useState(false);
@@ -140,6 +142,8 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
         setAgents(allAgents);
         setUpdateDate(data.updateDate || "");
         if (data.ranks) setGlobalRanks(data.ranks);
+        if (data.directRanks) setDirectRanks(data.directRanks);
+        if (data.partnerRanks) setPartnerRanks(data.partnerRanks);
 
         const excludeTest = allAgents.filter((a: any) => a.code !== RANK_EXCLUDE_CODE);
         if (excludeTest.length > 0) {
@@ -324,6 +328,9 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     setUser,
     loading,
     error,
+    globalRanks,
+    directRanks,
+    partnerRanks,
     selectedViewMonth,
     setSelectedViewMonth,
     prizeMonthDropdownOpen,

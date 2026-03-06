@@ -60,6 +60,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     
     // Derived Data (Incentives)
     incentiveData,
+    globalRanks,
+    directRanks,
+    partnerRanks,
     
     // Handlers
     handlePWAInstallClick,
@@ -217,8 +220,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <PerformanceChart
             performanceData={incentiveData.performanceData}
             showPartnerContent={isPartner}
-            partnerRanksByMonth={{}} // To be handled
-            globalRanks={{}} // To be handled
+            directRanks={directRanks}
+            partnerRanks={partnerRanks}
+            selectedAgent={selectedAgent}
+            agents={agents}
             setSelectedViewMonth={setSelectedViewMonth}
           />
         </div>

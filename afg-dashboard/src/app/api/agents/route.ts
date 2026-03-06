@@ -16,8 +16,8 @@ const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '202
 
 type AgentWithPerf = { code?: string; performance?: Record<string, number> | null; weekly?: Record<string, number> | null };
 
-/** 2월 마감 fix 데이터(february_closed.json)로 2026-01, 2026-02만 덮어쓰기. weekly는 덮지 않음(3월 탭에서 당월 1주차 등이 유지되도록) */
-function mergeFebruaryFix<T extends AgentWithPerf>(agents: T[]): T[] {
+/** 2월 마감 fix 데이터(february_closed.json)로 performance 덮어쓰기 + _febWeekly 첨부 */
+function mergeFebruaryFix<T extends AgentWithPerf & Record<string, any>>(agents: T[]): T[] {
   try {
     const fixPath = join(process.cwd(), 'src', 'data', 'february_closed.json');
     const raw = readFileSync(fixPath, 'utf-8');
@@ -27,12 +27,32 @@ function mergeFebruaryFix<T extends AgentWithPerf>(agents: T[]): T[] {
       const closed = fix[code];
       if (!closed) return a;
       const performance = { ...a.performance, ...closed.performance };
-      return { ...a, performance };
+      const febWeekly = closed.weekly ?? { week1: 0, week2: 0, week3: 0, week4: 0 };
+      return { ...a, performance, _febWeekly: febWeekly };
     });
   } catch {
     return agents;
   }
 }
+
+
+/** 1월 마감 데이터(january_closed.json)를 _janWeekly 필드에 첨부 (current weekly를 보존하며 1월 주차 데이터를 별도 제공) */
+function mergeJanuaryFix<T extends AgentWithPerf & Record<string, any>>(agents: T[]): T[] {
+  try {
+    const fixPath = join(process.cwd(), 'src', 'data', 'january_closed.json');
+    const raw = readFileSync(fixPath, 'utf-8');
+    const fix = JSON.parse(raw) as Record<string, { performance: Record<string, number>; weekly?: Record<string, number> }>;
+    return agents.map((a) => {
+      const code = a.code ?? '';
+      const closed = fix[code];
+      if (!closed) return a;
+      return { ...a, _janWeekly: closed.weekly ?? { week1: 0, week2: 0, week3: 0 } };
+    });
+  } catch {
+    return agents;
+  }
+}
+
 
 function getAgentsFromLocalJson(): any[] {
   const dataPath = join(process.cwd(), 'src', 'data', 'data.json');
@@ -106,6 +126,7 @@ export async function GET() {
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
       let items = await supabaseAgentsListAll({ filterRole: 'agent' });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
@@ -117,6 +138,7 @@ export async function GET() {
       const allowedBranches = ['우리'];
       let items = await supabaseAgentsListAll({ filterRole: 'agent' });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => {
         if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
         return allowedBranches.some((b) => String(a.branch).includes(b));
@@ -130,6 +152,7 @@ export async function GET() {
       const mCode = session.targetManagerCode || session.code || '';
       let items = await supabaseAgentsListAll({ filterManagerCode: mCode });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
@@ -138,7 +161,8 @@ export async function GET() {
 
     let agent = await supabaseAgentGetByCode(session.code!);
     if (agent && agent.code !== RANK_EXCLUDE_CODE) {
-      const merged = mergeFebruaryFix([agent]) as SupabaseAgentRecord[];
+      let merged = mergeFebruaryFix([agent]) as SupabaseAgentRecord[];
+      merged = mergeJanuaryFix(merged) as SupabaseAgentRecord[];
       agent = merged[0];
       return NextResponse.json({ agents: [toSafeAgent(agent)], updateDate });
     }

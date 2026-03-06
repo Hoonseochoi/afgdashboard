@@ -20,8 +20,8 @@ const RANK_MONTHS = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '202
 
 type AgentWithPerf = { code?: string; performance?: Record<string, number> | null; weekly?: Record<string, number> | null };
 
-/** 2월 마감 fix 데이터(february_closed.json)로 2026-01, 2026-02만 덮어쓰기. weekly는 덮지 않음(3월 탭 당월 1주차 유지) */
-function mergeFebruaryFix<T extends AgentWithPerf>(agents: T[]): T[] {
+/** 2월 마감 fix 데이터(february_closed.json)로 performance 덮어쓰기 + _febWeekly 첨부 */
+function mergeFebruaryFix<T extends AgentWithPerf & Record<string, any>>(agents: T[]): T[] {
   try {
     const fixPath = join(process.cwd(), 'src', 'data', 'february_closed.json');
     const raw = readFileSync(fixPath, 'utf-8');
@@ -31,12 +31,31 @@ function mergeFebruaryFix<T extends AgentWithPerf>(agents: T[]): T[] {
       const closed = fix[code];
       if (!closed) return a;
       const performance = { ...a.performance, ...closed.performance };
-      return { ...a, performance };
+      const febWeekly = closed.weekly ?? { week1: 0, week2: 0, week3: 0, week4: 0 };
+      return { ...a, performance, _febWeekly: febWeekly };
     });
   } catch {
     return agents;
   }
 }
+
+/** 1월 마감 데이터(january_closed.json)를 _janWeekly 필드에 첨부 */
+function mergeJanuaryFix<T extends AgentWithPerf & Record<string, any>>(agents: T[]): T[] {
+  try {
+    const fixPath = join(process.cwd(), 'src', 'data', 'january_closed.json');
+    const raw = readFileSync(fixPath, 'utf-8');
+    const fix = JSON.parse(raw) as Record<string, { performance: Record<string, number>; weekly?: Record<string, number> }>;
+    return agents.map((a) => {
+      const code = a.code ?? '';
+      const closed = fix[code];
+      if (!closed) return a;
+      return { ...a, _janWeekly: closed.weekly ?? { week1: 0, week2: 0, week3: 0, week4: 0 } };
+    });
+  } catch {
+    return agents;
+  }
+}
+
 
 function normalizeCode(c: string | number | null | undefined): string {
   const s = String(c ?? '').trim();
@@ -172,12 +191,19 @@ export async function GET() {
     const configApp = await supabaseConfigGetApp();
     const updateDate = configApp?.updateDate ?? '0000';
 
-    // 특수 코드: 105203241 → 지정된 지사만 조회
+    const isPartner = (a: SupabaseAgentRecord) => a.branch && String(a.branch).includes('파트너');
+
     if (session.code === '105203241') {
       const allowedBranches = ['송도스튜디오', '에이스스튜디오', '엔타스2스튜디오'];
       let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
       allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
+      allItems = mergeJanuaryFix(allItems) as SupabaseAgentRecord[];
       allItems = applyMcListBranch(allItems);
+      
+      const ranks = computeRanks(allItems);
+      const directRanks = computeRanks(allItems.filter(a => !isPartner(a)));
+      const partnerRanks = computeRanks(allItems.filter(a => isPartner(a)));
+
       const filtered = allItems.filter((a) => {
         if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
         const branchName = String(a.branch);
@@ -186,16 +212,11 @@ export async function GET() {
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
 
-      let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
-      allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
-      allForRanks = applyMcListBranch(allForRanks);
-      const ranks = computeRanks(allForRanks);
-      const partnerAgents = allForRanks
+      const partnerAgents = allItems
         .filter(
           (a) =>
             a.code !== RANK_EXCLUDE_CODE &&
-            a.branch &&
-            String(a.branch).includes('파트너'),
+            isPartner(a),
         )
         .map(toSafeAgent);
 
@@ -204,16 +225,24 @@ export async function GET() {
         agents: agentsData,
         updateDate,
         ranks,
+        directRanks,
+        partnerRanks,
         partnerAgents,
       });
     }
 
-    // 특수 코드: 722031500 (이도경 지점장) → "우리" 지점 설계사만 조회, 검색/리스트 오픈
+    // 특수 코드: 722031500 (이도경 지점장)
     if (session.code === '722031500') {
       const allowedBranches = ['우리'];
       let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
       allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
+      allItems = mergeJanuaryFix(allItems) as SupabaseAgentRecord[];
       allItems = applyMcListBranch(allItems);
+
+      const ranks = computeRanks(allItems);
+      const directRanks = computeRanks(allItems.filter(a => !isPartner(a)));
+      const partnerRanks = computeRanks(allItems.filter(a => isPartner(a)));
+
       const filtered = allItems.filter((a) => {
         if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
         const branchName = String(a.branch);
@@ -222,16 +251,11 @@ export async function GET() {
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
 
-      let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
-      allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
-      allForRanks = applyMcListBranch(allForRanks);
-      const ranks = computeRanks(allForRanks);
-      const partnerAgents = allForRanks
+      const partnerAgents = allItems
         .filter(
           (a) =>
             a.code !== RANK_EXCLUDE_CODE &&
-            a.branch &&
-            String(a.branch).includes('파트너'),
+            isPartner(a),
         )
         .map(toSafeAgent);
 
@@ -240,17 +264,24 @@ export async function GET() {
         agents: agentsData,
         updateDate,
         ranks,
+        directRanks,
+        partnerRanks,
         partnerAgents,
       });
     }
 
-    // 특수 코드: 102203009 (손영상 지점장) → 지정된 지사 전체 설계사 조회
+    // 특수 코드: 102203009 (손영상 지점장)
     if (String(session.code).trim() === '102203009') {
       const allowedBranches = ['주식회사 어센틱금융그룹(엔타스5스튜디오)', '엔타스5스튜디오', '엔타스5'];
       let allItems = await supabaseAgentsListAll({ filterRole: 'agent' });
-      
       allItems = mergeFebruaryFix(allItems) as SupabaseAgentRecord[];
+      allItems = mergeJanuaryFix(allItems) as SupabaseAgentRecord[];
       allItems = applyMcListBranch(allItems);
+
+      const ranks = computeRanks(allItems);
+      const directRanks = computeRanks(allItems.filter(a => !isPartner(a)));
+      const partnerRanks = computeRanks(allItems.filter(a => isPartner(a)));
+
       const filtered = allItems.filter((a) => {
         if (a.code === RANK_EXCLUDE_CODE || !a.branch) return false;
         const branchName = String(a.branch);
@@ -260,16 +291,11 @@ export async function GET() {
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
 
-      let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
-      allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
-      allForRanks = applyMcListBranch(allForRanks);
-      const ranks = computeRanks(allForRanks);
-      const partnerAgents = allForRanks
+      const partnerAgents = allItems
         .filter(
           (a) =>
             a.code !== RANK_EXCLUDE_CODE &&
-            a.branch &&
-            String(a.branch).includes('파트너'),
+            isPartner(a),
         )
         .map(toSafeAgent);
 
@@ -278,6 +304,8 @@ export async function GET() {
         agents: agentsData,
         updateDate,
         ranks,
+        directRanks,
+        partnerRanks,
         partnerAgents,
       });
     }
@@ -285,45 +313,64 @@ export async function GET() {
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
       let items = await supabaseAgentsListAll({ filterRole: 'agent' });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
       items = applyMcListBranch(items);
+
+      const ranks = computeRanks(items);
+      const directRanks = computeRanks(items.filter(a => !isPartner(a)));
+      const partnerRanks = computeRanks(items.filter(a => isPartner(a)));
+
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
-      const ranks = computeRanks(items);
-      const partnerAgents = agentsData.filter((a) => a.branch && String(a.branch).includes('파트너'));
-      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, partnerAgents });
+      const partnerAgents = agentsData.filter((a) => isPartner(a as any));
+      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, directRanks, partnerRanks, partnerAgents });
     }
 
     if (session.role === 'manager') {
       const mCode = session.targetManagerCode || session.code || '';
       let items = await supabaseAgentsListAll({ filterManagerCode: mCode });
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
       items = applyMcListBranch(items);
+
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
+
       let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
       allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
+      allForRanks = mergeJanuaryFix(allForRanks) as SupabaseAgentRecord[];
       allForRanks = applyMcListBranch(allForRanks);
+
       const ranks = computeRanks(allForRanks);
+      const directRanks = computeRanks(allForRanks.filter(a => !isPartner(a)));
+      const partnerRanks = computeRanks(allForRanks.filter(a => isPartner(a)));
+
       const partnerAgents = allForRanks
-        .filter((a) => a.code !== RANK_EXCLUDE_CODE && a.branch && String(a.branch).includes('파트너'))
+        .filter((a) => a.code !== RANK_EXCLUDE_CODE && isPartner(a))
         .map(toSafeAgent);
-      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, partnerAgents });
+      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, directRanks, partnerRanks, partnerAgents });
     }
 
     let agent = await supabaseAgentGetByCode(session.code!);
     if (agent && agent.code !== RANK_EXCLUDE_CODE) {
-      const merged = mergeFebruaryFix([agent]) as SupabaseAgentRecord[];
-      agent = applyMcListBranch(merged)[0];
+      let agentMerged = mergeFebruaryFix([agent]) as SupabaseAgentRecord[];
+      agentMerged = mergeJanuaryFix(agentMerged) as SupabaseAgentRecord[];
+      agent = applyMcListBranch(agentMerged)[0];
       let allForRanks = await supabaseAgentsListAll({ filterRole: 'agent' });
       allForRanks = mergeFebruaryFix(allForRanks) as SupabaseAgentRecord[];
+      allForRanks = mergeJanuaryFix(allForRanks) as SupabaseAgentRecord[];
       allForRanks = applyMcListBranch(allForRanks);
+
       const ranks = computeRanks(allForRanks);
+      const directRanks = computeRanks(allForRanks.filter(a => !isPartner(a)));
+      const partnerRanks = computeRanks(allForRanks.filter(a => isPartner(a)));
+
       const partnerAgents = allForRanks
-        .filter((a) => a.code !== RANK_EXCLUDE_CODE && a.branch && String(a.branch).includes('파트너'))
+        .filter((a) => a.code !== RANK_EXCLUDE_CODE && isPartner(a))
         .map(toSafeAgent);
-      return NextResponse.json({ user, agents: [toSafeAgent(agent)], updateDate, ranks, partnerAgents });
+      return NextResponse.json({ user, agents: [toSafeAgent(agent)], updateDate, ranks, directRanks, partnerRanks, partnerAgents });
     }
     return NextResponse.json({ user, agents: [], updateDate, partnerAgents: [] });
   } catch (error: unknown) {

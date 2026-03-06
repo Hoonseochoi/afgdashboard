@@ -3,6 +3,9 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { TierBadges } from "@/app/_components/shared/cards/TierBadges";
+import { DirectDoubleMeritzCard } from "./DirectDoubleMeritzCard";
+import { DirectMeritzClubPlusCard } from "./DirectMeritzClubPlusCard";
+import { DirectRegularPrizeCard } from "./DirectRegularPrizeCard";
 
 /** 금액 표시: 원 단위를 '만원' 기준 소수 첫째 자리(천원 단위)까지, 반올림 없이 표시 */
 function formatMan(amount: number | null | undefined): string {
@@ -40,11 +43,9 @@ const itemVariants = {
 const card = "relative overflow-hidden rounded-2xl backdrop-blur-xl border transition-all duration-200";
 const glassLight = "bg-white/70 dark:bg-white/[0.06] border-white/50 dark:border-white/[0.12] shadow-[0_2px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_20px_rgba(0,0,0,0.3)]";
 const accentCyan = "bg-gradient-to-br from-cyan-50/90 via-sky-50/70 to-teal-50/60 dark:from-cyan-900/30 dark:via-slate-800/60 dark:to-teal-900/20 border-cyan-200/60 dark:border-cyan-500/25 shadow-[0_2px_24px_rgba(6,182,212,0.08)] dark:shadow-[0_2px_24px_rgba(6,182,212,0.12)]";
-const accentDark = "bg-gradient-to-br from-gray-900/95 via-gray-800/95 to-gray-900/95 dark:from-[#111]/95 dark:via-[#1a1a1a]/95 dark:to-[#111]/95 border-white/[0.08] shadow-[0_4px_30px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_30px_rgba(0,0,0,0.4)]";
 
 const labelCls = "text-[11px] font-medium tracking-wide uppercase text-gray-600 dark:text-gray-400";
 const prizeCls = "text-xl font-bold tracking-tight text-red-600 dark:text-red-400";
-const subLabel = "text-xs text-gray-600 dark:text-gray-400";
 
 export interface MarchCardsProps {
   viewW1: number;
@@ -57,12 +58,13 @@ export interface MarchCardsProps {
   plusTarget: number | null;
   /** 3월 메리츠클럽+ 달성목표 표기: min(1월,2월) 실적 */
   plusTargetMinPerf: number;
-  plusNext: string;
   plusProgress: number;
   janPerf: number;
   febPerf: number;
   marchPerf: number;
   currentMonthNum: number;
+  regularPrize?: number;
+  dailyDiff?: number;
 }
 
 export function MarchCards(props: MarchCardsProps) {
@@ -81,6 +83,8 @@ export function MarchCards(props: MarchCardsProps) {
     febPerf,
     marchPerf,
     currentMonthNum,
+    regularPrize = 0,
+    dailyDiff = 0,
   } = props;
 
   return (
@@ -88,9 +92,9 @@ export function MarchCards(props: MarchCardsProps) {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 auto-rows-[minmax(130px,auto)]"
+      className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 auto-rows-fr"
     >
-      {/* ── 파타야 여행시상 (2행 스팬, 테두리 글로우) ── */}
+      {/* ── 파타야 여행시상 ── */}
       <motion.div
         variants={itemVariants}
         className="md:row-span-2 rounded-2xl p-[3px] overflow-hidden"
@@ -112,60 +116,49 @@ export function MarchCards(props: MarchCardsProps) {
       >
         <div className={`relative rounded-[14px] overflow-hidden ${card} ${accentCyan} p-3 flex flex-col justify-between min-h-0 w-full h-full`}>
           <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-300/20 dark:bg-cyan-400/10 blur-2xl pointer-events-none" />
-        {/* 이미지: 카드 가로 끝까지, 세로는 원본 비율 그대로(잘리지 않음), 텍스트와 겹침 가능 */}
-        <div className="absolute -left-3 -right-3 top-0 bottom-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
-          <img src="/meritzair.png" alt="" className="w-full h-[115%] max-h-none object-cover object-center -translate-y-[7%]" />
-        </div>
-        <div className="relative z-10 md:drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl md:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">🌴</span>
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">파타야 여행시상</h3>
-              <p className="text-[10px] text-gray-800 dark:text-gray-200 font-medium opacity-90">3월 실적 기준</p>
-            </div>
+          <div className="absolute -left-3 -right-3 top-0 bottom-0 z-0 pointer-events-none flex items-center justify-center overflow-hidden">
+            <img src="/meritzair.png" alt="" className="w-full h-[115%] max-h-none object-cover object-center -translate-y-[7%]" />
           </div>
-          <TierBadges tiersMan={[40, 60, 80, 100]} currentPerf={currentMonthPerf} className="mb-2" />
-        </div>
-        <div className="relative z-10 md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
-          {(() => {
-            const p = currentMonthPerf;
-            const toMan = (n: number) => formatMan(n);
-            let label = "";
-            let remain = 0;
-            if (p < 400000) {
-              label = "탑승까지";
-              remain = 400000 - p;
-            } else if (p < 600000) {
-              label = "1박추가까지";
-              remain = 600000 - p;
-            } else if (p < 800000) {
-              label = "국적기+5성까지";
-              remain = 800000 - p;
-            } else if (p < 1000000) {
-              label = "1인실+1만바트까지";
-              remain = 1000000 - p;
-            } else {
-              label = "챔피언까지";
-              remain = 0;
-            }
-            return (
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 uppercase tracking-wide opacity-90">현재 실적</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">{formatMan(p)}<span className="text-base font-medium text-gray-700 dark:text-gray-300 ml-0.5">만원</span></p>
-                </div>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white bg-white/80 dark:bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full border border-gray-200/80 dark:border-white/20 shadow-sm text-right whitespace-nowrap">
-                  {`${label} ${toMan(remain)}만원`}
-                </span>
+          <div className="relative z-10 md:drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl md:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">🌴</span>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">파타야 여행시상</h3>
+                <p className="text-[10px] text-gray-800 dark:text-gray-200 font-medium opacity-90">3월 실적 기준</p>
               </div>
-            );
-          })()}
-        </div>
+            </div>
+            <TierBadges tiersMan={[40, 60, 80, 100]} currentPerf={currentMonthPerf} className="mb-2" />
+          </div>
+          <div className="relative z-10 md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
+            {(() => {
+              const p = currentMonthPerf;
+              const toMan = (n: number) => formatMan(n);
+              let label = "";
+              let remain = 0;
+              if (p < 400000) { label = "탑승까지"; remain = 400000 - p; }
+              else if (p < 600000) { label = "1박추가까지"; remain = 600000 - p; }
+              else if (p < 800000) { label = "국적기+5성까지"; remain = 800000 - p; }
+              else if (p < 1000000) { label = "1인실+1만바트까지"; remain = 1000000 - p; }
+              else { label = "챔피언까지"; remain = 0; }
+              
+              return (
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 uppercase tracking-wide opacity-90">현재 실적</p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">{formatMan(p)}<span className="text-base font-medium text-gray-700 dark:text-gray-300 ml-0.5">만원</span></p>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white bg-white/80 dark:bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full border border-gray-200/80 dark:border-white/20 shadow-sm text-right whitespace-nowrap">
+                    {`${label} ${toMan(remain)}만원`}
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </motion.div>
 
-      {/* ── 1주차 특별 현금시상 (구간 20→30→50→80→100→120만) ── */}
-      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
+      {/* ── 1주차 특별 현금시상 ── */}
+      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col h-full`}>
         {(() => {
           const specialBadge = viewW1 >= 1200000 ? "최대구간 달성완료" : viewW1 >= 1000000 ? "120만구간도전" : viewW1 >= 800000 ? "100만구간도전" : viewW1 >= 500000 ? "80만구간도전" : viewW1 >= 300000 ? "50만구간도전" : viewW1 >= 200000 ? "30만구간도전" : "20만구간도전";
           const isMax = viewW1 >= 1200000;
@@ -199,8 +192,8 @@ export function MarchCards(props: MarchCardsProps) {
         })()}
       </motion.div>
 
-      {/* ── 1주차 PATTAYA 특별 현금 시상 (구간 20→30→50→70→100만) ── */}
-      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
+      {/* ── 1주차 PATTAYA 특별 현금 시상 ── */}
+      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col h-full`}>
         {(() => {
           const patayaBadge = viewW1 >= 1000000 ? "최대구간 달성완료" : viewW1 >= 700000 ? "100만구간도전" : viewW1 >= 500000 ? "70만구간도전" : viewW1 >= 300000 ? "50만구간도전" : viewW1 >= 200000 ? "30만구간도전" : "20만구간도전";
           const isMax = viewW1 >= 1000000;
@@ -234,89 +227,39 @@ export function MarchCards(props: MarchCardsProps) {
         })()}
       </motion.div>
 
-      {/* ── 2배 메리츠클럽 (3월 실적 + 근접구간까지 N만 더하세요 / 100만↑ 최대구간달성) ── */}
-      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
-        <div className="flex items-center justify-between mb-1.5">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">2배 메리츠클럽</h3>
-          <span className={prevMonthPerf >= 200000
-            ? "text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-500/20 border border-red-200 dark:border-red-500/30 px-2 py-0.5 rounded-full"
-            : "text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-white/[0.06] px-2 py-0.5 rounded-full"
-          }>
-            {prevMonthPerf >= 200000 ? "연속대상" : "미대상"}
-          </span>
-        </div>
-        <div className="mb-auto">
-          {(() => {
-            const marchMan = formatMan(currentMonthPerf);
-            const DOUBLE_TIERS = [20, 30, 40, 50, 60, 70, 80, 90, 100];
-            const nextTierMan = DOUBLE_TIERS.find(t => currentMonthPerf < t * 10000);
-            const isMax = currentMonthPerf >= 1000000;
-            return (
-              <>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">3월 실적 {marchMan}만</p>
-                {isMax ? (
-                  <p className="text-[11px] font-semibold text-green-600 dark:text-green-400">최대구간 달성!</p>
-                ) : nextTierMan != null ? (
-                  <p className="text-[11px] text-orange-600 dark:text-orange-400 font-medium">{nextTierMan}만까지 {formatMan(nextTierMan * 10000 - currentMonthPerf)}만 더하세요!</p>
-                ) : null}
-              </>
-            );
-          })()}
-        </div>
-        <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
-          <div />
-          <div className="text-right">
-            <p className={labelCls}>예상 시상금</p>
-            <p className={prizeCls}>{formatMan(doubleMeritzPrize)}만원</p>
-          </div>
-        </div>
+      {/* ── 2배 메리츠클럽 (리팩토링됨) ── */}
+      <motion.div variants={itemVariants} className="h-full">
+        <DirectDoubleMeritzCard
+          prevMonthPerf={prevMonthPerf}
+          currentMonthPerf={currentMonthPerf}
+          doubleMeritzPrize={doubleMeritzPrize}
+        />
       </motion.div>
 
-      {/* ── 메리츠 클럽+ (1주차 특별 현금시상과 동일 UI, 구간 20/40/60/80/100만원) ── */}
-      <motion.div variants={itemVariants} className={`${card} ${glassLight} p-3 flex flex-col`}>
-        {(() => {
-          const target = plusTarget ?? 0;
-          const tierMan = target >= 1000000 ? 100 : target > 0 ? target / 10000 : 20;
-          const goalLabel = tierMan >= 100 ? "100만원" : `${tierMan}만원`;
-          const hasTarget = target > 0;
-          const plusBadge = hasTarget ? `${tierMan}만구간도전` : "미대상";
-          return (
-            <>
-              <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">메리츠 클럽+</h3>
-                <span className={hasTarget
-                  ? "text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded-full"
-                  : "text-[10px] font-medium text-gray-400 bg-gray-100 dark:bg-white/[0.06] px-2 py-0.5 rounded-full"
-                }>
-                  {plusBadge}
-                </span>
-              </div>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5">
-                {currentMonthNum >= 3 ? `1월 : ${formatMan(janPerf)}만원 / 2월 : ${formatMan(febPerf)}만원` : "2월 실적 · 목표"}
-              </p>
-              <div className="w-full bg-gray-200 dark:bg-white/[0.08] rounded-full h-1.5 mb-auto overflow-hidden">
-                <motion.div
-                  className="bg-primary h-1.5 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, plusProgress)}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
-                />
-              </div>
-              <div className="mt-2 pt-2 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
-                <div>
-                  <p className={labelCls}>3월 {formatMan(marchPerf)}만 / 달성목표 {goalLabel}</p>
-                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{Math.min(100, Math.round(plusProgress))}%</p>
-                </div>
-                <div className="text-right">
-                  <p className={labelCls}>예상 시상금</p>
-                  <p className={prizeCls}>{formatMan(meritzClubPlusPrize)}만원</p>
-                </div>
-              </div>
-            </>
-          );
-        })()}
+      {/* ── 메리츠 클럽+ (리팩토링됨) ── */}
+      <motion.div variants={itemVariants} className="h-full">
+        <DirectMeritzClubPlusCard
+          janPerf={janPerf}
+          febPerf={febPerf}
+          marchPerf={marchPerf}
+          plusTarget={plusTarget}
+          plusProgress={plusProgress}
+          currentMonthNum={currentMonthNum}
+          meritzClubPlusPrize={meritzClubPlusPrize}
+        />
       </motion.div>
-      {/* 3월 정규 시상 카드는 page.tsx에서 MY HOT·7개월 추이와 한 줄에 배치 */}
+
+      {/* ── 3월 정규시상 (신규 추가 및 리팩토링됨) ── */}
+      <motion.div variants={itemVariants} className="h-full">
+        <DirectRegularPrizeCard
+          title="3월 정규 시상"
+          perf={currentMonthPerf}
+          prize={regularPrize}
+          dailyDiff={dailyDiff}
+          monthLabel="3월"
+          variant="indigo"
+        />
+      </motion.div>
     </motion.section>
   );
 }
