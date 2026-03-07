@@ -100,6 +100,20 @@
   - 2월: `_febWeekly` (february_closed)
   - 그 외: `agent.weekly` (week1, week2, week3)
 
+### 4.4 월간 실적 vs 주차 실적 (Supabase 사용 시)
+
+**다이렉트 3월 예시** — 두 값이 다르게 나오면 아래 소스를 각각 확인하면 됨.
+
+| 표시 항목 | 데이터 소스 (API → 엔진) | Supabase 저장 위치 |
+|----------|--------------------------|---------------------|
+| **월간 실적** (당월 실적, 118만 등) | `agent.performance[monthKey]`<br/>예: `performance["2026-03"]` | `agents.performance` (JSON)<br/>키: `"2026-01"`, `"2026-02"`, `"2026-03"` |
+| **1주차 전체 실적** (주차 시상·파타야·조기가동 계산용) | `getWeekDataForMonth()` → 3월이면 **`agent.weekly.week1`** (또는 `weekly_data`) | `agents.weekly` (JSON)<br/>키: `week1`, `week2`, `week3`, `week4` |
+| **1주차 상품별 실적** (파트너 1주차 상품 카드만) | `agent.productWeek1` | `agents.product_week1` 또는 `weekly.productWeek1` |
+
+- **1주차 전체 실적**에는 `weekly.week1`만 사용함. **productWeek1은 상품별(통합·간편·어린이) 실적**이므로 주차 시상/조기가동 로직에서는 사용하지 않음.
+- 월간은 **월별 누적**용 컬럼(`performance`), 주차 전체는 **주차별 실적**용 컬럼(`weekly`)이라 서로 다른 필드임.
+- 1주차인데 “1주차 실적 = 월간 실적”이어야 하면, **데이터 적재 시** `weekly.week1`을 당월 누적(또는 1주차 구간 합계)과 맞춰 넣어주는 쪽을 점검해야 함. (대시보드에서 월간으로 주차를 덮어쓰지 않음.)
+
 ---
 
 ## 5. 컴포넌트별 카드 구성

@@ -46,8 +46,10 @@ const ZERO_WEEK_DATA_4 = [
 ];
 
 /**
- * 해당 월의 주차 실적만 반환 (상단 시상·하단 실적추이 공통 소스)
- * 1·2월: _janWeekly/_febWeekly 또는 당월 실적 0이면 0. 3월: weekly_data 또는 weekly.
+ * 해당 월의 주차 실적만 반환 (상단 시상·하단 실적추이·주차 시상 계산 공통 소스)
+ * - 1·2월: _janWeekly / _febWeekly 또는 당월 실적 0이면 0
+ * - 3월: weekly_data 또는 weekly.week1~week4 (1주차 전체 실적 = weekly.week1, productWeek1 아님)
+ * - productWeek1은 "상품별 1주차 실적"이므로 이 함수에서는 사용하지 않음 (파트너 상품 카드에서만 사용)
  */
 export function getWeekDataForMonth(
   agent: Agent,
@@ -80,19 +82,19 @@ export function getWeekDataForMonth(
     }
     return ZERO_WEEK_DATA_3;
   }
-  // 3월: weekly_data 또는 weekly 사용. 상품별 1주차 실적은 Supabase product_week1 우선(파트너 등).
-  const w1 = raw.productWeek1 != null ? Number(raw.productWeek1) : undefined;
+  // 3월: 1주차 전체 실적 = weekly_data 또는 weekly.week1 만 사용.
+  // productWeek1은 "상품별(통합·간편·어린이) 1주차 실적"이므로 주차 시상/조기가동 등에는 사용하지 않음.
   if (agent.weekly_data?.length) {
     const w = agent.weekly_data;
     return [
-      { week: 1, performance: w1 ?? w.find((x) => x.week === 1)?.performance ?? 0 },
+      { week: 1, performance: w.find((x) => x.week === 1)?.performance ?? 0 },
       { week: 2, performance: w.find((x) => x.week === 2)?.performance ?? 0 },
       { week: 3, performance: w.find((x) => x.week === 3)?.performance ?? 0 },
       { week: 4, performance: w.find((x) => x.week === 4)?.performance ?? 0 },
     ];
   }
   return [
-    { week: 1, performance: w1 ?? stdWeekly.week1 ?? 0 },
+    { week: 1, performance: stdWeekly.week1 ?? 0 },
     { week: 2, performance: stdWeekly.week2 ?? 0 },
     { week: 3, performance: stdWeekly.week3 ?? 0 },
     { week: 4, performance: stdWeekly.week4 ?? 0 },

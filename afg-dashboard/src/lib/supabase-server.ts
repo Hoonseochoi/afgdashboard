@@ -76,7 +76,7 @@ export type SupabaseAgentRecord = {
   role?: string | null;
   performance?: Record<string, number> | null;
   weekly?: Record<string, number> | null;
-  /** 3월 상품 1주차 실적 (agents.product_week1 또는 weekly.productWeek1) */
+  /** 상품별(통합·간편·어린이) 1주차 실적. 1주차 전체 실적은 weekly.week1 사용. */
   productWeek1?: number | null;
   partner?: PartnerPrizeData | null;
   managerCode?: string | null;

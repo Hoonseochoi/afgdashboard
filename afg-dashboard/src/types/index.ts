@@ -15,7 +15,7 @@ export interface Agent {
   managerName?: string | null;
   performance: PerformanceData;
   weekly_data?: WeeklyPerformance[];
-  /** Supabase agents.product_week1 — 상품별 1주차 실적 (파트너 주간 시상용) */
+  /** Supabase agents.product_week1 — 상품별(통합·간편·어린이) 1주차 실적. 1주차 전체 실적은 weekly.week1 사용. */
   productWeek1?: number | null;
   /** 파트너 시상 데이터 (PRIZE_SUM 업로드: 연속가동·주차 시상금 등) */
   partner?: Record<string, number | undefined> | null;

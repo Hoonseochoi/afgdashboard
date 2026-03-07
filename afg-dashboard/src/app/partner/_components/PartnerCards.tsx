@@ -17,12 +17,11 @@ interface PartnerCardsProps {
   incentiveData: any;
 }
 
-function getWeekPerf(agent: Agent, week: 1 | 2, selectedMonth: number): number {
+/** 1주차 전체 실적 = weekly_data / weekly.week1. productWeek1(상품별)은 사용하지 않음. */
+function getWeekPerf(agent: Agent, week: 1 | 2, _selectedMonth: number): number {
   const w = agent.weekly_data?.find((x) => x.week === week)?.performance;
   const fromWeekly = (agent as { weekly?: { week1?: number; week2?: number } }).weekly;
-  if (week === 1) {
-    return selectedMonth === 3 ? (agent.productWeek1 ?? w ?? fromWeekly?.week1 ?? 0) : (w ?? fromWeekly?.week1 ?? 0);
-  }
+  if (week === 1) return w ?? fromWeekly?.week1 ?? 0;
   return (agent.partner?.productWeek2 as number | undefined) ?? w ?? fromWeekly?.week2 ?? 0;
 }
 
