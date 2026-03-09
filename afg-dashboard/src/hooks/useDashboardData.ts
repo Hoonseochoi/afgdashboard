@@ -159,7 +159,13 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
         }
       } catch (err) {
         console.error("데이터 로드 실패", err);
-        setError("서버와 통신할 수 없습니다.");
+        const isNetworkError =
+          err instanceof TypeError && (err as Error).message === "Failed to fetch";
+        setError(
+          isNetworkError
+            ? "서버에 연결할 수 없습니다. 개발 서버(npm run dev)가 실행 중인지, 네트워크를 확인해 주세요."
+            : "서버와 통신할 수 없습니다."
+        );
       } finally {
         setLoading(false);
       }

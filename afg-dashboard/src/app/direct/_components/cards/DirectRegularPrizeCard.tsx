@@ -18,6 +18,8 @@ export type DirectRegularPrizeCardProps = {
   compactTitle?: boolean;
   /** true면 세로 패딩 10% 증가, 현재금액~독려 블록 동일량 하단으로 */
   moreVerticalPadding?: boolean;
+  /** 카드 안 상단 등에 표시할 이미지 경로 (예: /king%20afg.png) */
+  imageSrc?: string;
 };
 
 export function DirectRegularPrizeCard({
@@ -30,6 +32,7 @@ export function DirectRegularPrizeCard({
   hideSubtitle = false,
   compactTitle = false,
   moreVerticalPadding = false,
+  imageSrc,
 }: DirectRegularPrizeCardProps) {
   const themes = {
     slate: "border-slate-200/60 dark:border-slate-500/30 bg-gradient-to-br from-white/90 via-white/50 to-slate-50/40 dark:from-white/10 dark:via-white/5 dark:to-slate-900/10",
@@ -47,30 +50,37 @@ export function DirectRegularPrizeCard({
     <div
       className={`${APPLE_CARD_BASE} h-full ${themes[variant]} shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300 border ${moreVerticalPadding ? "!py-[0.6875rem] md:!py-[0.825rem]" : ""}`}
     >
-      <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500">
+      {imageSrc && (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <img src={imageSrc} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+          <div className="absolute inset-0 bg-white/45 dark:bg-gray-900/45 pointer-events-none" aria-hidden />
+        </div>
+      )}
+
+      <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-500 z-10">
         <svg viewBox="0 0 24 24" className="w-16 h-16 fill-current text-gray-400 dark:text-white/40" aria-hidden>
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
         </svg>
       </div>
 
-      <div className="relative z-10 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-1">
+      <div className="relative z-10 h-full flex flex-col min-h-0">
+        <div className="flex items-center justify-between mb-1 flex-shrink-0">
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-gray-500 dark:text-white/60 tracking-tight uppercase">{monthLabel} 마감 목표</p>
             <h3 className={`${compactTitle ? "text-[14px]" : "text-lg"} font-bold ${accentColors[variant]} truncate leading-tight tracking-tight`}>
               {title}
             </h3>
           </div>
-          <span className="flex-shrink-0 bg-emerald-500/10 text-emerald-600 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-400/20 whitespace-nowrap shadow-sm dark:bg-emerald-500/20 dark:text-emerald-300">
+          <span className="flex-shrink-0 bg-amber-400 text-amber-950 text-[10px] px-2 py-0.5 rounded-full font-bold border border-amber-500/80 whitespace-nowrap shadow-md dark:bg-amber-400 dark:text-amber-950">
             시상 100%
           </span>
         </div>
 
         {!hideSubtitle && (
-          <p className="text-[11px] text-gray-400 dark:text-white/50 italic">실적과 시상금 1:1 매칭 구간</p>
+          <p className="text-[11px] text-gray-400 dark:text-white/50 italic flex-shrink-0">실적과 시상금 1:1 매칭 구간</p>
         )}
 
-        <div className="mt-auto pt-1.5">
+        <div className="mt-auto pt-1.5 flex-shrink-0">
           <div className="mt-1.5 pt-1.5 border-t border-gray-100 dark:border-white/10 flex items-end justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[10px] text-gray-500 dark:text-white/60 font-medium uppercase tracking-wider mb-0.5">현재 실적</p>

@@ -25,11 +25,15 @@ export function DirectCards({
         updateDate={updateDate}
         viewW1={incentiveData.week1Perf}
         week1SpecialPrize={incentiveData.marchW1SpecialPrize}
+        viewW2={incentiveData.viewW2 ?? 0}
+        week2SpecialPrize={incentiveData.marchW2SpecialPrize ?? 0}
         week1PatayaPrize={incentiveData.patayaPrize}
         currentMonthPerf={incentiveData.currentPerf}
         prevMonthPerf={selectedAgent.performance?.["2026-02"] ?? 0}
         doubleMeritzPrize={incentiveData.doubleMeritzPrize}
         meritzClubPlusPrize={incentiveData.clubPlusPrize}
+      rankInMonth={incentiveData.rankInMonth}
+      rank1Perf={incentiveData.rank1Perf}
         plusTarget={incentiveData.plusTargetMinPerf}
         plusTargetMinPerf={incentiveData.plusTargetMinPerf}
         plusProgress={incentiveData.plusProgress}

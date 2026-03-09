@@ -114,6 +114,14 @@ function rowToAgent(row: any): SupabaseAgentRecord {
     }
   }
 
+  let weekly = (row.weekly || null) as Record<string, number> | null;
+  if (row.agent_weekly_week2 != null) {
+    const w2 = safeNumber(row.agent_weekly_week2);
+    if (w2 != null) {
+      weekly = { ...(weekly || {}), week2: w2 };
+    }
+  }
+
   return {
     id: row.id,
     code: row.code,
@@ -121,7 +129,7 @@ function rowToAgent(row: any): SupabaseAgentRecord {
     password: row.password ?? undefined,
     role: row.role ?? undefined,
     performance: (row.performance || null) as Record<string, number> | null,
-    weekly: (row.weekly || null) as Record<string, number> | null,
+    weekly,
     productWeek1: productWeek1 ?? null,
     partner,
     managerCode: row.manager_code ?? null,
