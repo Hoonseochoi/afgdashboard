@@ -49,6 +49,9 @@ export default function LoginPage() {
         <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
           대시보드 로그인
         </h2>
+        <p className="mt-1 text-sm font-medium text-[#1e3a5f] dark:text-[#5b8fc4]">
+          FOR 어센틱금융그룹
+        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md overflow-visible">
@@ -150,6 +153,10 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+
+      <p className="mt-8 text-center text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto px-4">
+        *어센틱금융그룹 시책 독려용 보드입니다. 참고용으로만 사용하세요.
+      </p>
     </div>
   );
 }
