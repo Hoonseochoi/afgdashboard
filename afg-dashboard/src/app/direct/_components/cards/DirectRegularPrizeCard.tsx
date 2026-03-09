@@ -48,7 +48,7 @@ export function DirectRegularPrizeCard({
 
   return (
     <div
-      className={`${APPLE_CARD_BASE} h-full ${themes[variant]} shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300 border ${moreVerticalPadding ? "!py-[0.6875rem] md:!py-[0.825rem]" : ""}`}
+      className={`${APPLE_CARD_BASE} h-full ${themes[variant]} shadow-sm relative overflow-hidden group hover:shadow-md transition-all duration-300 border ${moreVerticalPadding ? "!py-[0.9rem] md:!py-[0.825rem]" : ""}`}
     >
       {imageSrc && (
         <div className="absolute inset-0 z-0 overflow-hidden">

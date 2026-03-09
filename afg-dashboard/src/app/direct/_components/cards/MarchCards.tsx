@@ -154,11 +154,11 @@ export function MarchCards(props: MarchCardsProps) {
           boxShadow: { duration: 2.5, repeat: Infinity, repeatType: "reverse" },
         }}
       >
-        <div className="relative rounded-[14px] overflow-hidden w-full h-full" style={{ perspective: "1000px" }}>
+        <div className="relative rounded-[14px] overflow-hidden w-full h-[200px] md:h-full" style={{ perspective: "1000px" }}>
           <div
             role="button"
             tabIndex={0}
-            className="relative w-full h-full cursor-pointer"
+            className="absolute inset-0 cursor-pointer"
             style={{
               transformStyle: "preserve-3d",
               transform: patayaFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
