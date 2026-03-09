@@ -51,9 +51,24 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${notoSansKr.variable} ${nunito.variable} font-sans`} suppressHydrationWarning>
       <head>
+        <title>AFG_meritz Prize Dashboard</title>
+        <meta name="description" content="어센틱금융그룹 설계사 실적 대시보드. 여기를 눌러 링크를 확인하세요." />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#1e40af" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Open Graph (링크 미리보기) - 절대 URL 필수 */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="AFG_meritz Prize Dashboard" />
+        <meta property="og:description" content="어센틱금융그룹 설계사 실적 대시보드. 여기를 눌러 링크를 확인하세요." />
+        <meta property="og:image" content={`${BASE_URL}/meritzair.png`} />
+        <meta property="og:url" content={BASE_URL} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="AFG_meritz Prize Dashboard" />
+        <meta name="twitter:description" content="어센틱금융그룹 설계사 실적 대시보드. 여기를 눌러 링크를 확인하세요." />
+        <meta name="twitter:image" content={`${BASE_URL}/meritzair.png`} />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
