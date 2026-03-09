@@ -83,6 +83,8 @@ export type SupabaseAgentRecord = {
   managerName?: string | null;
   branch?: string | null;
   gaBranch?: string | null;
+  /** MC LIST AH열: 지점/대리점명 (예: GA4-7, GA4-7지점, 충청GA-5) */
+  m_agent?: string | null;
   isFirstLogin?: boolean | null;
   targetManagerCode?: string | null;
 };
@@ -126,6 +128,7 @@ function rowToAgent(row: any): SupabaseAgentRecord {
     managerName: row.manager_name ?? null,
     branch: row.branch ?? null,
     gaBranch: row.ga_branch ?? null,
+    m_agent: row.m_agent ?? null,
     isFirstLogin: row.is_first_login ?? null,
     targetManagerCode: row.target_manager_code ?? null,
   };
@@ -182,6 +185,65 @@ export async function supabaseAgentsListAll(params: {
     if (chunk.length < AGENTS_PAGE_SIZE) break;
   }
   return all;
+}
+
+/** m_agent 값으로 해당 지점 소속 설계사 목록 조회 (값 또는 값+지점 둘 다 매칭) */
+export async function supabaseAgentsByMAgent(mAgentValue: string): Promise<SupabaseAgentRecord[]> {
+  const client = getServerClient();
+  const normalized = String(mAgentValue).trim().replace(/지점$/, '');
+  const values = [normalized, normalized + '지점'].filter((v, i, arr) => arr.indexOf(v) === i);
+  const all: SupabaseAgentRecord[] = [];
+  for (let page = 0; page < AGENTS_MAX_PAGES; page++) {
+    const from = page * AGENTS_PAGE_SIZE;
+    const to = from + AGENTS_PAGE_SIZE - 1;
+    const { data, error } = await client
+      .from('agents')
+      .select('*')
+      .in('m_agent', values)
+      .range(from, to);
+    if (error) {
+      console.error('supabaseAgentsByMAgent error:', error.message);
+      throw error;
+    }
+    const chunk = (data || []).map((row: any) => rowToAgent(row));
+    all.push(...chunk);
+    if (chunk.length < AGENTS_PAGE_SIZE) break;
+  }
+  return all;
+}
+
+/** m_agent 로그인 비밀번호 조회 */
+export async function supabaseMAgentLoginGet(mAgentValue: string): Promise<{ password: string } | null> {
+  const client = getServerClient();
+  const normalized = String(mAgentValue).trim().replace(/지점$/, '');
+  const { data, error } = await client
+    .from('m_agent_logins')
+    .select('password')
+    .eq('m_agent_value', normalized)
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error('supabaseMAgentLoginGet error:', error.message);
+    throw error;
+  }
+  return data ? { password: data.password } : null;
+}
+
+/** m_agent 로그인 비밀번호 저장/수정 (비밀번호 변경 시 사용) */
+export async function supabaseMAgentLoginUpsert(
+  mAgentValue: string,
+  password: string,
+): Promise<void> {
+  const client = getServerClient();
+  const normalized = String(mAgentValue).trim().replace(/지점$/, '');
+  const { error } = await client.from('m_agent_logins').upsert(
+    { m_agent_value: normalized, password },
+    { onConflict: 'm_agent_value' },
+  );
+  if (error) {
+    console.error('supabaseMAgentLoginUpsert error:', error.message);
+    throw error;
+  }
 }
 
 /** config 테이블에서 key='app' 행 1건 조회 */

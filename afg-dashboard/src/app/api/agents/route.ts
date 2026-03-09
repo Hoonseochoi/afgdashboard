@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   supabaseAgentGetByCode,
   supabaseAgentsListAll,
+  supabaseAgentsByMAgent,
   supabaseConfigGetApp,
   isSupabaseConfigured,
   type SupabaseAgentRecord,
@@ -101,7 +102,7 @@ export async function GET() {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
 
-    let session: { role?: string; code?: string; targetManagerCode?: string };
+    let session: { role?: string; code?: string; targetManagerCode?: string; m_agentValue?: string };
     try {
       session = JSON.parse(sessionCookie.value);
     } catch {
@@ -125,6 +126,17 @@ export async function GET() {
 
     if (session.role === 'admin' || session.code === DEV_MASTER_ID) {
       let items = await supabaseAgentsListAll({ filterRole: 'agent' });
+      items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
+      const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
+      let agentsData = filtered.map(toSafeAgent);
+      agentsData = sortByMarchPerformance(agentsData);
+      const ranks = computeRanks(items);
+      return NextResponse.json({ agents: agentsData, updateDate, ranks });
+    }
+
+    if (session.role === 'm_agent_manager' && session.m_agentValue) {
+      let items = await supabaseAgentsByMAgent(session.m_agentValue);
       items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
       items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
       const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);

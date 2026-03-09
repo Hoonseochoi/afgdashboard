@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -50,9 +51,9 @@ export default function LoginPage() {
         </h2>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-surface-dark py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-200 dark:border-gray-700">
-          <form className="space-y-6" onSubmit={handleLogin}>
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md overflow-visible">
+        <div className="bg-white dark:bg-surface-dark py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-200 dark:border-gray-700 overflow-visible">
+          <form className="space-y-6 overflow-visible" onSubmit={handleLogin}>
             <div>
               <label
                 htmlFor="code"
@@ -109,6 +110,42 @@ export default function LoginPage() {
               >
                 {loading ? "로그인 중..." : "로그인"}
               </button>
+
+              <div
+                className={`mt-4 flex justify-center ${showHelp ? "pb-52" : ""}`}
+                onMouseEnter={() => setShowHelp(true)}
+                onMouseLeave={() => setShowHelp(false)}
+              >
+                <div className="relative inline-flex">
+                  <span
+                    className="inline-flex p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors cursor-default"
+                    title="로그인 방법 안내"
+                    aria-label="로그인 방법 안내"
+                  >
+                    <span className="material-symbols-outlined text-2xl">help</span>
+                  </span>
+                  {showHelp && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0.5 w-80 min-w-[280px] p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 shadow-lg text-left text-sm text-gray-700 dark:text-gray-300 z-50 whitespace-normal">
+                    <p className="font-semibold text-gray-900 dark:text-white mb-2">로그인 방법</p>
+                    <ul className="space-y-1.5">
+                      <li>
+                        <span className="font-medium">설계사 로그인</span>: ID 787654321 / PW 787654321
+                        <span className="block text-gray-500 dark:text-gray-400 text-xs mt-0.5">(설계사 본인 메리츠 코드)</span>
+                      </li>
+                      <li>
+                        <span className="font-medium">매니저 로그인</span>: ID 387654321 / PW 387654321
+                      </li>
+                      <li>
+                        <span className="font-medium">내근직 로그인</span>: ID GA9-1 / PW GA9-1
+                      </li>
+                    </ul>
+                    <p className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400">
+                      초기 로그인 후 비밀번호를 변경해주세요.
+                    </p>
+                  </div>
+                  )}
+                </div>
+              </div>
             </div>
           </form>
         </div>

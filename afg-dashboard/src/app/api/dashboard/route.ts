@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import {
   supabaseAgentGetByCode,
   supabaseAgentsListAll,
+  supabaseAgentsByMAgent,
   supabaseConfigGetApp,
   isSupabaseConfigured,
   type SupabaseAgentRecord,
@@ -152,6 +153,34 @@ function sortByMarchPerformance<T extends { code?: string; performance?: Record<
   });
 }
 
+/** 캡처용: 로그인 없이 최신 DB 기준 전체 데이터 반환 (admin/develope와 동일한 데이터) */
+export async function getFullDashboardDataForCapture() {
+  if (!isSupabaseConfigured()) return null;
+  const configApp = await supabaseConfigGetApp();
+  const updateDate = configApp?.updateDate ?? '0000';
+  const isPartnerFn = (a: SupabaseAgentRecord) => a.branch && String(a.branch).includes('파트너');
+  let items = await supabaseAgentsListAll({ filterRole: 'agent' });
+  items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+  items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
+  items = applyMcListBranch(items);
+  const ranks = computeRanks(items);
+  const directRanks = computeRanks(items.filter((a) => !isPartnerFn(a)));
+  const partnerRanks = computeRanks(items.filter((a) => isPartnerFn(a)));
+  const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
+  let agentsData = filtered.map(toSafeAgent);
+  agentsData = sortByMarchPerformance(agentsData);
+  const partnerAgents = agentsData.filter((a) => isPartnerFn(a as SupabaseAgentRecord));
+  return {
+    user: null as unknown,
+    agents: agentsData,
+    updateDate,
+    ranks,
+    directRanks,
+    partnerRanks,
+    partnerAgents,
+  };
+}
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -161,7 +190,7 @@ export async function GET() {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
     }
 
-    let session: { role?: string; code?: string; targetManagerCode?: string; name?: string; isFirstLogin?: boolean };
+    let session: { role?: string; code?: string; targetManagerCode?: string; name?: string; isFirstLogin?: boolean; m_agentValue?: string };
     try {
       session = JSON.parse(sessionCookie.value);
     } catch {
@@ -325,6 +354,32 @@ export async function GET() {
       agentsData = sortByMarchPerformance(agentsData);
       const partnerAgents = agentsData.filter((a) => isPartner(a as any));
       return NextResponse.json({ user, agents: agentsData, updateDate, ranks, directRanks, partnerRanks, partnerAgents });
+    }
+
+    // m_agent(지점 ID) 로그인: 해당 지점 소속 설계사 전체 조회
+    if (session.role === 'm_agent_manager' && session.m_agentValue) {
+      let items = await supabaseAgentsByMAgent(session.m_agentValue);
+      items = mergeFebruaryFix(items) as SupabaseAgentRecord[];
+      items = mergeJanuaryFix(items) as SupabaseAgentRecord[];
+      items = applyMcListBranch(items);
+
+      const ranks = computeRanks(items);
+      const directRanks = computeRanks(items.filter((a) => !isPartner(a)));
+      const partnerRanks = computeRanks(items.filter((a) => isPartner(a)));
+
+      const filtered = items.filter((a) => a.code !== RANK_EXCLUDE_CODE);
+      let agentsData = filtered.map(toSafeAgent);
+      agentsData = sortByMarchPerformance(agentsData);
+      const partnerAgents = agentsData.filter((a) => isPartner(a as SupabaseAgentRecord));
+      return NextResponse.json({
+        user,
+        agents: agentsData,
+        updateDate,
+        ranks,
+        directRanks,
+        partnerRanks,
+        partnerAgents,
+      });
     }
 
     if (session.role === 'manager') {

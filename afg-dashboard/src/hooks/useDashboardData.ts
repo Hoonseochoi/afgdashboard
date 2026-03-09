@@ -190,7 +190,49 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     };
     
     (window as any).__CAPTURE_GET_PNG = async () => {
-      // Re-use logic from handleExportPng but specialized for capture
+      const el = exportAreaRef.current;
+      if (!el) return "";
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const removed: { link: HTMLLinkElement; parent: Node; next: Node | null }[] = [];
+      try {
+        document.querySelectorAll('link[rel="stylesheet"]').forEach((linkEl) => {
+          const link = linkEl as HTMLLinkElement;
+          if (link.href && new URL(link.href).origin !== origin) {
+            const parent = link.parentNode;
+            if (parent) {
+              removed.push({ link, parent, next: link.nextSibling });
+              parent.removeChild(link);
+            }
+          }
+        });
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
+        const pad = 4;
+        const origStyle = { width: el.style.width, minWidth: el.style.minWidth, maxWidth: el.style.maxWidth, boxSizing: el.style.boxSizing, padding: el.style.padding };
+        el.style.boxSizing = "border-box";
+        el.style.padding = `${pad}px`;
+        el.style.width = `${w + pad * 2}px`;
+        el.style.minWidth = `${w + pad * 2}px`;
+        el.style.maxWidth = `${w + pad * 2}px`;
+        const dataUrl = await toPng(el, {
+          width: w + pad * 2,
+          height: h + pad * 2,
+          pixelRatio: 3,
+          backgroundColor: document.documentElement.classList.contains("dark") ? "#111827" : "#f3f4f6",
+          cacheBust: true,
+        });
+        el.style.width = origStyle.width;
+        el.style.minWidth = origStyle.minWidth;
+        el.style.maxWidth = origStyle.maxWidth;
+        el.style.boxSizing = origStyle.boxSizing;
+        el.style.padding = origStyle.padding;
+        removed.forEach(({ link, parent, next }) => parent.insertBefore(link, next));
+        return dataUrl || "";
+      } catch (e) {
+        removed.forEach(({ link, parent, next }) => parent.insertBefore(link, next));
+        console.error("캡처 PNG 실패:", e);
+        return "";
+      }
     };
     
     return () => {

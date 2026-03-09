@@ -1,18 +1,23 @@
 /**
- * 캡처용 로컬 데이터 API (로그인 없음)
- * data/capture/dashboard.json 내용을 그대로 반환.
- * bulk-capture 스크립트에서 사용.
+ * 캡처용 데이터 API (로그인 없음)
+ * - Supabase 설정 시: 최신 DB에서 직접 조회 (캡처 시점 실적 반영)
+ * - Supabase 미설정 시: data/capture/dashboard.json 파일 사용 (dump 선행 필요)
  */
 import { NextResponse } from 'next/server';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { getFullDashboardDataForCapture } from '@/app/api/dashboard/route';
 
 export async function GET() {
   try {
+    const liveData = await getFullDashboardDataForCapture();
+    if (liveData) {
+      return NextResponse.json(liveData);
+    }
     const dataPath = join(process.cwd(), 'data', 'capture', 'dashboard.json');
     if (!existsSync(dataPath)) {
       return NextResponse.json(
-        { error: 'data/capture/dashboard.json 이 없습니다. scripts/capture-dump-dashboard.js 를 먼저 실행하세요.' },
+        { error: 'data/capture/dashboard.json 이 없습니다. Supabase 미설정 시 scripts/capture-dump-dashboard.js 를 먼저 실행하세요.' },
         { status: 404 }
       );
     }

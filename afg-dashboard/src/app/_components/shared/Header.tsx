@@ -83,7 +83,7 @@ export function Header({
               <div className="hidden lg:block text-sm text-right">
                 <p className="font-bold text-gray-800 dark:text-gray-100">
                   {user?.name}
-                  {user?.role === "admin" ? " 관리자" : user?.role === "manager" ? (user?.code === "722031500" ? " BM" : " 매니저") : "님"}
+                  {user?.role === "admin" ? " 관리자" : user?.role === "manager" ? (user?.code === "722031500" ? " BM" : " 매니저") : user?.role === "m_agent_manager" ? " 지점" : "님"}
                 </p>
               </div>
             </div>
@@ -143,7 +143,7 @@ export function Header({
           </div>
         </div>
 
-        {(user?.role === "admin" || user?.role === "manager") && (
+        {(user?.role === "admin" || user?.role === "manager" || user?.role === "m_agent_manager") && (
           <div className="relative w-full md:w-auto flex items-center gap-1">
             <input
               type="text"
