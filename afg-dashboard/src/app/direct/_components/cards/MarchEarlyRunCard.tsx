@@ -36,7 +36,10 @@ export function MarchEarlyRunCard({ weekPrizes, weekPerfs, updateDate }: MarchEa
   const currentWeek = getMarchCurrentWeek(updateDate);
 
   return (
-    <motion.div className={`${card} ${glass} p-2 flex flex-col h-full`}>
+    <motion.div className={`${card} ${glass} p-2 flex flex-col h-full min-h-[220px]`}>
+      <span className="absolute top-0 right-0 z-10 text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/70 border border-red-300 dark:border-red-500/60 px-2 py-1 rounded-bl-lg rounded-tr-2xl shadow-sm">
+        ACFP 기준 / 가족계약제외
+      </span>
       <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -54,11 +57,6 @@ export function MarchEarlyRunCard({ weekPrizes, weekPerfs, updateDate }: MarchEa
             </h3>
           </div>
         </div>
-        {total > 0 && (
-          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-400/30 dark:border-emerald-500/30 px-2 py-0.5 rounded-full whitespace-nowrap">
-            합계 {formatMan(total)}만원
-          </span>
-        )}
       </div>
 
       <div className="space-y-1 flex-1 min-h-0">
@@ -91,6 +89,11 @@ export function MarchEarlyRunCard({ weekPrizes, weekPerfs, updateDate }: MarchEa
         })}
       </div>
 
+      {total > 0 && (
+        <p className="text-right text-[12px] font-semibold text-red-600 dark:text-red-400 mt-2 mb-1">
+          합계 {formatMan(total)}만원
+        </p>
+      )}
       <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1.5 pt-1.5 border-t border-gray-100 dark:border-white/[0.06] italic">
         *ACFP기준으로 지급되며 대시보드는 FP기준으로 표시됩니다.
       </p>

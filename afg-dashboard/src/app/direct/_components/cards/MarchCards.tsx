@@ -125,6 +125,9 @@ export function MarchCards(props: MarchCardsProps) {
         }}
       >
         <div className={`relative rounded-[14px] overflow-hidden ${card} ${accentCyan} p-2 flex flex-col justify-between min-h-0 w-full h-full`}>
+          <span className="absolute top-0 right-0 z-20 text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/70 border border-red-300 dark:border-red-500/60 px-2 py-1 rounded-bl-lg rounded-tr-2xl shadow-sm">
+            ACFP 기준 / 가족계약제외
+          </span>
           <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-cyan-300/20 dark:bg-cyan-400/10 blur-2xl pointer-events-none" />
           <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
             <img
