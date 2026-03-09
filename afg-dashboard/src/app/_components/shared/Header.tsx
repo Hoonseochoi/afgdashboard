@@ -1,4 +1,7 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { User, Agent } from "@/types";
 import { formatMan, displayBranch } from "@/app/_components/dashboard/utils";
 import { RANK_EXCLUDE_CODE } from "@/app/_components/dashboard/constants";
@@ -52,6 +55,23 @@ export function Header({
   handleExportPng,
   handlePWAInstallClick,
 }: HeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const isAdminLike = user?.role === "admin" || user?.role === "manager" || user?.role === "m_agent_manager";
+  const inAdminManage = pathname?.startsWith("/direct/manage");
+
+  const handleGoToManage = () => {
+    router.push("/direct/manage");
+    setProfileMenuOpen(false);
+  };
+
+  const handleGoToDashboard = () => {
+    router.push("/direct");
+    setProfileMenuOpen(false);
+  };
+
   return (
     <header
       className={`bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm ${
@@ -76,16 +96,73 @@ export function Header({
             )}
           </div>
           <div className="flex items-center gap-1.5 md:gap-4 md:pl-4 md:border-l border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-meritz-gold flex items-center justify-center text-white font-bold text-xs shadow-md">
-                {user?.name?.charAt(0) || "U"}
-              </div>
-              <div className="hidden lg:block text-sm text-right">
-                <p className="font-bold text-gray-800 dark:text-gray-100">
-                  {user?.name}
-                  {user?.role === "admin" ? " 관리자" : user?.role === "manager" ? (user?.code === "722031500" ? " BM" : " 매니저") : user?.role === "m_agent_manager" ? " 지점" : "님"}
-                </p>
-              </div>
+            <div className="relative flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen((v) => !v)}
+                className="flex items-center space-x-2 focus:outline-none"
+              >
+                <div className="w-8 h-8 rounded-full bg-meritz-gold flex items-center justify-center text-white font-bold text-xs shadow-md">
+                  {user?.name?.charAt(0) || "U"}
+                </div>
+                <div className="hidden lg:block text-sm text-right">
+                  <p className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1">
+                    <span>
+                      {user?.name}
+                      {user?.role === "admin"
+                        ? " 관리자"
+                        : user?.role === "manager"
+                        ? user?.code === "722031500"
+                          ? " BM"
+                          : " 매니저"
+                        : user?.role === "m_agent_manager"
+                        ? " 지점"
+                        : "님"}
+                    </span>
+                    {isAdminLike && (
+                      <span className="material-symbols-outlined text-[16px] text-gray-500">
+                        expand_more
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </button>
+              {isAdminLike && profileMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setProfileMenuOpen(false)}
+                  />
+                  <div className="absolute top-full right-0 mt-2 z-50 w-52 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl py-1.5 text-sm">
+                    <button
+                      type="button"
+                      onClick={handleGoToManage}
+                      className={`w-full flex items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                        inAdminManage ? "text-primary" : "text-gray-800 dark:text-gray-100"
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[18px] text-gray-500">
+                          leaderboard
+                        </span>
+                        관리자 모드 열기
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGoToDashboard}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[18px] text-gray-500">
+                          dashboard
+                        </span>
+                        대시보드로 돌아가기
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
             <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-primary underline">
