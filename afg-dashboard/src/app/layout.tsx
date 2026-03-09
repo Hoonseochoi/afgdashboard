@@ -16,11 +16,31 @@ const nunito = Nunito({
   variable: "--font-nunito",
 });
 
+const BASE_URL =
+  process.env.NEXT_PUBLIC_VERCEL_URL
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "https://afgdashboard.vercel.app";
+
 export const metadata: Metadata = {
-  title: "Meritz Individual Agent Dashboard",
-  description: "Dashboard for Meritz GA Performance Management",
+  metadataBase: new URL(BASE_URL),
+  title: "AFG_meritz Prize Dashboard",
+  description: "어센틱금융그룹 설계사 실적 대시보드. 여기를 눌러 링크를 확인하세요.",
   manifest: "/manifest.json",
   themeColor: "#1e40af",
+  openGraph: {
+    title: "AFG_meritz Prize Dashboard",
+    description: "어센틱금융그룹 설계사 실적 대시보드. 여기를 눌러 링크를 확인하세요.",
+    images: ["/meritzair.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AFG_meritz Prize Dashboard",
+    description: "어센틱금융그룹 설계사 실적 대시보드. 여기를 눌러 링크를 확인하세요.",
+    images: ["/meritzair.png"],
+  },
 };
 
 export default function RootLayout({
