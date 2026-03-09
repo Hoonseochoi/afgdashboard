@@ -3,6 +3,7 @@ import { Noto_Sans_KR, Nunito } from "next/font/google";
 import "./globals.css";
 import { RegisterSW } from "./RegisterSW";
 import Footer from "./_components/Footer";
+import { Analytics } from "@vercel/analytics/next";
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
@@ -80,6 +81,7 @@ export default function RootLayout({
         <RegisterSW />
         <main className="flex-1 min-h-0">{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );
