@@ -167,9 +167,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="mb-6">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <span className="w-1.5 h-6 bg-meritz-gold rounded-sm mr-3"></span>
-                MY MERITZ PRIZE
+                <span>MY MERITZ PRIZE</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Daily Update는 매일 10시에 자동진행됩니다 ({formatUpdateDateShort(updateDate)} update)
+                </span>
               </h2>
               <div className="relative">
                 <button
@@ -283,4 +286,14 @@ function formatUpdateDateLabel(updateDate: string): string {
   if (!Number.isFinite(mm) || mm < 1 || mm > 12) return "-";
   const day = Number.isFinite(dd) && dd >= 1 && dd <= 31 ? dd : 0;
   return day ? `${mm}월 ${day}일` : `${mm}월`;
+}
+
+/** API updateDate(MMDD 또는 '0000') → "MM.DD" */
+function formatUpdateDateShort(updateDate: string): string {
+  const s = String(updateDate ?? "").trim();
+  if (!s || s === "0000") return "-";
+  if (s.length < 4) return "-";
+  const mm = s.slice(0, 2);
+  const dd = s.slice(2, 4);
+  return `${mm}.${dd}`;
 }
