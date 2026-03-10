@@ -34,7 +34,8 @@ jobs:
         working-directory: ./afg-dashboard
         env:
           NODE_ENV: development
-        run: npm ci
+          NPM_CONFIG_PRODUCTION: "false"
+        run: npm ci --include=dev
 
       - name: Ensure TypeScript is installed
         working-directory: ./afg-dashboard
