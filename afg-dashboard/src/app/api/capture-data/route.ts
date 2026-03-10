@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { getFullDashboardDataForCapture } from '@/app/api/dashboard/route';
+import { getFullDashboardDataForCapture } from '@/lib/dashboard-capture';
 
 export async function GET() {
   try {
