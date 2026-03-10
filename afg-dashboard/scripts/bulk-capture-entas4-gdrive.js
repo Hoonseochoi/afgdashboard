@@ -59,7 +59,6 @@ async function loadPayload() {
 
 async function main() {
   let { GDRIVE_SERVICE_ACCOUNT_KEY: serviceAccountJson } = process.env;
-  const testMode = process.env.ENTAS4_TEST_MODE === '1';
 
   if (!serviceAccountJson && fs.existsSync(envPath)) {
     // dotenv가 길이 때문에 무시한 경우를 대비해 직접 파싱
@@ -82,11 +81,10 @@ async function main() {
 
   const payload = await loadPayload();
   const monthKey = getCurrentMonthKey(payload.updateDate);
-  const baseDateLabelMMDD = getTodayLabelMMDD();
-  const dateLabelMMDD = testMode ? `test-${baseDateLabelMMDD}` : baseDateLabelMMDD;
+  const dateLabelMMDD = getTodayLabelMMDD();
 
   const agentsWithIndex = (payload.agents || []).map((agent, index) => ({ agent, index }));
-  let filtered = agentsWithIndex
+  const filtered = agentsWithIndex
     .filter(({ agent }) => {
       const branch = String(agent.branch || '').trim();
       if (!branch.includes('엔타스4스튜디오')) return false;
@@ -103,10 +101,6 @@ async function main() {
   if (filtered.length === 0) {
     console.log('엔타스4스튜디오 + 실적>0 대상 설계사가 없습니다.');
     return;
-  }
-
-  if (testMode && filtered.length > 5) {
-    filtered = filtered.slice(0, 5);
   }
 
   console.log(

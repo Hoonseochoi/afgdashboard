@@ -16,19 +16,8 @@ function createAuth(serviceAccountJson) {
     GDRIVE_REFRESH_TOKEN,
   } = process.env;
 
-  // 디버그: CI/로컬에서 어떤 경로를 타는지 확인용
-  // 값 자체는 찍지 않고 존재 여부만 로그로 남긴다.
-  // eslint-disable-next-line no-console
-  console.log('[GDRIVE AUTH MODE]', {
-    hasId: !!GDRIVE_CLIENT_ID,
-    hasSecret: !!GDRIVE_CLIENT_SECRET,
-    hasRefresh: !!GDRIVE_REFRESH_TOKEN,
-  });
-
   // 1) OAuth2 (사용자 계정) 우선 사용
   if (GDRIVE_CLIENT_ID && GDRIVE_CLIENT_SECRET && GDRIVE_REFRESH_TOKEN) {
-    // eslint-disable-next-line no-console
-    console.log('[GDRIVE AUTH MODE] using OAuth2 client');
     const oAuth2Client = new google.auth.OAuth2(
       GDRIVE_CLIENT_ID,
       GDRIVE_CLIENT_SECRET,

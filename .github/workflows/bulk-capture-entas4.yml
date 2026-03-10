@@ -2,8 +2,8 @@ name: Entas4 Bulk Capture to Google Drive
 
 on:
   schedule:
-    # 매일 10:30 KST = 01:30 UTC
-    - cron: '30 1 * * *'
+    # 월~금 10:30 KST = 01:30 UTC, 주말 제외
+    - cron: '30 1 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,6 @@ jobs:
       NODE_ENV: production
       GDRIVE_SERVICE_ACCOUNT_KEY: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_KEY }}
       DAILY_SCREENSHOT_FOLDER_ID: '1M8s8vE85v_MUAupxMpKYSSRUG2z0fXlc'
-      ENTAS4_TEST_MODE: '1'
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
