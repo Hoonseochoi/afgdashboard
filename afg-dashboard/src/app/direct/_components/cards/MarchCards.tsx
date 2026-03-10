@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { TierBadges } from "@/app/_components/shared/cards/TierBadges";
 import { DirectDoubleMeritzCard } from "./DirectDoubleMeritzCard";
@@ -23,23 +23,6 @@ const SPECIAL_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000
 /** 2주차 특별: 20→20, 30→30, 50→50, 80→160, 100→300, 120→480 (만원) */
 const SPECIAL_W2_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000], [500000, 500000], [800000, 1600000], [1000000, 3000000], [1200000, 4800000]];
 const PATAYA_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000], [500000, 1000000], [700000, 2100000], [1000000, 5000000]];
-
-/** 파타야 구간별 시상 상세 (뒷면 테이블용) */
-const PATAYA_DETAIL_ROWS: { condition: string; benefits: string }[] = [
-  { condition: "40/40/40 or 합산 140", benefits: "파타야 달성" },
-  { condition: "60/60/60 or 합산 210", benefits: "1박 추가" },
-  { condition: "80/80/80 or 합산 280", benefits: "5 STAR HOTEL + 1박 추가 + 5천 바트" },
-  { condition: "100/100/100 or 합산 350", benefits: "5 STAR HOTEL PRIVATE ROOM + 1박 추가 + 1만 바트" },
-  { condition: "CHAMP", benefits: "BUSINESS + SUITE + 1박 추가 + 1만 바트" },
-];
-
-function getPatayaDetailTierIndex(perf: number): number {
-  if (perf >= 1000000) return 4;
-  if (perf >= 800000) return 3;
-  if (perf >= 600000) return 2;
-  if (perf >= 400000) return 1;
-  return 0;
-}
 
 function getNextTierAndPrize(perf: number, tiersAsc: [number, number][]): { gap: number; addPrize: number } | null {
   for (let i = 0; i < tiersAsc.length; i++) {
@@ -99,7 +82,6 @@ export interface MarchCardsProps {
 }
 
 export function MarchCards(props: MarchCardsProps) {
-  const [patayaFlipped, setPatayaFlipped] = useState(false);
   const {
     updateDate,
     viewW1,
@@ -154,130 +136,66 @@ export function MarchCards(props: MarchCardsProps) {
           boxShadow: { duration: 2.5, repeat: Infinity, repeatType: "reverse" },
         }}
       >
-        <div className="relative rounded-[14px] overflow-hidden w-full h-[200px] md:h-full" style={{ perspective: "1000px" }}>
-          <div
-            role="button"
-            tabIndex={0}
-            className="absolute inset-0 cursor-pointer"
-            style={{
-              transformStyle: "preserve-3d",
-              transform: patayaFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
-              transition: "transform 0.5s ease",
-            }}
-            onClick={() => setPatayaFlipped((v) => !v)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPatayaFlipped((v) => !v); } }}
-          >
-            {/* 앞면: 사진·실적 텍스트로 카드 꽉 채움 */}
-            <div
-              className="absolute inset-0 rounded-[14px] overflow-hidden p-2 flex flex-col justify-between w-full h-full bg-transparent"
-              style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
-            >
-              <div className="absolute inset-0 z-0 pointer-events-none">
-                <img
-                  src={currentMonthPerf >= 800000 ? "/afgair1.png" : "/meritzair.png"}
-                  alt=""
-                  className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover object-center"
-                  style={currentMonthPerf >= 800000 ? { objectPosition: "center calc(50% + 25px)" } : undefined}
-                />
-              </div>
-              <span className="absolute top-0 right-0 z-20 text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/70 border border-red-300 dark:border-red-500/60 px-2 py-1 rounded-bl-lg rounded-tr-2xl shadow-sm">
-                ACFP 기준 / 가족계약제외
-              </span>
-              <div className="relative z-10 flex flex-col flex-1 min-h-0 md:drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-xl md:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">🌴</span>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">파타야 여행시상</h3>
-                    <p className="text-[10px] text-gray-800 dark:text-gray-200 font-medium opacity-90">3월 실적 기준 · 클릭하면 상세</p>
-                  </div>
-                </div>
-                <TierBadges tiersMan={[40, 60, 80, 100]} currentPerf={currentMonthPerf} className="mb-0.5 flex-shrink-0" />
-                <div className="flex-1 min-h-0" />
-              </div>
-              <div className="relative z-10 flex-shrink-0 md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
-                {(() => {
-                  const p = currentMonthPerf;
-                  const toMan = (n: number) => formatMan(n);
-                  const isChampion = rankInMonth === 1 && rankInMonth > 0;
-                  let label = "";
-                  let remain = 0;
-                  if (!isChampion) {
-                    if (p < 400000) { label = "탑승까지"; remain = 400000 - p; }
-                    else if (p < 600000) { label = "1박추가까지"; remain = 600000 - p; }
-                    else if (p < 800000) { label = "국적기+5성까지"; remain = 800000 - p; }
-                    else if (p < 1000000) { label = "1인실+1만바트까지"; remain = 1000000 - p; }
-                    else {
-                      label = "CHAMP 까지 남은금액:";
-                      remain = Math.max(rank1Perf - p, 0);
-                    }
-                  }
-                  return (
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-gray-800 dark:text-gray-200 uppercase tracking-wide opacity-90">현재 실적</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{formatMan(p)}<span className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-0.5">만원</span></p>
-                      </div>
-                      {isChampion ? (
-                        <span className="text-sm font-extrabold bg-amber-300 text-amber-950 px-3 py-1 rounded-full border border-amber-500 shadow-md whitespace-nowrap">
-                          CHAMPION
-                        </span>
-                      ) : (
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-white/80 dark:bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full border border-gray-200/80 dark:border-white/20 shadow-sm text-right whitespace-nowrap">
-                          {`${label} ${toMan(remain)}만원`}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
+        {/* 파타야 여행시상: 플립 제거, 앞면만 정적 카드 (캡처 시 겹침 현상 방지) */}
+        <div className="relative rounded-[14px] overflow-hidden w-full h-[200px] md:h-full">
+          <div className="absolute inset-0 rounded-[14px] overflow-hidden p-2 flex flex-col justify-between w-full h-full bg-transparent">
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <img
+                src={currentMonthPerf >= 800000 ? "/afgair1.png" : "/meritzair.png"}
+                alt=""
+                className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover object-center"
+                style={currentMonthPerf >= 800000 ? { objectPosition: "center calc(50% + 25px)" } : undefined}
+              />
             </div>
-
-            {/* 뒷면: 배경 이미지 + 60% 오버레이 + 테이블만 (카드/그라데이션 제거로 내용 노출) */}
-            <div
-              className="absolute inset-0 rounded-[14px] overflow-hidden p-2 w-full h-full bg-transparent"
-              style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-            >
-              <div className="absolute inset-0 z-0">
-                <img
-                  src={currentMonthPerf >= 800000 ? "/afgair1.png" : "/meritzair.png"}
-                  alt=""
-                  className="absolute inset-0 w-full h-full min-w-full min-h-full object-cover object-center"
-                  style={currentMonthPerf >= 800000 ? { objectPosition: "center calc(50% + 25px)" } : undefined}
-                />
-                <div className="absolute inset-0 bg-white/60 dark:bg-gray-900/60" aria-hidden />
-              </div>
-              <div className="relative z-10 h-full flex flex-col overflow-hidden isolate">
-                <div className="flex items-center justify-between mb-1 flex-shrink-0">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">구간별 시상 상세</h3>
-                  <span className="text-[9px] text-gray-600 dark:text-gray-400">클릭 시 뒤집기</span>
-                </div>
-                <div className="flex-1 min-h-0 overflow-auto rounded-lg border border-cyan-200/80 dark:border-cyan-500/30 bg-white/95 dark:bg-gray-900/95 shadow-inner">
-                  <table className="w-full text-left border-collapse table-fixed">
-                    <thead className="sticky top-0 z-[1] bg-cyan-700 text-white">
-                      <tr>
-                        <th className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-1 border-b border-cyan-600/80 w-[38%]">구간</th>
-                        <th className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-1 border-b border-cyan-600/80">Benefits</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {PATAYA_DETAIL_ROWS.map((row, idx) => {
-                        const isMyTier = getPatayaDetailTierIndex(currentMonthPerf) === idx;
-                        return (
-                          <tr
-                            key={idx}
-                            className={isMyTier
-                              ? "bg-amber-100/90 dark:bg-amber-900/40 border-2 border-amber-500 dark:border-amber-400 font-semibold text-amber-900 dark:text-amber-100"
-                              : "border-b border-gray-200/80 dark:border-gray-600/60 text-gray-800 dark:text-gray-200"}
-                          >
-                            <td className={`text-[10px] px-1.5 py-0.5 align-top ${isMyTier ? "font-bold" : ""}`}>{row.condition}</td>
-                            <td className={`text-[10px] px-1.5 py-0.5 align-top ${isMyTier ? "font-bold" : ""}`}>{row.benefits}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+            <span className="absolute top-0 right-0 z-20 text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/70 border border-red-300 dark:border-red-500/60 px-2 py-1 rounded-bl-lg rounded-tr-2xl shadow-sm">
+              ACFP 기준 / 가족계약제외
+            </span>
+            <div className="relative z-10 flex flex-col flex-1 min-h-0 md:drop-shadow-[0_1px_2px_rgba(255,255,255,0.9)] md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xl md:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">🌴</span>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">파타야 여행시상</h3>
+                  <p className="text-[10px] text-gray-800 dark:text-gray-200 font-medium opacity-90">3월 실적 기준</p>
                 </div>
               </div>
+              <TierBadges tiersMan={[40, 60, 80, 100]} currentPerf={currentMonthPerf} className="mb-0.5 flex-shrink-0" />
+              <div className="flex-1 min-h-0" />
+            </div>
+            <div className="relative z-10 flex-shrink-0 md:[text-shadow:0_0_6px_rgb(255,255,255),0_1px_3px_rgba(0,0,0,0.4)]">
+              {(() => {
+                const p = currentMonthPerf;
+                const toMan = (n: number) => formatMan(n);
+                const isChampion = rankInMonth === 1 && rankInMonth > 0;
+                let label = "";
+                let remain = 0;
+                if (!isChampion) {
+                  if (p < 400000) { label = "탑승까지"; remain = 400000 - p; }
+                  else if (p < 600000) { label = "1박추가까지"; remain = 600000 - p; }
+                  else if (p < 800000) { label = "국적기+5성까지"; remain = 800000 - p; }
+                  else if (p < 1000000) { label = "1인실+1만바트까지"; remain = 1000000 - p; }
+                  else {
+                    label = "CHAMP 까지 남은금액:";
+                    remain = Math.max(rank1Perf - p, 0);
+                  }
+                }
+                return (
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-gray-800 dark:text-gray-200 uppercase tracking-wide opacity-90">현재 실적</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{formatMan(p)}<span className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-0.5">만원</span></p>
+                    </div>
+                    {isChampion ? (
+                      <span className="text-sm font-extrabold bg-amber-300 text-amber-950 px-3 py-1 rounded-full border border-amber-500 shadow-md whitespace-nowrap">
+                        CHAMPION
+                      </span>
+                    ) : (
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white bg-white/80 dark:bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full border border-gray-200/80 dark:border-white/20 shadow-sm text-right whitespace-nowrap">
+                        {`${label} ${toMan(remain)}만원`}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
