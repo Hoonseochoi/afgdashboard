@@ -32,6 +32,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./afg-dashboard
+        env:
+          NODE_ENV: development
         run: npm ci
 
       - name: Ensure TypeScript is installed
