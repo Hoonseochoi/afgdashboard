@@ -9,38 +9,70 @@ function sanitizeName(name) {
     .trim() || '미지정';
 }
 
+function createAuth(serviceAccountJson) {
+  const {
+    GDRIVE_CLIENT_ID,
+    GDRIVE_CLIENT_SECRET,
+    GDRIVE_REFRESH_TOKEN,
+  } = process.env;
+
+  // 디버그: CI/로컬에서 어떤 경로를 타는지 확인용
+  // 값 자체는 찍지 않고 존재 여부만 로그로 남긴다.
+  // eslint-disable-next-line no-console
+  console.log('[GDRIVE AUTH MODE]', {
+    hasId: !!GDRIVE_CLIENT_ID,
+    hasSecret: !!GDRIVE_CLIENT_SECRET,
+    hasRefresh: !!GDRIVE_REFRESH_TOKEN,
+  });
+
+  // 1) OAuth2 (사용자 계정) 우선 사용
+  if (GDRIVE_CLIENT_ID && GDRIVE_CLIENT_SECRET && GDRIVE_REFRESH_TOKEN) {
+    // eslint-disable-next-line no-console
+    console.log('[GDRIVE AUTH MODE] using OAuth2 client');
+    const oAuth2Client = new google.auth.OAuth2(
+      GDRIVE_CLIENT_ID,
+      GDRIVE_CLIENT_SECRET,
+    );
+    oAuth2Client.setCredentials({ refresh_token: GDRIVE_REFRESH_TOKEN });
+    return oAuth2Client;
+  }
+
+  // 2) 없으면 서비스 계정 JSON 사용 (현재는 quota 제한이 있어 사실상 fallback 용)
+  if (!serviceAccountJson) {
+    throw new Error('GDRIVE_SERVICE_ACCOUNT_KEY 또는 GDRIVE_CLIENT_* OAuth2 환경 변수가 필요합니다.');
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(serviceAccountJson);
+  } catch {
+    try {
+      // JSON 형식이 약간 어긋난 경우를 위해 느슨한 파서 사용
+      // eslint-disable-next-line no-eval
+      parsed = eval(`(${serviceAccountJson})`);
+    } catch {
+      throw new Error('GDRIVE_SERVICE_ACCOUNT_KEY JSON 파싱 실패');
+    }
+  }
+  const clientEmail = parsed.client_email;
+  const privateKey = parsed.private_key;
+  if (!clientEmail || !privateKey) {
+    throw new Error('서비스 계정 JSON에 client_email 또는 private_key 가 없습니다.');
+  }
+
+  const jwt = new google.auth.JWT({
+    email: clientEmail,
+    key: privateKey,
+    scopes: ['https://www.googleapis.com/auth/drive.file'],
+  });
+  return jwt;
+}
+
 class GoogleDriveClient {
   constructor(options) {
     const { serviceAccountJson, rootFolderId } = options;
-    if (!serviceAccountJson) {
-      throw new Error('GDRIVE_SERVICE_ACCOUNT_KEY 가 비어 있습니다.');
-    }
     this.rootFolderId = rootFolderId;
-
-    let parsed;
-    try {
-      parsed = JSON.parse(serviceAccountJson);
-    } catch {
-      try {
-        // JSON 형식이 약간 어긋난 경우를 위해 느슨한 파서 사용
-        // eslint-disable-next-line no-eval
-        parsed = eval(`(${serviceAccountJson})`);
-      } catch {
-        throw new Error('GDRIVE_SERVICE_ACCOUNT_KEY JSON 파싱 실패');
-      }
-    }
-    const clientEmail = parsed.client_email;
-    const privateKey = parsed.private_key;
-    if (!clientEmail || !privateKey) {
-      throw new Error('서비스 계정 JSON에 client_email 또는 private_key 가 없습니다.');
-    }
-
-    const auth = new google.auth.JWT({
-      email: clientEmail,
-      key: privateKey,
-      scopes: ['https://www.googleapis.com/auth/drive.file'],
-    });
-
+    const auth = createAuth(serviceAccountJson);
     this.drive = google.drive({ version: 'v3', auth });
   }
 
