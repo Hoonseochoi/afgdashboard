@@ -3,6 +3,7 @@ import {
   supabaseAgentGetByCode,
   supabaseAgentsByMAgent,
   supabaseMAgentLoginGet,
+  supabaseAuthActivityLogInsert,
   isSupabaseConfigured,
 } from '@/lib/supabase-server';
 
@@ -28,25 +29,22 @@ export async function POST(request: Request) {
     }
 
     if (code === DEV_MASTER_ID && password === DEV_MASTER_PW) {
-      const response = NextResponse.json({
-        success: true,
-        user: {
-          code: DEV_MASTER_ID,
-          name: '개발자',
-          isFirstLogin: false,
-          role: 'admin',
-          targetManagerCode: null,
-          branch: null,
-        },
-      });
-      response.cookies.set('auth_session', JSON.stringify({
+      const userPayload = {
         code: DEV_MASTER_ID,
         name: '개발자',
         isFirstLogin: false,
         role: 'admin',
         targetManagerCode: null,
         branch: null,
-      }), {
+      };
+      await supabaseAuthActivityLogInsert('login', {
+        userCode: userPayload.code,
+        userName: userPayload.name,
+        role: userPayload.role,
+        userAgent: request.headers.get('user-agent') ?? undefined,
+      });
+      const response = NextResponse.json({ success: true, user: userPayload });
+      response.cookies.set('auth_session', JSON.stringify(userPayload), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -88,6 +86,12 @@ export async function POST(request: Request) {
         branch: null,
         m_agentValue: normalizedId,
       };
+      await supabaseAuthActivityLogInsert('login', {
+        userCode: user.code,
+        userName: user.name,
+        role: user.role,
+        userAgent: request.headers.get('user-agent') ?? undefined,
+      });
       const response = NextResponse.json({ success: true, user });
       response.cookies.set('auth_session', JSON.stringify(user), {
         httpOnly: true,
@@ -116,6 +120,12 @@ export async function POST(request: Request) {
       targetManagerCode: agent.targetManagerCode ?? null,
       branch: agent.branch ?? null,
     };
+    await supabaseAuthActivityLogInsert('login', {
+      userCode: user.code,
+      userName: user.name,
+      role: user.role,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+    });
     const response = NextResponse.json({ success: true, user });
     response.cookies.set('auth_session', JSON.stringify(user), {
       httpOnly: true,

@@ -5,14 +5,15 @@ import React from 'react';
 interface PrizeGuideModalProps {
   isOpen: boolean;
   onClose: () => void;
-  imageSrc: string;
+  /** 이미지 URL 목록. 순서대로 위에서 아래로 표시(첫 번째가 맨 위) */
+  imageSrcs: string[];
   title?: string;
 }
 
 export const PrizeGuideModal: React.FC<PrizeGuideModalProps> = ({
   isOpen,
   onClose,
-  imageSrc,
+  imageSrcs,
   title = "1주차 시상안 보기",
 }) => {
   if (!isOpen) return null;
@@ -30,12 +31,15 @@ export const PrizeGuideModal: React.FC<PrizeGuideModalProps> = ({
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
-        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900/60 flex items-center justify-center p-3 md:p-4">
-          <img
-            src={imageSrc}
-            alt={title}
-            className="max-h-[80vh] w-auto rounded-lg shadow-md"
-          />
+        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900/60 flex flex-col items-center gap-4 p-3 md:p-4">
+          {imageSrcs.map((src, i) => (
+            <img
+              key={`${src}-${i}`}
+              src={src}
+              alt={`${title} ${i + 1}`}
+              className="max-h-[80vh] w-auto rounded-lg shadow-md"
+            />
+          ))}
         </div>
       </div>
     </div>

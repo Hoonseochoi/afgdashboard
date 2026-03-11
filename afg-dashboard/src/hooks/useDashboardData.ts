@@ -174,6 +174,38 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     fetchData();
   }, [router, retryKey, isCaptureMode, initialCode]);
 
+  // 데일리 업데이트 반영 시 자동 새로고침 (매일 10시 업데이트 후, 10시 이전에 연 페이지도 새 데이터로 갱신)
+  const updateDateRef = useRef<string>("");
+  updateDateRef.current = updateDate;
+  useEffect(() => {
+    if (typeof window === "undefined" || isCaptureMode || !user) return;
+    const POLL_MS = 5 * 60 * 1000; // 5분마다 updateDate 확인
+    const intervalId = window.setInterval(async () => {
+      try {
+        const res = await fetch("/api/update-date", { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const serverUpdateDate = data?.updateDate ?? "";
+        if (serverUpdateDate && serverUpdateDate !== updateDateRef.current) {
+          window.location.reload();
+        }
+      } catch {
+        // 네트워크 오류 시 무시, 다음 폴링에서 재시도
+      }
+    }, POLL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [user, isCaptureMode]);
+
+  // 접속 후 12시간 경과 시에도 자동 새로고침 (폴링 실패·업데이트 없을 때 대비)
+  useEffect(() => {
+    if (typeof window === "undefined" || isCaptureMode || !user) return;
+    const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+    const id = window.setTimeout(() => {
+      window.location.reload();
+    }, TWELVE_HOURS_MS);
+    return () => window.clearTimeout(id);
+  }, [user, isCaptureMode]);
+
   // GA 리다이렉트
   useEffect(() => {
     if (mode === "all" || !selectedAgent) return;

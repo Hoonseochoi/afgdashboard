@@ -8,6 +8,7 @@ import {
   supabaseAgentsListAll,
   supabaseAgentsByMAgent,
   supabaseConfigGetApp,
+  supabaseAuthActivityLogInsert,
   isSupabaseConfigured,
   type SupabaseAgentRecord,
 } from '@/lib/supabase-server';
@@ -153,7 +154,7 @@ function sortByMarchPerformance<T extends { code?: string; performance?: Record<
   });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('auth_session');
@@ -176,6 +177,14 @@ export async function GET() {
       role: session.role,
       targetManagerCode: session.targetManagerCode,
     };
+
+    // 대시보드 로드(새로고침) 기록 — 로그 실패해도 응답에는 영향 없음
+    supabaseAuthActivityLogInsert('page_view', {
+      userCode: user.code,
+      userName: user.name ?? undefined,
+      role: user.role,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+    }).catch(() => {});
 
     if (session.code === DEV_MASTER_ID && !isSupabaseConfigured()) {
       const agentsData = getAgentsFromLocalJson();

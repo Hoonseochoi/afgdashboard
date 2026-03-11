@@ -115,7 +115,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <PrizeGuideModal
         isOpen={showPrizeGuide}
         onClose={() => setShowPrizeGuide(false)}
-        imageSrc="/26031w_prize.jpg"
+        imageSrcs={['/26032w%20direct.jpg', '/26031w_prize.jpg']}
       />
 
       <Header

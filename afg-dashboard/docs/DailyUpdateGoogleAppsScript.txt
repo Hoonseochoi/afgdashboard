@@ -1,0 +1,438 @@
+/**
+ * AFG 대시보드 데일리 업데이트 - Google Apps Script
+ * 
+ * PLAN_DAILY_UPDATE.md 기반.
+ * - 구글 드라이브 지정 폴더에서 최신 MC_LIST / PRIZE_SUM xlsx 조회
+ * - xlsx → 임시 스프레드시트로 변환 후 파싱
+ * - Supabase REST API로 config(update_date), agents(performance, weekly, product_week1) 반영
+ * 
+ * 설정:
+ * 1. 스크립트 속성에 추가:
+ *    - SUPABASE_URL: Supabase 프로젝트 URL (예: https://xxx.supabase.co)
+ *    - SUPABASE_SERVICE_ROLE_KEY: 서비스 롤 키
+ * 2. 확장 프로그램(Resources) > Google 서비스에서 "Drive API" 사용 설정
+ * 3. installDailyTrigger() 실행 후 매일 10:00(한국시간) 실행
+ * 
+ * 주의: agent-order.json은 로컬 파일이므로 이 스크립트에서는 갱신하지 않음.
+ *       대시보드 API는 3월 매출 순 정렬 등을 사용하므로 동작에는 지장 없음.
+ */
+
+// ========== 설정 ==========
+var DRIVE_FOLDER_ID = '10177TYChiirxIIrrwFX33Yxi2UnLpSCF'; // daily_update 폴더
+var MC_LIST_PATTERN = /^\d{4}MC_LIST/i;
+var PRIZE_SUM_PATTERN = /^\d{4}PRIZE_SUM/i;
+var TIMEZONE = 'Asia/Seoul';
+
+// MC_LIST 컬럼 (1-based, getRange 사용)
+var COL_CODE = 6;    // F
+var COL_NAME = 7;    // G
+var COL_CURRENT = 11; // K 인정실적(당월)
+var COL_PREV = 19;   // S 전월
+var COL_W1 = 21;     // U
+var COL_W2 = 22;     // V
+var COL_W3 = 23;     // W
+var COL_W4 = 24;     // X
+var COL_BRANCH = 38; // AL
+var DATA_START_ROW = 2;
+
+// PRIZE_SUM 컬럼 (1-based)
+var P_COL_CODE = 11;   // K 설계사코드
+var P_COL_PRODUCT_W1 = 29; // AC 상품 1주차
+var P_DATA_START_ROW = 2;
+
+var SUPABASE_PAGE_SIZE = 1000;
+var BATCH_UPDATE_CONCURRENT = 50;
+
+// ========== 유틸 ==========
+function getSupabaseUrl() {
+  var url = PropertiesService.getScriptProperties().getProperty('SUPABASE_URL');
+  if (!url) throw new Error('스크립트 속성에 SUPABASE_URL를 설정하세요.');
+  return url.replace(/\/$/, '');
+}
+
+function getSupabaseKey() {
+  var key = PropertiesService.getScriptProperties().getProperty('SUPABASE_SERVICE_ROLE_KEY');
+  if (!key) throw new Error('스크립트 속성에 SUPABASE_SERVICE_ROLE_KEY를 설정하세요.');
+  return key;
+}
+
+function supabaseFetch(method, path, body) {
+  var url = getSupabaseUrl() + '/rest/v1' + path;
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': getSupabaseKey(),
+      'Authorization': 'Bearer ' + getSupabaseKey(),
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    muteHttpExceptions: true
+  };
+  if (body && (method === 'POST' || method === 'PATCH' || method === 'PUT')) {
+    opts.payload = JSON.stringify(body);
+  }
+  var resp = UrlFetchApp.fetch(url, opts);
+  if (resp.getResponseCode() >= 400) {
+    throw new Error('Supabase ' + method + ' ' + path + ': ' + resp.getResponseCode() + ' ' + resp.getContentText());
+  }
+  return resp;
+}
+
+/** 코드 정규화: 숫자면 앞자리 0 제거 문자열 */
+function normalizeCode(c) {
+  var s = String(c).trim();
+  var n = Number(s);
+  if (!isNaN(n) && n >= 0 && n < 1e15) return String(Math.round(n));
+  return s;
+}
+
+/** 파일명에서 YYYYMM 추출 → currentMonthKey, prevMonthKey */
+function parseMonthFromFilename(filename) {
+  var match = filename.match(/_(\d{6})\.xlsx?$/i) || filename.match(/(\d{6})\.xlsx?$/i);
+  if (!match) return { current: '2026-02', prev: '2026-01' };
+  var ym = match[1];
+  var y = ym.slice(0, 4);
+  var m = parseInt(ym.slice(4), 10);
+  var current = y + '-' + (m < 10 ? '0' : '') + m;
+  var prevM = m === 1 ? 12 : m - 1;
+  var prevY = m === 1 ? String(parseInt(y, 10) - 1) : y;
+  var prev = prevY + '-' + (prevM < 10 ? '0' : '') + prevM;
+  return { current: current, prev: prev };
+}
+
+function toNum(val) {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'number' && !isNaN(val)) return val;
+  var s = String(val).replace(/[,\s]/g, '');
+  var n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+
+// ========== 드라이브: 폴더 내 xlsx 목록 ==========
+function listXlsxInFolder() {
+  var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  var files = folder.getFilesByType(MimeType.MICROSOFT_EXCEL);
+  var list = [];
+  while (files.hasNext()) {
+    var f = files.next();
+    list.push({ id: f.getId(), name: f.getName() });
+  }
+  return list;
+}
+
+/** 최신 MC_LIST, PRIZE_SUM 파일 및 전일 MC_LIST (있으면) */
+function findLatestFiles() {
+  var list = listXlsxInFolder();
+  var mcList = list.filter(function (f) { return MC_LIST_PATTERN.test(f.name) && /\.xlsx?$/i.test(f.name); });
+  var prizeSum = list.filter(function (f) { return PRIZE_SUM_PATTERN.test(f.name) && /\.xlsx?$/i.test(f.name); });
+  mcList.sort(function (a, b) { return a.name.localeCompare(b.name); });
+  prizeSum.sort(function (a, b) { return a.name.localeCompare(b.name); });
+  var latestMc = mcList.length > 0 ? mcList[mcList.length - 1] : null;
+  var latestPrize = prizeSum.length > 0 ? prizeSum[prizeSum.length - 1] : null;
+  var prevMc = null;
+  if (latestMc) {
+    var prefix = latestMc.name.slice(0, 4);
+    var num = parseInt(prefix, 10);
+    if (!isNaN(num) && num > 0) {
+      var prevNum = num - 1;
+      var prevPrefix = (prevNum < 10 ? '000' : prevNum < 100 ? '00' : prevNum < 1000 ? '0' : '') + prevNum;
+      for (var idx = mcList.length - 1; idx >= 0; idx--) {
+        if (mcList[idx].name.indexOf(prevPrefix) === 0) { prevMc = mcList[idx]; break; }
+      }
+    }
+  }
+  return { latestMc: latestMc, latestPrize: latestPrize, prevMc: prevMc };
+}
+
+// ========== xlsx → 임시 시트 변환 (Drive API) ==========
+/** xlsx 파일 ID로 blob 가져와서 구글 시트로 변환 후 스프레드시트 ID 반환. 삭제는 호출자가. (Drive API 사용) */
+function xlsxToSpreadsheet(fileId) {
+  var file = DriveApp.getFileById(fileId);
+  var blob = file.getBlob();
+  var resource = { title: 'temp_daily_' + new Date().getTime(), mimeType: 'application/vnd.google-apps.spreadsheet' };
+  var newFile = Drive.Files.insert(resource, blob, { convert: true });
+  return newFile.id;
+}
+
+// ========== MC_LIST 파싱 ==========
+function parseMcListSheet(spreadsheetId) {
+  var ss = SpreadsheetApp.openById(spreadsheetId);
+  var sheet = ss.getSheets()[0];
+  var lastRow = sheet.getLastRow();
+  if (lastRow < DATA_START_ROW) return [];
+  var result = [];
+  for (var r = DATA_START_ROW; r <= lastRow; r++) {
+    var branch = String(sheet.getRange(r, COL_BRANCH).getValue() || '').trim();
+    if (branch.indexOf('어센틱') === -1) continue;
+    var code = String(sheet.getRange(r, COL_CODE).getValue() || '').trim();
+    if (!code || code.length < 5) continue;
+    var name = String(sheet.getRange(r, COL_NAME).getValue() || '').trim() || code;
+    var currentMonth = toNum(sheet.getRange(r, COL_CURRENT).getValue());
+    var prevMonth = toNum(sheet.getRange(r, COL_PREV).getValue());
+    var week1 = toNum(sheet.getRange(r, COL_W1).getValue());
+    var week2 = toNum(sheet.getRange(r, COL_W2).getValue());
+    var week3 = toNum(sheet.getRange(r, COL_W3).getValue());
+    var week4 = toNum(sheet.getRange(r, COL_W4).getValue());
+    result.push({ code: code, name: name, branch: branch, currentMonth: currentMonth, prevMonth: prevMonth, week1: week1, week2: week2, week3: week3, week4: week4 });
+  }
+  return result;
+}
+
+// ========== PRIZE_SUM 파싱 ==========
+function parsePrizeSumSheet(spreadsheetId) {
+  var ss = SpreadsheetApp.openById(spreadsheetId);
+  var sheet = ss.getSheets()[0];
+  var lastRow = sheet.getLastRow();
+  if (lastRow < P_DATA_START_ROW) return [];
+  var result = [];
+  for (var r = P_DATA_START_ROW; r <= lastRow; r++) {
+    var code = String(sheet.getRange(r, P_COL_CODE).getValue() || '').trim();
+    if (!code || code.length < 5) continue;
+    var productWeek1 = toNum(sheet.getRange(r, P_COL_PRODUCT_W1).getValue());
+    result.push({ code: normalizeCode(code), codeRaw: code, productWeek1: productWeek1 });
+  }
+  return result;
+}
+
+// ========== Supabase: agents 전량 조회 ==========
+function fetchAllAgentsMap() {
+  var map = {};
+  var offset = 0;
+  var hasMore = true;
+  while (hasMore) {
+    var path = '/agents?select=code,performance,weekly&order=id.asc&offset=' + offset + '&limit=' + SUPABASE_PAGE_SIZE;
+    var url = getSupabaseUrl() + '/rest/v1' + path;
+    var resp = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: { 'apikey': getSupabaseKey(), 'Authorization': 'Bearer ' + getSupabaseKey() },
+      muteHttpExceptions: true
+    });
+    if (resp.getResponseCode() >= 400) throw new Error('agents 조회 실패: ' + resp.getContentText());
+    var data = JSON.parse(resp.getContentText() || '[]');
+    if (!data || data.length === 0) break;
+    for (var i = 0; i < data.length; i++) {
+      var row = data[i];
+      var key = normalizeCode(row.code);
+      map[key] = { code: String(row.code), performance: row.performance || {}, weekly: row.weekly || {} };
+    }
+    hasMore = data.length === SUPABASE_PAGE_SIZE;
+    offset += SUPABASE_PAGE_SIZE;
+  }
+  return map;
+}
+
+// ========== Supabase: config upsert ==========
+function updateConfigUpdateDate(updateDate) {
+  var body = [{ key: 'app', update_date: updateDate }];
+  var url = getSupabaseUrl() + '/rest/v1/config';
+  var resp = UrlFetchApp.fetch(url, {
+    method: 'post',
+    headers: {
+      'apikey': getSupabaseKey(),
+      'Authorization': 'Bearer ' + getSupabaseKey(),
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    },
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  });
+  if (resp.getResponseCode() >= 400) throw new Error('config upsert 실패: ' + resp.getContentText());
+}
+
+// ========== MC_LIST 반영 (config + agents) ==========
+function runMcListUpdate(latestMc, prevMc, monthKeys, updateDate, agentByCode) {
+  var tempId = null;
+  try {
+    tempId = xlsxToSpreadsheet(latestMc.id);
+    var rows = parseMcListSheet(tempId);
+  } finally {
+    if (tempId) try { Drive.Files.remove(tempId); } catch (e) {}
+  }
+  if (rows.length === 0) {
+    Logger.log('MC_LIST 파싱 결과 0건. 파일명: ' + latestMc.name);
+    return { updated: 0, inserted: 0 };
+  }
+
+  var prevMap = {};
+  if (prevMc) {
+    var prevId = null;
+    try {
+      prevId = xlsxToSpreadsheet(prevMc.id);
+      var prevRows = parseMcListSheet(prevId);
+      for (var p = 0; p < prevRows.length; p++) {
+        prevMap[normalizeCode(prevRows[p].code)] = prevRows[p];
+      }
+    } catch (e) {
+      Logger.log('전일 파일 파싱 오류(무시): ' + e);
+    } finally {
+      if (prevId) try { Drive.Files.remove(prevId); } catch (e2) {}
+    }
+  }
+
+  updateConfigUpdateDate(updateDate);
+
+  var currentMonthKey = monthKeys.current;
+  var prevMonthKey = monthKeys.prev;
+  var dailyDiffKey = currentMonthKey + '-diff';
+  var toUpdate = [];
+  var toInsert = [];
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var codeNorm = normalizeCode(row.code);
+    var prevRow = prevMap[codeNorm];
+    var prevCurrent = prevRow ? prevRow.currentMonth : row.currentMonth;
+    var dailyDiff = row.currentMonth - prevCurrent;
+
+    var existing = agentByCode[codeNorm];
+    var performance = existing && existing.performance ? JSON.parse(JSON.stringify(existing.performance)) : {};
+    performance[currentMonthKey] = row.currentMonth;
+    performance[prevMonthKey] = row.prevMonth;
+    performance[dailyDiffKey] = dailyDiff;
+    var weekly = { week1: row.week1, week2: row.week2, week3: row.week3, week4: row.week4 };
+
+    if (existing) {
+      toUpdate.push({ code: existing.code, performance: performance, weekly: weekly });
+    } else {
+      toInsert.push({
+        code: codeNorm,
+        name: row.name || '',
+        branch: row.branch || '',
+        password: codeNorm,
+        role: 'agent',
+        is_first_login: true,
+        performance: performance,
+        weekly: weekly,
+        manager_code: null,
+        manager_name: null,
+        target_manager_code: null
+      });
+    }
+  }
+
+  var updated = 0;
+  for (var u = 0; u < toUpdate.length; u += BATCH_UPDATE_CONCURRENT) {
+    var batch = toUpdate.slice(u, u + BATCH_UPDATE_CONCURRENT);
+    for (var b = 0; b < batch.length; b++) {
+      var item = batch[b];
+      supabaseFetch('PATCH', '/agents?code=eq.' + encodeURIComponent(item.code), { performance: item.performance, weekly: item.weekly });
+      updated++;
+    }
+  }
+
+  var inserted = 0;
+  for (var ins = 0; ins < toInsert.length; ins += 100) {
+    var chunk = toInsert.slice(ins, ins + 100);
+    var path = '/agents';
+    var opts = {
+      method: 'post',
+      headers: {
+        'apikey': getSupabaseKey(),
+        'Authorization': 'Bearer ' + getSupabaseKey(),
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      payload: JSON.stringify(chunk),
+      muteHttpExceptions: true
+    };
+    var resp = UrlFetchApp.fetch(getSupabaseUrl() + '/rest/v1' + path, opts);
+    if (resp.getResponseCode() >= 400) throw new Error('agents insert 실패: ' + resp.getContentText());
+    inserted += chunk.length;
+  }
+
+  Logger.log('MC_LIST 반영 완료. update: ' + updated + ', insert: ' + inserted);
+  return { updated: updated, inserted: inserted };
+}
+
+// ========== PRIZE_SUM 반영 (product_week1, weekly.productWeek1) ==========
+function runPrizeSumUpdate(latestPrize, agentByCode) {
+  var tempId = null;
+  try {
+    tempId = xlsxToSpreadsheet(latestPrize.id);
+    var rows = parsePrizeSumSheet(tempId);
+  } finally {
+    if (tempId) try { Drive.Files.remove(tempId); } catch (e) {}
+  }
+  if (rows.length === 0) {
+    Logger.log('PRIZE_SUM 파싱 결과 0건.');
+    return 0;
+  }
+
+  var count = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var existing = agentByCode[row.code];
+    if (!existing) continue;
+    var weekly = existing.weekly ? JSON.parse(JSON.stringify(existing.weekly)) : {};
+    weekly.productWeek1 = row.productWeek1;
+    supabaseFetch('PATCH', '/agents?code=eq.' + encodeURIComponent(existing.code), { weekly: weekly, product_week1: row.productWeek1 });
+    count++;
+  }
+  Logger.log('PRIZE_SUM 반영 완료. ' + count + '명');
+  return count;
+}
+
+// ========== 메인 ==========
+function runDailyUpdate() {
+  Logger.log('=== 데일리 업데이트 시작 ===');
+  var files = findLatestFiles();
+  if (!files.latestMc) {
+    Logger.log('MC_LIST 파일 없음. 종료.');
+    return;
+  }
+
+  var updateDate = files.latestMc.name.substring(0, 4);
+  var monthKeys = parseMonthFromFilename(files.latestMc.name);
+  Logger.log('파일: ' + files.latestMc.name + ', updateDate: ' + updateDate + ', 당월: ' + monthKeys.current + ', 전월: ' + monthKeys.prev);
+
+  var agentByCode = fetchAllAgentsMap();
+  Logger.log('기존 agents ' + Object.keys(agentByCode).length + '명 로드');
+
+  var mcResult = runMcListUpdate(files.latestMc, files.prevMc, monthKeys, updateDate, agentByCode);
+  agentByCode = fetchAllAgentsMap();
+
+  if (files.latestPrize) {
+    runPrizeSumUpdate(files.latestPrize, agentByCode);
+  } else {
+    Logger.log('PRIZE_SUM 파일 없음. 1주차 상품 반영 생략.');
+  }
+
+  Logger.log('=== 데일리 업데이트 완료. update: ' + mcResult.updated + ', insert: ' + mcResult.inserted + ' ===');
+}
+
+// ========== 트리거 설치 (매일 10:00 한국시간) ==========
+function installDailyTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'runDailyUpdate') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  ScriptApp.newTrigger('runDailyUpdate')
+    .timeBased()
+    .everyDays(1)
+    .atHour(10)
+    .inTimezone(TIMEZONE)
+    .create();
+  Logger.log('매일 10:00(' + TIMEZONE + ') 실행 트리거 등록됨.');
+}
+
+// ========== 수동 테스트 (편집기에서 runDailyUpdate 실행) ==========
+// runDailyUpdate();
+
+/**
+ * 사용 방법 (요약)
+ * -----------------
+ * 1. script.google.com 에서 새 프로젝트 생성.
+ * 2. 위 코드 전체 복사 후 붙여넣기.
+ * 3. 확장 프로그램 > Google 서비스 > "Drive API" 추가 및 사용 설정.
+ * 4. 프로젝트 설정 > 스크립트 속성에 다음 추가:
+ *    - SUPABASE_URL = https://xxxx.supabase.co
+ *    - SUPABASE_SERVICE_ROLE_KEY = (서비스 롤 비밀키)
+ * 5. DRIVE_FOLDER_ID 가 다르면 상단 상수 수정 (기본: daily_update 폴더 ID).
+ * 6. installDailyTrigger() 함수를 한 번 실행 → 매일 10:00(한국시간)에 runDailyUpdate 자동 실행.
+ * 7. 수동 실행: runDailyUpdate() 선택 후 실행.
+ *
+ * 참고: agent-order.json 은 로컬 파일이라 이 스크립트에서 갱신하지 않음.
+ *       대시보드 API는 3월 매출 순 정렬을 사용하므로 목록 노출에는 문제 없음.
+ */

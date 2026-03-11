@@ -254,6 +254,27 @@ export async function supabaseMAgentLoginUpsert(
   }
 }
 
+/** 로그인·페이지뷰(새로고침) 로그 기록. 실패해도 예외를 던지지 않음. */
+export async function supabaseAuthActivityLogInsert(
+  eventType: 'login' | 'page_view',
+  payload: { userCode?: string; userName?: string; role?: string; userAgent?: string },
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const client = getServerClient();
+    const { error } = await client.from('auth_activity_log').insert({
+      event_type: eventType,
+      user_code: payload.userCode ?? null,
+      user_name: payload.userName ?? null,
+      role: payload.role ?? null,
+      user_agent: payload.userAgent ?? null,
+    });
+    if (error) console.error('auth_activity_log insert error:', error.message);
+  } catch (e) {
+    console.error('supabaseAuthActivityLogInsert:', e);
+  }
+}
+
 /** config 테이블에서 key='app' 행 1건 조회 */
 export async function supabaseConfigGetApp(): Promise<{
   updateDate?: string;
