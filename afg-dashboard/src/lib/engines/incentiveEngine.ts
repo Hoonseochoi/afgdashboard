@@ -193,8 +193,17 @@ export const getPartnerTierPrize = (perf: number): number => {
   return 0;
 };
 
+/** 파트너 2주차 구간 시상금 (10→5만, 20→10만, 30→30만, 50→50만 원) */
+export const getPartnerTierPrizeWeek2 = (perf: number): number => {
+  if (perf >= 500000) return 500000;
+  if (perf >= 300000) return 300000;
+  if (perf >= 200000) return 100000;
+  if (perf >= 100000) return 50000;
+  return 0;
+};
+
 /**
- * 파트너 연속가동 시상금 계산
+ * 파트너 연속가동 시상금 계산 (1~2월 / 2~3월 연속가동)
  */
 export const getPartnerContinuousPrize = (perf: number): number => {
   if (perf >= 500000) return 1800000;
@@ -203,6 +212,169 @@ export const getPartnerContinuousPrize = (perf: number): number => {
   if (perf >= 100000) return 200000;
   return 0;
 };
+
+/** 파트너 1~2월 추가 연속가동 시상금 (20만 구간만 45만원, 나머지 동일) */
+export const getPartnerContinuousPrizeExtra = (perf: number): number => {
+  if (perf >= 500000) return 1800000;
+  if (perf >= 300000) return 800000;
+  if (perf >= 200000) return 450000;
+  if (perf >= 100000) return 200000;
+  return 0;
+};
+
+const RUN23_TIERS: [number, number][] = [[100000, 200000], [200000, 600000], [300000, 800000], [500000, 1800000]];
+
+function run23PrizeFromTier(feb: number, march: number): number {
+  if (march < 100000) return 0;
+  const tier = RUN23_TIERS.find(([t]) => feb >= t);
+  return tier ? tier[1] : 0;
+}
+
+function toPrizeWon(v: number): number {
+  return v > 0 && v < 10000 ? v * 10000 : v;
+}
+
+/**
+ * 파트너 대시보드에 카드로 보이는 시상금들의 합산 (배너 "합산 시상금액"에 사용)
+ * - 카드별: 정규+, 1주차 인/상품, 2주차 인/상품, 메리츠클럽+, 2배메리츠, 1~2월 연속/추가(3월 제외), 2~3월 연속/추가
+ */
+export function getPartnerTotalPrizeFromCards(
+  agent: Agent,
+  selectedViewMonth: number,
+  fromIncentive: { currentPerf: number; clubPlusPrize: number; doubleMeritzPrize: number }
+): number {
+  const partner =
+    agent.partner != null && typeof agent.partner === "string"
+      ? (() => {
+          try {
+            return JSON.parse(agent.partner) as Record<string, unknown>;
+          } catch {
+            return null;
+          }
+        })()
+      : (agent.partner as Record<string, unknown> | null | undefined) ?? null;
+
+  const janPerf = agent.performance?.["2026-01"] ?? 0;
+  const febPerf = agent.performance?.["2026-02"] ?? 0;
+  const marchPerf = agent.performance?.["2026-03"] ?? 0;
+  const weekly = (agent as { weekly?: { week1?: number; week2?: number } }).weekly;
+  const week1InsPerf = Number(weekly?.week1 ?? 0);
+  const week1ProductPerf = Number((agent as { productWeek1?: number }).productWeek1 ?? 0);
+  const week2InsPerf = Number(weekly?.week2 ?? 0);
+  const week2ProductPerf = Number((agent as { productWeek2?: number }).productWeek2 ?? 0);
+
+  const week1InsPrizeRaw = toPrizeWon(Number(partner?.productWeek1InsPrize ?? 0));
+  const week1InsPrize = week1InsPrizeRaw > 0 ? week1InsPrizeRaw : getPartnerTierPrize(week1InsPerf);
+  const week1ProductPrizeRaw = toPrizeWon(Number(partner?.productWeek1Prize ?? 0));
+  const week1ProductPrize = week1ProductPrizeRaw > 0 ? week1ProductPrizeRaw : getPartnerTierPrize(week1ProductPerf);
+  const week2InsPrizeRaw = toPrizeWon(Number(partner?.productWeek2InsPrize ?? 0));
+  const week2InsPrize = week2InsPrizeRaw > 0 ? week2InsPrizeRaw : getPartnerTierPrizeWeek2(week2InsPerf);
+  const week2ProductPrizeRaw = toPrizeWon(Number(partner?.productWeek2Prize ?? 0));
+  const week2ProductPrize = week2ProductPrizeRaw > 0 ? week2ProductPrizeRaw : getPartnerTierPrizeWeek2(week2ProductPerf);
+
+  const baseJan = Number(partner?.continuous12Jan ?? janPerf);
+  const baseFeb = Number(partner?.continuous12Feb ?? febPerf);
+  const extraJan = Number(partner?.continuous12ExtraJan ?? partner?.continuous12Jan ?? janPerf);
+  const extraFeb = Number(partner?.continuous12ExtraFeb ?? partner?.continuous12Feb ?? febPerf);
+  const basePrizeRaw = toPrizeWon(Number(partner?.continuous12Prize ?? 0));
+  const basePrizeComputed = basePrizeRaw > 0 ? basePrizeRaw : getPartnerContinuousPrize(baseJan);
+  const extraPrizeRaw = toPrizeWon(Number(partner?.continuous12ExtraPrize ?? 0));
+  const extraPrizeComputed = extraPrizeRaw > 0 ? extraPrizeRaw : getPartnerContinuousPrizeExtra(extraJan);
+  const baseConditionMet = baseJan >= 100000 && baseFeb >= 100000;
+  const extraConditionMet = extraJan >= 100000 && extraFeb >= 100000;
+  const basePrize = baseConditionMet ? basePrizeComputed : 0;
+  const extraPrize = extraConditionMet ? extraPrizeComputed : 0;
+
+  const febRun = Number(partner?.continuous23Feb ?? febPerf);
+  const febExtraRun = Number(partner?.continuous23ExtraFeb ?? partner?.continuous23Feb ?? febPerf);
+  const march15Perf = Number(partner?.continuous23Mar ?? 0) || marchPerf;
+  const marchExtraPerf = Number(partner?.continuous23ExtraMar ?? 0) || march15Perf;
+  const run23BasePrizeRaw = toPrizeWon(Number(partner?.continuous23Prize ?? 0));
+  const run23ExtraPrizeRaw = toPrizeWon(Number(partner?.continuous23ExtraPrize ?? 0));
+  const run23BasePrize = run23BasePrizeRaw > 0 ? run23BasePrizeRaw : run23PrizeFromTier(febRun, march15Perf);
+  const run23ExtraPrize = run23ExtraPrizeRaw > 0 ? run23ExtraPrizeRaw : run23PrizeFromTier(febExtraRun, marchExtraPerf);
+
+  const regularPlus = fromIncentive.currentPerf * 4.5;
+
+  let total =
+    regularPlus +
+    week1InsPrize +
+    week1ProductPrize +
+    week2InsPrize +
+    week2ProductPrize +
+    fromIncentive.clubPlusPrize +
+    fromIncentive.doubleMeritzPrize +
+    run23BasePrize +
+    run23ExtraPrize;
+  if (selectedViewMonth !== 3) {
+    total += basePrize + extraPrize;
+  }
+  return total;
+}
+
+/** 1월 파트너 11개 시상 항목 합산 (배너 합산 시상금액용) */
+export function getPartnerJanuaryTotalPrizeFromCards(
+  agent: Agent,
+  januaryData: Record<string, unknown>,
+  fromIncentive: { currentPerf: number; clubPlusPrize: number }
+): number {
+  const j = januaryData ?? {};
+  const weekly = (agent as any).weekly ?? (agent as any)._janWeekly;
+  const week1InsPerf = Number(weekly?.week1 ?? 0);
+  const week1ProductPerf = Number((agent as any).productWeek1 ?? 0);
+  const week2InsPerf = Number(weekly?.week2 ?? 0);
+  const week2ProductPerf = Number((agent as any).productWeek2 ?? 0);
+  const week3Perf = Number(weekly?.week3 ?? 0);
+  const week4Perf = Number(weekly?.week4 ?? 0);
+  const janPerf = agent.performance?.["2026-01"] ?? 0;
+  const decPerf = agent.performance?.["2025-12"] ?? 0;
+
+  const week1InsPrize = toPrizeWon(Number(j.productWeek1PrizeJan ?? 0)) || getPartnerTierPrize(week1InsPerf);
+  const week1ProductPrize = toPrizeWon(Number(j.productWeek1PrizeJan ?? 0)) || getPartnerTierPrize(week1ProductPerf);
+  const week2InsPrize = toPrizeWon(Number(j.productWeek2InsPrizeJan ?? 0)) || getPartnerTierPrizeWeek2(week2InsPerf);
+  const week2ProductPrize = toPrizeWon(Number(j.productWeek2PrizeJan ?? 0)) || getPartnerTierPrizeWeek2(week2ProductPerf);
+  const week3Prize = toPrizeWon(Number(j.week3PrizeJan ?? 0)) || getPartnerTierPrize(week3Perf);
+  const week4PerfForCard = Number(j.week34SumJan ?? 0) || week4Perf;
+  const week4Prize = toPrizeWon(Number(j.week34PrizeJan ?? 0)) || getPartnerTierPrize(week4PerfForCard);
+
+  const continuous121Dec = Number(j.continuous121Dec ?? decPerf);
+  const continuous121Jan = Number(j.continuous121Jan ?? janPerf);
+  const continuous121PrizeRaw = toPrizeWon(Number(j.continuous121Prize ?? 0));
+  const continuous121Prize = continuous121PrizeRaw > 0 ? continuous121PrizeRaw : getPartnerContinuousPrize(continuous121Jan);
+  const continuous121Condition = continuous121Dec >= 100000 && continuous121Jan >= 100000;
+  const continuous121PrizeFinal = continuous121Condition ? continuous121Prize : 0;
+
+  const partner = (agent.partner != null && typeof agent.partner === "object")
+    ? (agent.partner as Record<string, unknown>)
+    : {};
+  const baseJan = Number(partner?.continuous12Jan ?? janPerf);
+  const baseFeb = Number(partner?.continuous12Feb ?? agent.performance?.["2026-02"] ?? 0);
+  const extraJan = Number(partner?.continuous12ExtraJan ?? partner?.continuous12Jan ?? janPerf);
+  const extraFeb = Number(partner?.continuous12ExtraFeb ?? partner?.continuous12Feb ?? baseFeb);
+  const basePrizeRaw = toPrizeWon(Number(partner?.continuous12Prize ?? 0));
+  const basePrizeComputed = basePrizeRaw > 0 ? basePrizeRaw : getPartnerContinuousPrize(baseJan);
+  const extraPrizeRaw = toPrizeWon(Number(partner?.continuous12ExtraPrize ?? 0));
+  const extraPrizeComputed = extraPrizeRaw > 0 ? extraPrizeRaw : getPartnerContinuousPrizeExtra(extraJan);
+  const baseConditionMet = baseJan >= 100000 && baseFeb >= 100000;
+  const extraConditionMet = extraJan >= 100000 && extraFeb >= 100000;
+  const basePrize = baseConditionMet ? basePrizeComputed : 0;
+  const extraPrize = extraConditionMet ? extraPrizeComputed : 0;
+
+  const regularPlus = fromIncentive.currentPerf * 4.5;
+  return (
+    regularPlus +
+    week1InsPrize +
+    week1ProductPrize +
+    week2InsPrize +
+    week2ProductPrize +
+    continuous121PrizeFinal +
+    week3Prize +
+    week4Prize +
+    basePrize +
+    extraPrize +
+    fromIncentive.clubPlusPrize
+  );
+}
 
 /**
  * 3월 AFG 조기가동 시상금: 실적 구간(10/20/30/40/50만 이상) × 시상률(%)

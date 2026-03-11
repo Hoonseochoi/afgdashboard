@@ -71,28 +71,40 @@ export function DirectDoubleMeritzCard({
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center min-h-0 pt-1">
-        <div className="grid grid-cols-3 gap-x-1.5 gap-y-3 w-full">
-        {DOUBLE_MERITZ_TIERS.map((tierMan) => {
-          const tierValue = tierMan * 10000;
-          const isAchieved = achieved && currentMonthPerf >= tierValue;
-          const isNextTarget = eligible && nextTierMan === tierMan;
-          return (
-            <span
-              key={tierMan}
-              className={`inline-flex items-center justify-center rounded-lg px-1.5 py-1 text-[10px] font-semibold transition-all ${
-                isAchieved
-                  ? "bg-amber-500 text-white dark:bg-amber-600 dark:text-white shadow-sm ring-2 ring-amber-400/30"
-                  : isNextTarget
-                    ? "bg-white/80 dark:bg-gray-800/70 text-amber-600 dark:text-amber-400 border-2 border-dashed border-amber-400 shadow-sm"
-                    : "bg-white/40 dark:bg-gray-800/40 text-gray-400 dark:text-gray-500 border border-gray-100 dark:border-gray-700"
-              }`}
-            >
-              {tierMan}만
-            </span>
-          );
-        })}
-        </div>
+      <div className="flex-1 flex items-center justify-center min-h-0 pt-1 min-h-[7rem]">
+        {!eligible ? (
+          <div className="relative w-full min-h-[7rem] flex-shrink-0">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img
+                src="/2xclub.png"
+                alt="2배 메리츠클럽"
+                className="max-h-24 w-auto object-contain scale-150 pointer-events-none"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-x-1.5 gap-y-3 w-full">
+            {DOUBLE_MERITZ_TIERS.map((tierMan) => {
+              const tierValue = tierMan * 10000;
+              const isAchieved = achieved && currentMonthPerf >= tierValue;
+              const isNextTarget = eligible && nextTierMan === tierMan;
+              return (
+                <span
+                  key={tierMan}
+                  className={`inline-flex items-center justify-center rounded-lg px-1.5 py-1 text-[10px] font-semibold transition-all ${
+                    isAchieved
+                      ? "bg-amber-500 text-white dark:bg-amber-600 dark:text-white shadow-sm ring-2 ring-amber-400/30"
+                      : isNextTarget
+                        ? "bg-white/80 dark:bg-gray-800/70 text-amber-600 dark:text-amber-400 border-2 border-dashed border-amber-400 shadow-sm"
+                        : "bg-white/40 dark:bg-gray-800/40 text-gray-400 dark:text-gray-500 border border-gray-100 dark:border-gray-700"
+                  }`}
+                >
+                  {tierMan}만
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="mt-auto pt-2 border-t border-gray-100/80 dark:border-gray-700/80">

@@ -28,14 +28,18 @@ export function ContinuousRun23Card({
   const march15Progress = Math.min(100, (march15Perf / marchTarget) * 100 || 0);
   const march8Progress = Math.min(100, (march8Perf / marchTarget) * 100 || 0);
 
-  const baseStatus = febPerf >= 100000 && march15Perf >= 100000 ? "조건 달성" : "진행 중";
-  const extraStatus = febExtraPerf >= 100000 && march8Perf >= 100000 ? "조건 달성" : "진행 중";
+  /** 2월 구간 10만 미만이면 미해당, 아니면 조건 달성 / 진행 중 */
+  const baseStatus = febPerf < 100000 ? "미해당" : febPerf >= 100000 && march15Perf >= 100000 ? "조건 달성" : "진행 중";
+  const extraStatus = febExtraPerf < 100000 ? "미해당" : febExtraPerf >= 100000 && march8Perf >= 100000 ? "조건 달성" : "진행 중";
 
   const febTicks = [100000, 200000, 300000, 500000];
   const maxTickReached = febTicks.reduce((acc, t) => (febPerf >= t ? t : acc), 0);
 
+  /** 2월 구간 둘 다 10만 미만이면 카드 투명도 50% */
+  const isNoEligible = febPerf < 100000 && febExtraPerf < 100000;
+
   return (
-    <div className={`${APPLE_CARD_BASE} h-full gap-1.5`}>
+    <div className={`${APPLE_CARD_BASE} h-full gap-1.5 ${isNoEligible ? "opacity-50" : ""}`}>
       <div className="absolute top-0 left-0 right-0 h-px opacity-60 bg-gradient-to-r from-transparent via-violet-300/70 to-transparent dark:via-violet-500/70" />
 
       <div className="flex items-start justify-between gap-3">
@@ -145,7 +149,7 @@ export function ContinuousRun23Card({
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-100 dark:bg-violet-800/60 text-violet-800 dark:text-violet-100">
                   추가 연속가동
                 </span>
-                <span className="text-[10px] font-medium text-red-600 dark:text-red-400">3월 1~8일</span>
+                <span className="text-[10px] font-medium text-red-600 dark:text-red-400">3월 1~15일</span>
               </div>
               <span className={`font-semibold text-xs ${extraStatus === "조건 달성" ? "text-emerald-600 dark:text-emerald-300" : "text-gray-700 dark:text-gray-200"}`}>
                 {extraStatus}

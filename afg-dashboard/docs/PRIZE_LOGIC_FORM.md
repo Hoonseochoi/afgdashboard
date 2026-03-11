@@ -302,6 +302,22 @@ PRIZE_SUM 엑셀은 **파트너 전용** 시상 실적·시상금을 `agents.par
 - **월간/주차 기본 실적**: `performance`, `weekly`는 MC_LIST 등 일일 업데이트로 채워지며, PRIZE_SUM은 **시상금·연속가동 구간 실적**만 `partner`로 보강합니다 (기본 실적 대체 아님).
 - 상세 컬럼 설명: `docs/PARTNER_PRIZE_RULES.md` §3.3 참고.
 
+### 5.4 파트너 카드별 시상금 표시 매핑 체크
+
+UI에 표시되는 시상금은 **원 단위**로 카드에 전달되고, `formatMan(원)`으로 "만원" 문자열로 표시됩니다. 엑셀에 만원 단위(예: 20)로 들어오면 `PartnerCards.tsx`에서 `toPrizeWon`(1~9999 → ×10000)으로 원으로 변환 후 사용합니다.
+
+| 카드 | 표시 시상금 출처 | 비고 |
+|------|-------------------|------|
+| **PartnerRegularPlusCard** | 카드 내부 계산: `currentPerf × 4.5` (450%) | incentiveData 미사용 |
+| **PartnerWeekCombinedCard** (1주차 인보험/상품) | 실적: 1주차 인보험=Supabase `weekly.week1`, 1주차 상품=`productWeek1`. 시상금: PRIZE_SUM(AB/AD) 우선, 없으면 구간별 달성금액 `getPartnerTierPrize(실적)` (10/20/30/50만원) | toPrizeWon 적용 후 fallback |
+| **DirectMeritzClubPlusCard** | `incentiveData.clubPlusPrize` | incentiveEngine 계산 |
+| **DirectDoubleMeritzCard** | `incentiveData.doubleMeritzPrize` | incentiveEngine 계산 |
+| **ContinuousRun12Card** | `partner.continuous12Prize`, `partner.continuous12ExtraPrize` (PRIZE_SUM BN/BT) | toPrizeWon 적용 |
+| **ContinuousRun23Card** | `partner.continuous23Prize`/`continuous23ExtraPrize` 우선, 없으면 run23Tiers(2월 구간+3월 10만)로 계산 | 원 단위 유지 |
+
+- **toPrizeWon**: `v > 0 && v < 10000`이면 `v * 10000` (만원→원), 아니면 그대로. 엑셀에 만원 단위로 적힌 시상금이 올바르게 "만원"으로 표시되도록 함.
+- 코드 위치: `src/app/partner/_components/PartnerCards.tsx` (카드별 매핑 주석 동일 내용).
+
 ---
 
 이 폼만 수정한 뒤 "PRIZE_LOGIC_FORM.md 반영해줘"라고 하면, 위 매핑대로 대시보드 코드에 숫자 반영하면 됩니다.

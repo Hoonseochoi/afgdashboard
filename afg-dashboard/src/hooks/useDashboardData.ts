@@ -5,7 +5,9 @@ import { Agent, User, ViewMonth, DashboardMode } from "@/types";
 import { RANK_EXCLUDE_CODE } from "@/app/_components/dashboard/constants";
 import { 
   calculateIncentiveData, 
-  preparePerformanceChartData 
+  preparePerformanceChartData,
+  getPartnerTotalPrizeFromCards,
+  getPartnerJanuaryTotalPrizeFromCards,
 } from "@/lib/engines/incentiveEngine";
 import { displayBranch } from "@/app/_components/dashboard/utils";
 
@@ -49,6 +51,8 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
   const [isMobile, setIsMobile] = useState(false);
   const [showPWAInstallPrompt, setShowPWAInstallPrompt] = useState(false);
   const [currentMonthNum, setCurrentMonthNum] = useState(1);
+  /** 1월 파트너 시상 고정 데이터 (코드별 API 조회) */
+  const [januaryPartnerPrize, setJanuaryPartnerPrize] = useState<Record<string, unknown> | null>(null);
 
   // Refs
   const deferredPromptRef = useRef<any>(null);
@@ -109,6 +113,27 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
+
+  // 1월 파트너 시상 고정 데이터 (코드별 조회)
+  useEffect(() => {
+    const code = selectedAgent?.code;
+    const isPartner = (selectedAgent?.branch || "").includes("파트너");
+    if (selectedViewMonth !== 1 || !isPartner || !code) {
+      setJanuaryPartnerPrize(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/january-partner-prize?code=${encodeURIComponent(String(code))}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data && typeof data === "object") setJanuaryPartnerPrize(data);
+        else if (!cancelled) setJanuaryPartnerPrize(null);
+      })
+      .catch(() => {
+        if (!cancelled) setJanuaryPartnerPrize(null);
+      });
+    return () => { cancelled = true; };
+  }, [selectedViewMonth, selectedAgent?.code, selectedAgent?.branch]);
 
   // 데이터 페칭
   useEffect(() => {
@@ -397,9 +422,47 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     if (!selectedAgent) return null;
     const ranksForMode = mode === "direct" ? directRanks : mode === "partner" ? partnerRanks : globalRanks;
     const data = calculateIncentiveData(selectedAgent, agents, selectedViewMonth, ranksForMode, updateDate);
-    const performanceData = preparePerformanceChartData(selectedAgent);
-    return { ...data, performanceData };
-  }, [selectedAgent, agents, selectedViewMonth, globalRanks, directRanks, partnerRanks, mode, updateDate]);
+    let performanceData = preparePerformanceChartData(selectedAgent);
+    const isPartnerBranch = (selectedAgent.branch || "").includes("파트너");
+    let totalPrize =
+      isPartnerBranch && data
+        ? getPartnerTotalPrizeFromCards(selectedAgent, selectedViewMonth, {
+            currentPerf: data.currentPerf,
+            clubPlusPrize: data.clubPlusPrize ?? 0,
+            doubleMeritzPrize: data.doubleMeritzPrize ?? 0,
+          })
+        : data?.totalPrize ?? 0;
+    if (selectedViewMonth === 1 && isPartnerBranch && data && januaryPartnerPrize != null && typeof januaryPartnerPrize === "object") {
+      totalPrize = getPartnerJanuaryTotalPrizeFromCards(selectedAgent, januaryPartnerPrize, {
+        currentPerf: data.currentPerf,
+        clubPlusPrize: data.clubPlusPrize ?? 0,
+      });
+    }
+
+    if (isPartnerBranch && data) {
+      performanceData = performanceData.map((item) => {
+        const monthNum = item.name === "1월" ? 1 : item.name === "2월" ? 2 : item.name === "3월" ? 3 : null;
+        if (monthNum == null) return item;
+        const incentiveForMonth = calculateIncentiveData(selectedAgent, agents, monthNum, ranksForMode, updateDate);
+        let prize: number;
+        if (monthNum === 1 && januaryPartnerPrize != null && typeof januaryPartnerPrize === "object") {
+          prize = getPartnerJanuaryTotalPrizeFromCards(selectedAgent, januaryPartnerPrize, {
+            currentPerf: incentiveForMonth.currentPerf,
+            clubPlusPrize: incentiveForMonth.clubPlusPrize ?? 0,
+          });
+        } else {
+          prize = getPartnerTotalPrizeFromCards(selectedAgent, monthNum, {
+            currentPerf: incentiveForMonth.currentPerf,
+            clubPlusPrize: incentiveForMonth.clubPlusPrize ?? 0,
+            doubleMeritzPrize: incentiveForMonth.doubleMeritzPrize ?? 0,
+          });
+        }
+        return { ...item, prize };
+      });
+    }
+
+    return { ...data, performanceData, totalPrize };
+  }, [selectedAgent, agents, selectedViewMonth, globalRanks, directRanks, partnerRanks, mode, updateDate, januaryPartnerPrize]);
 
   return {
     agents,
@@ -436,6 +499,7 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     setShowInstallHint,
     isMobile,
     incentiveData: incentiveData || ({} as any),
+    januaryPartnerPrize,
     handlePWAInstallClick,
     handleExportPng,
     handleChangePassword,

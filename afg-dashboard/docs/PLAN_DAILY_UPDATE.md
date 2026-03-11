@@ -1,8 +1,8 @@
-## Supabase 데일리 업데이트 플로우 (MC_LIST + 1주차 상품)
+## Supabase 데일리 업데이트 플로우 (MC_LIST + 1·2주차 상품)
 
 이 문서는 **데일리 업데이트** 시  
 1) **MC_LIST** 엑셀 기준 실적·주차·config·agent-order 반영,  
-2) **PRIZE_SUM** 엑셀 기준 **1주차 상품** 실적 반영  
+2) **PRIZE_SUM** 엑셀 기준 **1주차 상품**(AC열)·**2주차 상품**(AH열) 실적 반영  
 이 동시에 이루어지도록 정리한 것입니다.
 
 ---
@@ -13,7 +13,7 @@
 
 - **실행**: `python scripts/run-daily-update.py`  
   - 1단계: `node scripts/supabase-upload-daily.js` (MC_LIST)
-  - 2단계: `node scripts/supabase-upload-march-product-week1.js` (1주차 상품, PRIZE_SUM)
+  - 2단계: `node scripts/supabase-upload-march-product-week1.js` (1·2주차 상품, PRIZE_SUM)
 - **위치**: `afg-dashboard` 폴더에서 실행. `.env.local` 필요.
 
 ### 1.2 개별 스크립트
@@ -21,7 +21,7 @@
 | 스크립트 | 용도 | 입력 파일 패턴 |
 |----------|------|----------------|
 | `node scripts/supabase-upload-daily.js` | 당월/전월 실적, 1~4주차, config, agent-order | `data/daily` 최신 `NNNNMC_LIST*.xlsx` |
-| `node scripts/supabase-upload-march-product-week1.js` [경로] | 1주차 상품 실적 → `product_week1`, `weekly.productWeek1` | `data/daily` 최신 `NNNNPRIZE_SUM*.xlsx` 또는 인자로 경로 지정 |
+| `node scripts/supabase-upload-march-product-week1.js` [경로] | 1주차 상품(AC)·2주차 상품(AH) → `product_week1`, `product_week2`, `weekly.productWeek1`, `weekly.productWeek2` | `data/daily` 최신 `NNNNPRIZE_SUM*.xlsx` 또는 인자로 경로 지정 |
 
 - **필요 환경 변수 (`.env.local`)**
   - `SUPABASE_URL` 또는 `NEXT_PUBLIC_SUPABASE_URL`
@@ -40,15 +40,17 @@
 
 ---
 
-## 2. 1주차 상품(PRIZE_SUM) 반영
+## 2. 1·2주차 상품(PRIZE_SUM) 반영
 
 - **파일 패턴**: `data/daily` 아래 `NNNNPRIZE_SUM*.xlsx` (예: `0305PRIZE_SUM_OUT_202603.xlsx`).
 - **선택**: 인자 없이 실행 시 위 패턴 중 **가장 최신 파일** 사용. `node scripts/supabase-upload-march-product-week1.js "경로"` 로 파일 지정 가능.
 - **엑셀 매핑** (고정 인덱스):
   - **K열(인덱스 10)**: 설계사코드
-  - **AC열(인덱스 28)**: 상품 1주차 실적
+  - **AC열(인덱스 28)**: 상품 1주차 실적 → `product_week1`, `weekly.productWeek1`
+  - **AH열(인덱스 33)**: 상품 2주차 실적 → `product_week2`, `weekly.productWeek2`
 - **Supabase 반영**:
-  - `agents.product_week1` (컬럼), `agents.weekly.productWeek1` (JSON) 에 동일 값 반영.
+  - `agents.product_week1` (컬럼), `agents.weekly.productWeek1` (JSON) 에 AC열 값 반영.
+  - `agents.product_week2` (컬럼), `agents.weekly.productWeek2` (JSON) 에 AH열 값 반영.
   - 기존 `weekly` 의 나머지 키(week1~4 등)는 유지한 채 merge.
 - **파일 없음**: 해당 패턴 파일이 없으면 스크립트는 “1주차 상품 업데이트 생략” 후 exit 0으로 종료합니다.
 

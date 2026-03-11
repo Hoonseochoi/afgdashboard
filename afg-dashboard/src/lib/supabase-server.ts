@@ -78,6 +78,8 @@ export type SupabaseAgentRecord = {
   weekly?: Record<string, number> | null;
   /** 상품별(통합·간편·어린이) 1주차 실적. 1주차 전체 실적은 weekly.week1 사용. */
   productWeek1?: number | null;
+  /** 상품별 2주차 실적. PRIZE_SUM AH열 → product_week2. */
+  productWeek2?: number | null;
   partner?: PartnerPrizeData | null;
   managerCode?: string | null;
   managerName?: string | null;
@@ -96,11 +98,13 @@ function safeNumber(v: unknown): number | null {
 }
 
 function rowToAgent(row: any): SupabaseAgentRecord {
-  const raw =
+  const raw1 =
     row?.product_week1 != null
       ? row.product_week1
       : row?.weekly?.productWeek1;
-  const productWeek1 = safeNumber(raw);
+  const productWeek1 = safeNumber(raw1);
+  const raw2 = row?.product_week2 != null ? row.product_week2 : row?.weekly?.productWeek2;
+  const productWeek2 = safeNumber(raw2);
   let partner: PartnerPrizeData | null = null;
   if (row.partner != null) {
     if (typeof row.partner === 'string') {
@@ -131,6 +135,7 @@ function rowToAgent(row: any): SupabaseAgentRecord {
     performance: (row.performance || null) as Record<string, number> | null,
     weekly,
     productWeek1: productWeek1 ?? null,
+    productWeek2: productWeek2 ?? null,
     partner,
     managerCode: row.manager_code ?? null,
     managerName: row.manager_name ?? null,

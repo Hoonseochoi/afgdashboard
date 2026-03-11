@@ -74,6 +74,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     displayBranch,
     isCaptureMode,
     updateDate,
+    januaryPartnerPrize,
   } = useDashboardData({ mode, initialCode, exportAreaRef });
 
   if (loading) return <LoadingLines />;
@@ -222,6 +223,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 selectedViewMonth={selectedViewMonth}
                 selectedAgent={selectedAgent}
                 incentiveData={incentiveData}
+                januaryPartnerPrize={januaryPartnerPrize}
               />
             ) : (
               <DirectCards

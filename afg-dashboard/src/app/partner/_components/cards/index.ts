@@ -18,3 +18,9 @@ export type { ContinuousRun12Props } from "./ContinuousRun12Card";
 
 export { ContinuousRun23Card } from "./ContinuousRun23Card";
 export type { ContinuousRun23Props } from "./ContinuousRun23Card";
+
+export { ContinuousRun121Card } from "./ContinuousRun121Card";
+export type { ContinuousRun121Props } from "./ContinuousRun121Card";
+
+export { PartnerWeekSingleCard } from "./PartnerWeekSingleCard";
+export type { PartnerWeekSingleCardProps } from "./PartnerWeekSingleCard";

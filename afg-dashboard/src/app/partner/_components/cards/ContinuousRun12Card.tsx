@@ -11,6 +11,8 @@ export type ContinuousRun12Props = {
   extraJan: number;
   extraFeb: number;
   extraPrize: number;
+  /** 이미 종료된 시상에서 달성금이 둘 다 0일 때 카드 투명도 50% */
+  isEndedWithNoPrize?: boolean;
 };
 
 export function ContinuousRun12Card({
@@ -20,6 +22,7 @@ export function ContinuousRun12Card({
   extraJan,
   extraFeb,
   extraPrize,
+  isEndedWithNoPrize = false,
 }: ContinuousRun12Props) {
   const janTarget = 500000; // 50만
   const febTarget = 100000; // 10만
@@ -38,7 +41,7 @@ export function ContinuousRun12Card({
   const maxTickReached = janTicks.reduce((acc, t) => (baseJan >= t ? t : acc), 0);
 
   return (
-    <div className={`${APPLE_CARD_BASE} h-full gap-1.5`}>
+    <div className={`${APPLE_CARD_BASE} h-full gap-1.5 ${isEndedWithNoPrize ? "opacity-50" : ""}`}>
       <div className="absolute top-0 left-0 right-0 h-px opacity-60 bg-gradient-to-r from-transparent via-violet-300/70 to-transparent dark:via-violet-500/70" />
 
       <div className="flex items-start justify-between gap-3">
