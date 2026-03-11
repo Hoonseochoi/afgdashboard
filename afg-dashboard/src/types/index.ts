@@ -11,6 +11,8 @@ export interface Agent {
   code: string;
   name: string;
   branch: string;
+  /** GA 지점/대리점명 (예: WOORI BRANCH). Supabase agents.ga_branch */
+  gaBranch?: string | null;
   /** 매니저명 (상단 타이틀 브랜치 옆 표시용) */
   managerName?: string | null;
   performance: PerformanceData;

@@ -186,7 +186,9 @@ export async function GET(request: Request) {
       role: user.role,
       userAgent: request.headers.get('user-agent') ?? undefined,
     }).catch(() => {});
-    supabaseAuthAccessCountIncrement('page_view', { userCode: user.code, userName: user.name ?? undefined }).catch(() => {});
+    if (user.code) {
+      supabaseAuthAccessCountIncrement('page_view', { userCode: user.code, userName: user.name ?? undefined }).catch(() => {});
+    }
 
     if (session.code === DEV_MASTER_ID && !isSupabaseConfigured()) {
       const agentsData = getAgentsFromLocalJson();

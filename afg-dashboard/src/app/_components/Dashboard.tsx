@@ -101,7 +101,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const showPartnerContent = (mode === 'all' || mode === 'partner') && isPartnerBranch;
 
   const isWooriBranch = (() => {
-    const g = (selectedAgent?.ga_branch ?? selectedAgent?.gaBranch ?? '').toString().toLowerCase().trim();
+    const g = (selectedAgent?.gaBranch ?? '').toString().toLowerCase().trim();
     return g === 'woori branch' || g.includes('woori branch');
   })();
   const noticeMessage = isWooriBranch
