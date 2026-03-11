@@ -4,6 +4,7 @@ import {
   supabaseAgentsByMAgent,
   supabaseMAgentLoginGet,
   supabaseAuthActivityLogInsert,
+  supabaseAuthAccessCountIncrement,
   isSupabaseConfigured,
 } from '@/lib/supabase-server';
 
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
         role: userPayload.role,
         userAgent: request.headers.get('user-agent') ?? undefined,
       });
+      await supabaseAuthAccessCountIncrement('login', { userCode: userPayload.code, userName: userPayload.name });
       const response = NextResponse.json({ success: true, user: userPayload });
       response.cookies.set('auth_session', JSON.stringify(userPayload), {
         httpOnly: true,
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
         role: user.role,
         userAgent: request.headers.get('user-agent') ?? undefined,
       });
+      await supabaseAuthAccessCountIncrement('login', { userCode: user.code, userName: user.name });
       const response = NextResponse.json({ success: true, user });
       response.cookies.set('auth_session', JSON.stringify(user), {
         httpOnly: true,
@@ -126,6 +129,7 @@ export async function POST(request: Request) {
       role: user.role,
       userAgent: request.headers.get('user-agent') ?? undefined,
     });
+    await supabaseAuthAccessCountIncrement('login', { userCode: user.code, userName: user.name });
     const response = NextResponse.json({ success: true, user });
     response.cookies.set('auth_session', JSON.stringify(user), {
       httpOnly: true,

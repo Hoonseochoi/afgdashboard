@@ -275,6 +275,42 @@ export async function supabaseAuthActivityLogInsert(
   }
 }
 
+/** 사용자별 로그인/페이지뷰 횟수 +1 (auth_access_counts). 실패해도 예외를 던지지 않음. */
+export async function supabaseAuthAccessCountIncrement(
+  eventType: 'login' | 'page_view',
+  payload: { userCode: string; userName?: string },
+): Promise<void> {
+  if (!isSupabaseConfigured() || !payload.userCode?.trim()) return;
+  try {
+    const client = getServerClient();
+    const code = String(payload.userCode).trim();
+    const { data: existing } = await client
+      .from('auth_access_counts')
+      .select('login_count, page_view_count, user_name')
+      .eq('user_code', code)
+      .maybeSingle();
+
+    if (existing) {
+      const update =
+        eventType === 'login'
+          ? { login_count: (existing.login_count ?? 0) + 1, user_name: payload.userName ?? existing.user_name ?? null, updated_at: new Date().toISOString() }
+          : { page_view_count: (existing.page_view_count ?? 0) + 1, user_name: payload.userName ?? existing.user_name ?? null, updated_at: new Date().toISOString() };
+      const { error } = await client.from('auth_access_counts').update(update).eq('user_code', code);
+      if (error) console.error('auth_access_counts update error:', error.message);
+    } else {
+      const { error } = await client.from('auth_access_counts').insert({
+        user_code: code,
+        user_name: payload.userName ?? null,
+        login_count: eventType === 'login' ? 1 : 0,
+        page_view_count: eventType === 'page_view' ? 1 : 0,
+      });
+      if (error) console.error('auth_access_counts insert error:', error.message);
+    }
+  } catch (e) {
+    console.error('supabaseAuthAccessCountIncrement:', e);
+  }
+}
+
 /** config 테이블에서 key='app' 행 1건 조회 */
 export async function supabaseConfigGetApp(): Promise<{
   updateDate?: string;
