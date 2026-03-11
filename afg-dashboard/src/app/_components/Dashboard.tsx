@@ -3,6 +3,7 @@
 import React, { Suspense, useRef } from 'react';
 import LoadingLines from './shared/LoadingLines';
 import { Header } from './shared/Header';
+import { NoticeCard } from './shared/cards/NoticeCard';
 import { AgentBanner } from './shared/cards/AgentBanner';
 import { PerformanceChart } from './shared/PerformanceChart';
 import { MyHotCard } from './shared/cards/MyHotCard';
@@ -99,6 +100,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const isPartnerBranch = (selectedAgent?.branch || '').includes('파트너');
   const showPartnerContent = (mode === 'all' || mode === 'partner') && isPartnerBranch;
 
+  const isWooriBranch = (() => {
+    const g = (selectedAgent?.ga_branch ?? selectedAgent?.gaBranch ?? '').toString().toLowerCase().trim();
+    return g === 'woori branch' || g.includes('woori branch');
+  })();
+  const noticeMessage = isWooriBranch
+    ? 'GA업계 압도적 1위 WOORI Branch 이도경 지점장님의 생일을 축하드립니다 !'
+    : '메리츠와 함께 3월의 영업을 성공하세요 !';
+
   return (
     <Suspense fallback={<LoadingLines />}>
       <PasswordModal
@@ -145,6 +154,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-14">
         <div ref={exportAreaRef} className="space-y-0" data-capture-area>
+          <NoticeCard message={noticeMessage} isWooriNotice={isWooriBranch} />
           <AgentBanner
             selectedAgent={selectedAgent}
             selectedViewMonth={selectedViewMonth}
