@@ -10,6 +10,8 @@ import {
   supabaseConfigGetApp,
   supabaseAuthActivityLogInsert,
   supabaseAuthAccessCountIncrement,
+  supabaseNoticeGetActive,
+  supabaseAgentProfileImagesGetAll,
   isSupabaseConfigured,
   type SupabaseAgentRecord,
 } from '@/lib/supabase-server';
@@ -205,6 +207,17 @@ export async function GET(request: Request) {
     const configApp = await supabaseConfigGetApp();
     const updateDate = configApp?.updateDate ?? '0000';
 
+    let notice: { message: string } | null = null;
+    let profileImageMap: Record<string, string> = {};
+    try {
+      const [activeNotice, images] = await Promise.all([
+        supabaseNoticeGetActive('all'),
+        supabaseAgentProfileImagesGetAll(),
+      ]);
+      if (activeNotice) notice = { message: activeNotice.body || activeNotice.title || "" };
+      profileImageMap = images;
+    } catch (_) {}
+
     const isPartner = (a: SupabaseAgentRecord) => a.branch && String(a.branch).includes('파트너');
 
     if (session.code === '105203241') {
@@ -242,6 +255,8 @@ export async function GET(request: Request) {
         directRanks,
         partnerRanks,
         partnerAgents,
+        notice,
+        profileImageMap,
       });
     }
 
@@ -281,6 +296,8 @@ export async function GET(request: Request) {
         directRanks,
         partnerRanks,
         partnerAgents,
+        notice,
+        profileImageMap,
       });
     }
 
@@ -321,6 +338,8 @@ export async function GET(request: Request) {
         directRanks,
         partnerRanks,
         partnerAgents,
+        notice,
+        profileImageMap,
       });
     }
 
@@ -338,7 +357,7 @@ export async function GET(request: Request) {
       let agentsData = filtered.map(toSafeAgent);
       agentsData = sortByMarchPerformance(agentsData);
       const partnerAgents = agentsData.filter((a) => isPartner(a as any));
-      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, directRanks, partnerRanks, partnerAgents });
+      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, directRanks, partnerRanks, partnerAgents, notice, profileImageMap });
     }
 
     // m_agent(지점 ID) 로그인: 해당 지점 소속 설계사 전체 조회
@@ -364,6 +383,8 @@ export async function GET(request: Request) {
         directRanks,
         partnerRanks,
         partnerAgents,
+        notice,
+        profileImageMap,
       });
     }
 
@@ -390,7 +411,7 @@ export async function GET(request: Request) {
       const partnerAgents = allForRanks
         .filter((a) => a.code !== RANK_EXCLUDE_CODE && isPartner(a))
         .map(toSafeAgent);
-      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, directRanks, partnerRanks, partnerAgents });
+      return NextResponse.json({ user, agents: agentsData, updateDate, ranks, directRanks, partnerRanks, partnerAgents, notice, profileImageMap });
     }
 
     let agent = await supabaseAgentGetByCode(session.code!);
@@ -410,9 +431,9 @@ export async function GET(request: Request) {
       const partnerAgents = allForRanks
         .filter((a) => a.code !== RANK_EXCLUDE_CODE && isPartner(a))
         .map(toSafeAgent);
-      return NextResponse.json({ user, agents: [toSafeAgent(agent)], updateDate, ranks, directRanks, partnerRanks, partnerAgents });
+      return NextResponse.json({ user, agents: [toSafeAgent(agent)], updateDate, ranks, directRanks, partnerRanks, partnerAgents, notice, profileImageMap });
     }
-    return NextResponse.json({ user, agents: [], updateDate, partnerAgents: [] });
+    return NextResponse.json({ user, agents: [], updateDate, partnerAgents: [], notice, profileImageMap });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('Dashboard GET error:', message);

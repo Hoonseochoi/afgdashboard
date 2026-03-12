@@ -75,6 +75,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     isCaptureMode,
     updateDate,
     januaryPartnerPrize,
+    notice,
+    profileImageMap,
   } = useDashboardData({ mode, initialCode, exportAreaRef });
 
   if (loading) return <LoadingLines />;
@@ -92,22 +94,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const isTop3 = rankInMonth >= 1 && rankInMonth <= 3;
   const isTop30 = rankInMonth >= 1 && rankInMonth <= 30;
   
-  const profileImageSrc = isTop3 
-    ? "/top3_profile.png" 
-    : isTop30 
-      ? "/top30_profile.png" 
-      : "/default_profile.png";
+  const customProfileUrl = selectedAgent?.code ? profileImageMap?.[selectedAgent.code] : undefined;
+  const profileImageSrc = customProfileUrl
+    ? customProfileUrl
+    : isTop3
+      ? "/top3_profile.png"
+      : isTop30
+        ? "/top30_profile.png"
+        : "/default_profile.png";
 
   const isPartnerBranch = (selectedAgent?.branch || '').includes('파트너');
   const showPartnerContent = (mode === 'all' || mode === 'partner') && isPartnerBranch;
 
-  const isWooriBranch = (() => {
-    const g = (selectedAgent?.gaBranch ?? '').toString().toLowerCase().trim();
-    return g === 'woori branch' || g.includes('woori branch');
-  })();
-  const noticeMessage = isWooriBranch
-    ? 'GA업계 압도적 1위 WOORI Branch 이도경 지점장님의 생일을 축하드립니다 !'
-    : '메리츠와 함께 3월의 영업을 성공하세요 !';
+  /** 기본 공지: The BEST PARTNER, meritz (meritz만 RED + 볼드) */
+  const defaultNoticeHtml =
+    'The BEST PARTNER, <b><span style="color:#dc2626">meritz</span></b>';
+  const noticeMessage = notice?.message ?? defaultNoticeHtml;
 
   return (
     <Suspense fallback={<LoadingLines />}>
@@ -155,7 +157,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-14">
         <div ref={exportAreaRef} className="space-y-0" data-capture-area>
-          <NoticeCard message={noticeMessage} isWooriNotice={isWooriBranch} />
+          <NoticeCard message={noticeMessage} isWooriNotice={false} />
           <AgentBanner
             selectedAgent={selectedAgent}
             selectedViewMonth={selectedViewMonth}

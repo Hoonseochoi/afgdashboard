@@ -1,13 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { MovingBorderCard } from '@/components/ui/moving-border';
+import { sanitizeNoticeHtml } from '@/lib/notice-html';
 
-/** 한 줄 공지사항 카드. 상단 타이틀 바와 프로필 카드 사이에 배치, 프로필 카드와 동일 너비·세로는 프로필의 약 30% 높이 */
+/** 한 줄 공지사항 카드. 상단 타이틀 바와 프로필 카드 사이에 배치. message에 HTML(굵게/색상) 포함 가능 */
 interface NoticeCardProps {
-  /** 공지 문구 (한 줄 권장). isWooriNotice 시 무시되고 고정 문구 사용 */
+  /** 공지 문구. HTML(b, strong, i, em, span style color) 지원. isWooriNotice 시 무시 */
   message?: string;
-  /** WOORI 브랜치 공지일 때: 레드 무빙보더 + WOORI BRANCH(레드 강조) / 이도경지점장님(네이비 강조) */
+  /** WOORI 브랜치 공지일 때: 레드 무빙보더 + 고정 문구 */
   isWooriNotice?: boolean;
   className?: string;
 }
@@ -57,6 +58,12 @@ export function NoticeCard({ message, isWooriNotice = false, className = '' }: N
     );
   }
 
+  const isHtml = typeof message === 'string' && message.includes('<');
+  const sanitized = useMemo(
+    () => (isHtml && message ? sanitizeNoticeHtml(message) : ''),
+    [isHtml, message]
+  );
+
   return (
     <div
       role="region"
@@ -69,11 +76,18 @@ export function NoticeCard({ message, isWooriNotice = false, className = '' }: N
         mb-4 md:mb-5
       `}
     >
-      <span className="inline-flex items-center gap-2 truncate">
+      <span className="inline-flex items-center gap-2 min-w-0 flex-1">
         <span className="flex-shrink-0 text-meritz-gold" aria-hidden>
           <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
         </span>
-        <span className="truncate">{message ?? '공지사항이 없습니다.'}</span>
+        {isHtml && sanitized ? (
+          <span
+            className="break-words [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic"
+            dangerouslySetInnerHTML={{ __html: sanitized }}
+          />
+        ) : (
+          <span className="truncate">{message ?? '공지사항이 없습니다.'}</span>
+        )}
       </span>
     </div>
   );

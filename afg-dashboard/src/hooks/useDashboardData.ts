@@ -31,6 +31,8 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
   const [directRanks, setDirectRanks] = useState<Record<string, number[]>>({});
   const [partnerRanks, setPartnerRanks] = useState<Record<string, number[]>>({});
   const [updateDate, setUpdateDate] = useState<string>("");
+  const [notice, setNotice] = useState<{ message: string } | null>(null);
+  const [profileImageMap, setProfileImageMap] = useState<Record<string, string>>({});
   const [selectedViewMonth, setSelectedViewMonth] = useState<ViewMonth>(3);
   const [prizeMonthDropdownOpen, setPrizeMonthDropdownOpen] = useState(false);
   const [agentSearchOpen, setAgentSearchOpen] = useState(false);
@@ -166,6 +168,8 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
         const allAgents = data.agents || [];
         setAgents(allAgents);
         setUpdateDate(data.updateDate || "");
+        setNotice(data.notice ?? null);
+        setProfileImageMap(data.profileImageMap ?? {});
         if (data.ranks) setGlobalRanks(data.ranks);
         if (data.directRanks) setDirectRanks(data.directRanks);
         if (data.partnerRanks) setPartnerRanks(data.partnerRanks);
@@ -509,5 +513,7 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     retryKey,
     setRetryKey,
     updateDate,
+    notice,
+    profileImageMap,
   };
 }

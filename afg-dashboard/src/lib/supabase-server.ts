@@ -356,3 +356,200 @@ export async function supabaseAgentUpdate(
   }
 }
 
+// --- Admin 전용 (develope 계정): 공지사항, 프로필 이미지, 업로드 로그 ---
+
+export type NoticeTargetAudience = "all" | "direct" | "partner" | string; // string = JSON array of codes
+
+export type NoticeRecord = {
+  id: string;
+  title: string;
+  body: string;
+  enabled: boolean;
+  target_audience: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** 활성 공지 1건 조회 (enabled=true, target_audience이 all 또는 주어진 target과 일치). 없으면 null */
+export async function supabaseNoticeGetActive(
+  target: "all" | "direct" | "partner" = "all"
+): Promise<NoticeRecord | null> {
+  try {
+    const client = getServerClient();
+    const { data, error } = await client
+      .from("notices")
+      .select("id, title, body, enabled, target_audience, created_at, updated_at")
+      .eq("enabled", true)
+      .order("updated_at", { ascending: false })
+      .limit(10);
+    if (error || !data?.length) return null;
+    const row = data.find(
+      (r: any) => r.target_audience === "all" || r.target_audience === target
+    );
+    if (!row) return null;
+    return {
+      id: row.id,
+      title: row.title ?? "",
+      body: row.body ?? "",
+      enabled: !!row.enabled,
+      target_audience: row.target_audience ?? "all",
+      created_at: row.created_at ?? "",
+      updated_at: row.updated_at ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** notices 테이블 전체 조회 (admin) */
+export async function supabaseNoticesList(): Promise<NoticeRecord[]> {
+  const client = getServerClient();
+  const { data, error } = await client
+    .from("notices")
+    .select("id, title, body, enabled, target_audience, created_at, updated_at")
+    .order("updated_at", { ascending: false });
+  if (error) {
+    console.error("supabaseNoticesList error:", error.message);
+    throw error;
+  }
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    title: r.title ?? "",
+    body: r.body ?? "",
+    enabled: !!r.enabled,
+    target_audience: r.target_audience ?? "all",
+    created_at: r.created_at ?? "",
+    updated_at: r.updated_at ?? "",
+  }));
+}
+
+/** 공지 1건 생성 */
+export async function supabaseNoticeInsert(row: {
+  title: string;
+  body: string;
+  enabled?: boolean;
+  target_audience?: string;
+}): Promise<NoticeRecord> {
+  const client = getServerClient();
+  const { data, error } = await client
+    .from("notices")
+    .insert({
+      title: row.title,
+      body: row.body,
+      enabled: row.enabled ?? true,
+      target_audience: row.target_audience ?? "all",
+    })
+    .select("id, title, body, enabled, target_audience, created_at, updated_at")
+    .single();
+  if (error) {
+    console.error("supabaseNoticeInsert error:", error.message);
+    throw error;
+  }
+  return {
+    id: data.id,
+    title: data.title ?? "",
+    body: data.body ?? "",
+    enabled: !!data.enabled,
+    target_audience: data.target_audience ?? "all",
+    created_at: data.created_at ?? "",
+    updated_at: data.updated_at ?? "",
+  };
+}
+
+/** 공지 1건 수정 (enabled, target_audience, title, body) */
+export async function supabaseNoticeUpdate(
+  id: string,
+  patch: { title?: string; body?: string; enabled?: boolean; target_audience?: string }
+): Promise<void> {
+  const client = getServerClient();
+  const payload: Record<string, unknown> = {};
+  if (patch.title !== undefined) payload.title = patch.title;
+  if (patch.body !== undefined) payload.body = patch.body;
+  if (patch.enabled !== undefined) payload.enabled = patch.enabled;
+  if (patch.target_audience !== undefined) payload.target_audience = patch.target_audience;
+  if (Object.keys(payload).length === 0) return;
+  const { error } = await client.from("notices").update(payload).eq("id", id);
+  if (error) {
+    console.error("supabaseNoticeUpdate error:", error.message);
+    throw error;
+  }
+}
+
+/** agent_profile_images: 설계사별 프로필 이미지 URL 조회 (전체) */
+export async function supabaseAgentProfileImagesGetAll(): Promise<Record<string, string>> {
+  const client = getServerClient();
+  const { data, error } = await client
+    .from("agent_profile_images")
+    .select("agent_code, image_url");
+  if (error) {
+    console.error("supabaseAgentProfileImagesGetAll error:", error.message);
+    throw error;
+  }
+  const map: Record<string, string> = {};
+  for (const row of data || []) {
+    if (row.agent_code && row.image_url) map[row.agent_code] = row.image_url;
+  }
+  return map;
+}
+
+/** agent_profile_images: 한 명 이미지 설정(upsert) */
+export async function supabaseAgentProfileImageUpsert(
+  agentCode: string,
+  imageUrl: string
+): Promise<void> {
+  const client = getServerClient();
+  const { error } = await client
+    .from("agent_profile_images")
+    .upsert(
+      { agent_code: agentCode.trim(), image_url: imageUrl, updated_at: new Date().toISOString() },
+      { onConflict: "agent_code" }
+    );
+  if (error) {
+    console.error("supabaseAgentProfileImageUpsert error:", error.message);
+    throw error;
+  }
+}
+
+/** config 전체 행 조회 (admin용 - 업데이트 이력 등) */
+export async function supabaseConfigGetAll(): Promise<{ key: string; update_date?: string; [k: string]: unknown }[]> {
+  const client = getServerClient();
+  const { data, error } = await client.from("config").select("*");
+  if (error) {
+    console.error("supabaseConfigGetAll error:", error.message);
+    throw error;
+  }
+  return data || [];
+}
+
+/** upload_log 테이블이 있으면 최근 N건 조회 */
+export async function supabaseUploadLogList(limit = 100): Promise<Record<string, unknown>[]> {
+  try {
+    const client = getServerClient();
+    const { data, error } = await client
+      .from("upload_log")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+/** upload_history 테이블이 있으면 최근 N건 조회 */
+export async function supabaseUploadHistoryList(limit = 100): Promise<Record<string, unknown>[]> {
+  try {
+    const client = getServerClient();
+    const { data, error } = await client
+      .from("upload_history")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+

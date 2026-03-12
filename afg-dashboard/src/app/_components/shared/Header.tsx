@@ -61,9 +61,16 @@ export function Header({
 
   const isAdminLike = user?.role === "admin" || user?.role === "manager" || user?.role === "m_agent_manager";
   const inAdminManage = pathname?.startsWith("/direct/manage");
+  const inAdminPage = pathname?.startsWith("/direct/admin");
+  const isDevelope = user?.code === "develope";
 
   const handleGoToManage = () => {
     router.push("/direct/manage");
+    setProfileMenuOpen(false);
+  };
+
+  const handleGoToAdmin = () => {
+    router.push("/direct/admin");
     setProfileMenuOpen(false);
   };
 
@@ -134,6 +141,22 @@ export function Header({
                     onClick={() => setProfileMenuOpen(false)}
                   />
                   <div className="absolute top-full right-0 mt-2 z-50 w-52 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl py-1.5 text-sm">
+                    {isDevelope && (
+                      <button
+                        type="button"
+                        onClick={handleGoToAdmin}
+                        className={`w-full flex items-center justify-between px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 ${
+                          inAdminPage ? "text-primary" : "text-gray-800 dark:text-gray-100"
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[18px] text-gray-500">
+                            settings
+                          </span>
+                          관리자 페이지
+                        </span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={handleGoToManage}
