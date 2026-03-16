@@ -26,6 +26,16 @@ export const MAR_W1_SPECIAL_PRIZES: [number, number][] = [[1200000, 6000000], [1
 export const MAR_W1_PATAYA_PRIZES: [number, number][] = [[1000000, 5000000], [700000, 2100000], [500000, 1000000], [300000, 300000], [200000, 200000]];
 /** 3월 2주차 특별 현금시상: 20→20, 30→30, 50→50, 80→160, 100→300, 120→480 (만원) */
 export const MAR_W2_SPECIAL_PRIZES: [number, number][] = [[1200000, 4800000], [1000000, 3000000], [800000, 1600000], [500000, 500000], [300000, 300000], [200000, 200000]];
+/** 3월 3주차 특별 현금시상: 10→10, 20→20, 30→30, 50→100, 80→160, 100→300, 120→300 (만원) */
+export const MAR_W3_SPECIAL_PRIZES: [number, number][] = [
+  [100000, 100000],
+  [200000, 200000],
+  [300000, 300000],
+  [500000, 1000000],
+  [800000, 1600000],
+  [1000000, 3000000],
+  [1200000, 3000000],
+];
 
 export const MONTHLY_TIERS = [1000000, 1200000, 1500000, 1800000, 2000000, 2500000];
 export const PLUS_TIERS = [200000, 400000, 600000, 800000, 1000000];
@@ -410,6 +420,13 @@ export const calculateMarW2SpecialPrize = (w2Perf: number): any => {
 };
 
 /**
+ * 3월 3주차 특별 현금시상 (구간 10/20/30/50/80/100/120만)
+ */
+export const calculateMarW3SpecialPrize = (w3Perf: number): any => {
+  return calculateIncentiveTier(w3Perf, MAR_W3_SPECIAL_PRIZES);
+};
+
+/**
  * 정규시상 계산
  */
 export const calculateRegularPrize = (perf: number, isPartner: boolean): number => {
@@ -705,12 +722,15 @@ export const calculateIncentiveData = (
   // 파타야 및 3월 특별 시상 (3월 1·2주차 기준) — 총합 계산 전에 필요
   const week1Perf = weekData.find(w => w.week === 1)?.performance ?? 0;
   const week2Perf = weekData.find(w => w.week === 2)?.performance ?? 0;
+  const week3Perf = weekData.find(w => w.week === 3)?.performance ?? 0;
   const patayaResult = selectedMonth === 3 ? calculatePatayaTravelIncentive(week1Perf) : null;
   const marchW1SpecialResult = selectedMonth === 3 ? calculateMarW1SpecialPrize(week1Perf) : null;
   const marchW2SpecialResult = selectedMonth === 3 ? calculateMarW2SpecialPrize(week2Perf) : null;
   const patayaPrize = patayaResult ? patayaResult.prize : 0;
   const marchW1SpecialPrize = marchW1SpecialResult ? marchW1SpecialResult.prize : 0;
   const marchW2SpecialPrize = marchW2SpecialResult ? marchW2SpecialResult.prize : 0;
+  const marchW3SpecialResult = selectedMonth === 3 ? calculateMarW3SpecialPrize(week3Perf) : null;
+  const marchW3SpecialPrize = marchW3SpecialResult ? marchW3SpecialResult.prize : 0;
 
   // 3월 AFG 조기가동: 1주 400%, 2주 300%, 3주 250%, 4주 200% × 구간(10/20/30/40/50만)
   const earlyRunWeekPerfs = [1, 2, 3, 4].map((wNum) => weekData.find(w => w.week === wNum)?.performance ?? 0);
@@ -731,7 +751,7 @@ export const calculateIncentiveData = (
   });
   // 3월 다이렉트: 파타야 + 2주차 특별 + 조기가동 시상이 카드에 있으므로 총합에 포함
   if (selectedMonth === 3 && !isPartner) {
-    totalPrize += patayaPrize + marchW2SpecialPrize + earlyRunTotalPrize;
+    totalPrize += patayaPrize + marchW2SpecialPrize + marchW3SpecialPrize + earlyRunTotalPrize;
   }
 
   // 순위 및 목표
@@ -768,6 +788,7 @@ export const calculateIncentiveData = (
     patayaPrize,
     marchW1SpecialPrize,
     marchW2SpecialPrize,
+    marchW3SpecialPrize,
     earlyRunWeekPrizes,
     earlyRunWeekPerfs,
     earlyRunTotalPrize,

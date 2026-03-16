@@ -27,6 +27,8 @@ export function DirectCards({
         week1SpecialPrize={incentiveData.marchW1SpecialPrize}
         viewW2={incentiveData.viewW2 ?? 0}
         week2SpecialPrize={incentiveData.marchW2SpecialPrize ?? 0}
+        viewW3={incentiveData.viewW3 ?? 0}
+        week3SpecialPrize={incentiveData.marchW3SpecialPrize ?? 0}
         week1PatayaPrize={incentiveData.patayaPrize}
         currentMonthPerf={incentiveData.currentPerf}
         prevMonthPerf={selectedAgent.performance?.["2026-02"] ?? 0}

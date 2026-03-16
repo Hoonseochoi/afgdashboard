@@ -22,6 +22,16 @@ function formatMan(amount: number | null | undefined): string {
 const SPECIAL_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000], [500000, 1000000], [800000, 2400000], [1000000, 4000000], [1200000, 6000000]];
 /** 2주차 특별: 20→20, 30→30, 50→50, 80→160, 100→300, 120→480 (만원) */
 const SPECIAL_W2_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000], [500000, 500000], [800000, 1600000], [1000000, 3000000], [1200000, 4800000]];
+/** 3주차 특별: 10→10, 20→20, 30→30, 50→100, 80→160, 100→300, 120→300 (만원) */
+const SPECIAL_W3_TIERS_ASC: [number, number][] = [
+  [100000, 100000],
+  [200000, 200000],
+  [300000, 300000],
+  [500000, 1000000],
+  [800000, 1600000],
+  [1000000, 3000000],
+  [1200000, 3000000],
+];
 const PATAYA_TIERS_ASC: [number, number][] = [[200000, 200000], [300000, 300000], [500000, 1000000], [700000, 2100000], [1000000, 5000000]];
 
 function getNextTierAndPrize(perf: number, tiersAsc: [number, number][]): { gap: number; addPrize: number } | null {
@@ -58,6 +68,8 @@ export interface MarchCardsProps {
   week1SpecialPrize: number;
   viewW2: number;
   week2SpecialPrize: number;
+  viewW3: number;
+  week3SpecialPrize: number;
   week1PatayaPrize: number;
   currentMonthPerf: number;
   prevMonthPerf: number;
@@ -88,6 +100,8 @@ export function MarchCards(props: MarchCardsProps) {
     week1SpecialPrize,
     viewW2,
     week2SpecialPrize,
+    viewW3,
+    week3SpecialPrize,
     week1PatayaPrize,
     currentMonthPerf,
     prevMonthPerf,
@@ -289,6 +303,64 @@ export function MarchCards(props: MarchCardsProps) {
             const next = getNextTierAndPrize(viewW2, SPECIAL_W2_TIERS_ASC);
             if (!next || next.gap <= 0) return null;
             return <p className="text-[11px] text-emerald-500 dark:text-emerald-400 mt-1 font-medium">+{formatMan(next.gap)}만 더 → 시상금 +{formatMan(next.addPrize)}만</p>;
+          })()}
+        </div>
+      </motion.div>
+
+      {/* ── 3주차 특별 현금시상 (골드 테두리 강조) ── */}
+      <motion.div
+        variants={itemVariants}
+        className={`${card} ${glassLight} px-2 py-[0.55rem] flex flex-col h-full border-2 border-amber-400 dark:border-amber-300 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]`}
+      >
+        {(() => {
+          const isMax = viewW3 >= 1200000;
+          const badge =
+            viewW3 >= 1200000 ? "120만구간 달성"
+            : viewW3 >= 1000000 ? "100만구간도전"
+            : viewW3 >= 800000 ? "80만구간도전"
+            : viewW3 >= 500000 ? "50만구간도전"
+            : viewW3 >= 300000 ? "30만구간도전"
+            : viewW3 >= 200000 ? "20만구간도전"
+            : viewW3 >= 100000 ? "10만구간도전"
+            : "도전 시작";
+          return (
+            <div className="flex items-center justify-between mb-1">
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 tracking-tight">3주차 구간 시상</p>
+                <h3 className="text-[14px] font-bold text-gray-900 dark:text-white leading-tight">3주차 특별 현금시상</h3>
+              </div>
+              <span
+                className={
+                  isMax
+                    ? "text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 rounded-full"
+                    : "text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded-full"
+                }
+              >
+                {badge}
+              </span>
+            </div>
+          );
+        })()}
+        <TierBadges tiersMan={[10, 20, 30, 50, 80, 100, 120]} currentPerf={viewW3} className="mb-1" />
+        <div className="mt-[0.05rem]">
+          <div className="mt-1.5 pt-1.5 border-t border-gray-200/60 dark:border-white/[0.06] flex items-end justify-between">
+            <div>
+              <p className={labelCls}>현재</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{formatMan(viewW3)}만</p>
+            </div>
+            <div className="text-right">
+              <p className={labelCls}>예상 시상금</p>
+              <p className={prizeCls}>{formatMan(week3SpecialPrize)}만원</p>
+            </div>
+          </div>
+          {(() => {
+            const next = getNextTierAndPrize(viewW3, SPECIAL_W3_TIERS_ASC);
+            if (!next || next.gap <= 0) return null;
+            return (
+              <p className="text-[11px] text-emerald-500 dark:text-emerald-400 mt-1 font-medium">
+                +{formatMan(next.gap)}만 더 → 시상금 +{formatMan(next.addPrize)}만
+              </p>
+            );
           })()}
         </div>
       </motion.div>
