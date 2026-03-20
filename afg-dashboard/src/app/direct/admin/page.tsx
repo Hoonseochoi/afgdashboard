@@ -298,6 +298,9 @@ function AdminContent() {
         handleLogout={handleLogout}
         handleExportPng={handleExportPng}
         handlePWAInstallClick={handlePWAInstallClick}
+        pushEnabled={false}
+        onTogglePush={() => {}}
+        onOpenPushSend={() => {}}
       />
 
       <main className="max-w-[1000px] mx-auto px-4 sm:px-6 py-8 pb-14">

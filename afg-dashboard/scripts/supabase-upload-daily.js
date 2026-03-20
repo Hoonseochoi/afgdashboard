@@ -291,9 +291,39 @@ async function main() {
     console.log('  agent-order.json 저장 (MC_LIST 순서,', codesForOrder.length, '명)');
   }
   console.log('[Supabase Daily] 완료. updateDate:', updateDate, '실적 반영:', updated, '건, 신규 생성:', created);
+  return updateDate;
 }
 
-main().catch((err) => {
+main().then(async (updateDate) => {
+  // Push 알림 발송 (업로드 완료 시)
+  if (!updateDate) return;
+  const PUSH_API_SECRET = process.env.PUSH_API_SECRET || '';
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://afg-dashboard.vercel.app';
+  if (!PUSH_API_SECRET) {
+    console.log('[Push] PUSH_API_SECRET 없음 - push 발송 건너뜀');
+    return;
+  }
+  try {
+    // MM.DD 포맷
+    const dateParts = String(updateDate).split('-'); // "2026-03-20" → ["2026","03","20"]
+    const mmdd = dateParts.length >= 3 ? `${dateParts[1]}.${dateParts[2]}` : updateDate;
+    const title = `${mmdd} 데이터 업로드 완료!`;
+    const body = '지금 여기를 눌러 시상금을 확인하세요!';
+    const res = await fetch(`${APP_URL}/api/push/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body, apiKey: PUSH_API_SECRET }),
+    });
+    const result = await res.json();
+    if (result.ok) {
+      console.log(`[Push] 발송 완료: ${result.sent}/${result.total}명`);
+    } else {
+      console.warn('[Push] 발송 실패:', result.error);
+    }
+  } catch (e) {
+    console.warn('[Push] 발송 오류:', e.message);
+  }
+}).catch((err) => {
   console.error(err);
   process.exit(1);
 });

@@ -56,6 +56,11 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
   /** 1월 파트너 시상 고정 데이터 (코드별 API 조회) */
   const [januaryPartnerPrize, setJanuaryPartnerPrize] = useState<Record<string, unknown> | null>(null);
 
+  // Push notification state
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [showPushPermission, setShowPushPermission] = useState(false);
+  const [showPushSend, setShowPushSend] = useState(false);
+
   // Refs
   const deferredPromptRef = useRef<any>(null);
 
@@ -115,6 +120,32 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
+
+  // Push 알림 - 구독/해제 처리
+  useEffect(() => {
+    if (typeof window === "undefined" || !user) return;
+    const isDevelope = user.code === "develope";
+
+    // develope: 항상 ON 상태 유지 (구독 자동 등록)
+    if (isDevelope) {
+      setPushEnabled(true);
+      autoSubscribePush();
+      return;
+    }
+
+    // 일반 유저: localStorage에서 상태 읽기
+    const stored = localStorage.getItem("push_enabled");
+    const asked = localStorage.getItem("push_permission_asked");
+    if (stored === "true") {
+      setPushEnabled(true);
+      // 이미 구독 등록된 상태면 다시 등록 (브라우저 재시작 등에 대비)
+      ensurePushSubscribed();
+    } else if (!asked) {
+      // 처음 접속 → 2초 후 모달 표시
+      const t = setTimeout(() => setShowPushPermission(true), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [user]);
 
   // 1월 파트너 시상 고정 데이터 (코드별 조회)
   useEffect(() => {
@@ -468,6 +499,124 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     return { ...data, performanceData, totalPrize };
   }, [selectedAgent, agents, selectedViewMonth, globalRanks, directRanks, partnerRanks, mode, updateDate, januaryPartnerPrize]);
 
+  async function autoSubscribePush() {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return;
+      const reg = await navigator.serviceWorker.ready;
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+      const subJson = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subJson),
+      });
+    } catch (e) {
+      console.warn("[Push] autoSubscribePush error:", e);
+    }
+  }
+
+  async function ensurePushSubscribed() {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) return; // 이미 구독 중
+      const perm = Notification.permission;
+      if (perm !== "granted") return;
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+      const subJson = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subJson),
+      });
+    } catch (e) {
+      console.warn("[Push] ensurePushSubscribed error:", e);
+    }
+  }
+
+  function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    const buffer = new ArrayBuffer(rawData.length);
+    const view = new Uint8Array(buffer);
+    for (let i = 0; i < rawData.length; i++) view[i] = rawData.charCodeAt(i);
+    return view;
+  }
+
+  const handleAllowPush = async () => {
+    setShowPushPermission(false);
+    localStorage.setItem("push_permission_asked", "true");
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return;
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+      const reg = await navigator.serviceWorker.ready;
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+      const subJson = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subJson),
+      });
+      setPushEnabled(true);
+      localStorage.setItem("push_enabled", "true");
+    } catch (e) {
+      console.warn("[Push] handleAllowPush error:", e);
+    }
+  };
+
+  const handleDenyPush = () => {
+    setShowPushPermission(false);
+    localStorage.setItem("push_permission_asked", "true");
+    localStorage.setItem("push_enabled", "false");
+  };
+
+  const handleTogglePush = async () => {
+    if (pushEnabled) {
+      // 끄기: 구독 해제
+      try {
+        if ("serviceWorker" in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) {
+            await fetch("/api/push/subscribe", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ endpoint: sub.endpoint }),
+            });
+            await sub.unsubscribe();
+          }
+        }
+      } catch (e) {
+        console.warn("[Push] unsubscribe error:", e);
+      }
+      setPushEnabled(false);
+      localStorage.setItem("push_enabled", "false");
+    } else {
+      // 켜기: 구독 등록
+      await handleAllowPush();
+    }
+  };
+
   return {
     agents,
     selectedAgent,
@@ -515,5 +664,13 @@ export function useDashboardData({ mode = "all", initialCode = null, exportAreaR
     updateDate,
     notice,
     profileImageMap,
+    pushEnabled,
+    showPushPermission,
+    setShowPushPermission,
+    showPushSend,
+    setShowPushSend,
+    handleAllowPush,
+    handleDenyPush,
+    handleTogglePush,
   };
 }

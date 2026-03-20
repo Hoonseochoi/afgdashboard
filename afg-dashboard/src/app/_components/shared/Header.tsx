@@ -29,6 +29,9 @@ interface HeaderProps {
   handleLogout: () => void;
   handleExportPng: () => void;
   handlePWAInstallClick: () => void;
+  pushEnabled: boolean;
+  onTogglePush: () => void;
+  onOpenPushSend: () => void;
 }
 
 export function Header({
@@ -54,6 +57,9 @@ export function Header({
   handleLogout,
   handleExportPng,
   handlePWAInstallClick,
+  pushEnabled,
+  onTogglePush,
+  onOpenPushSend,
 }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -232,14 +238,41 @@ export function Header({
               </button>
             )}
 
-            <button
-              type="button"
-              onClick={() => setShowPrizeGuide(true)}
-              className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm sm:text-base">visibility</span>
-              시상안보기
-            </button>
+            {isDevelope ? (
+              <button
+                type="button"
+                onClick={onOpenPushSend}
+                className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-blue-600 text-white border border-blue-700 shadow-sm hover:bg-blue-700 transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm sm:text-base">campaign</span>
+                푸시 발송
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onTogglePush}
+                  className={`inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium border shadow-sm transition-colors ${
+                    pushEnabled
+                      ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                  title={pushEnabled ? "푸시 알림 켜짐 (클릭하여 끄기)" : "푸시 알림 꺼짐 (클릭하여 켜기)"}
+                >
+                  <span className="material-symbols-outlined text-sm sm:text-base">
+                    {pushEnabled ? "notifications_active" : "notifications_off"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPrizeGuide(true)}
+                  className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 rounded-md text-[11px] sm:text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm sm:text-base">visibility</span>
+                  시상안보기
+                </button>
+              </>
+            )}
           </div>
         </div>
 

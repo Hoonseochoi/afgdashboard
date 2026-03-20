@@ -9,6 +9,8 @@ import { PerformanceChart } from './shared/PerformanceChart';
 import { MyHotCard } from './shared/cards/MyHotCard';
 import { PasswordModal } from './shared/modals/PasswordModal';
 import { PrizeGuideModal } from './shared/modals/PrizeGuideModal';
+import { PushPermissionModal } from './shared/PushPermissionModal';
+import { PushSendModal } from './shared/PushSendModal';
 import { PartnerCards } from '../partner/_components/PartnerCards';
 import { DirectCards } from '../direct/_components/cards/DirectCards';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -66,6 +68,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
     directRanks,
     partnerRanks,
     
+    // Push
+    pushEnabled,
+    showPushPermission,
+    showPushSend,
+    setShowPushSend,
+    handleAllowPush,
+    handleDenyPush,
+    handleTogglePush,
+
     // Handlers
     handlePWAInstallClick,
     handleExportPng,
@@ -130,6 +141,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
         imageSrcs={['/26032w%20direct.jpg', '/26031w_prize.jpg']}
       />
 
+      {showPushPermission && user?.code !== "develope" && (
+        <PushPermissionModal
+          onAllow={handleAllowPush}
+          onDeny={handleDenyPush}
+        />
+      )}
+
+      <PushSendModal
+        isOpen={showPushSend}
+        onClose={() => setShowPushSend(false)}
+      />
+
       <Header
         user={user}
         selectedAgent={selectedAgent}
@@ -153,6 +176,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         handleLogout={handleLogout}
         handleExportPng={handleExportPng}
         handlePWAInstallClick={handlePWAInstallClick}
+        pushEnabled={pushEnabled}
+        onTogglePush={handleTogglePush}
+        onOpenPushSend={() => setShowPushSend(true)}
       />
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-14">

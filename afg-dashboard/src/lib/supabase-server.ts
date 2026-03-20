@@ -553,3 +553,62 @@ export async function supabaseUploadHistoryList(limit = 100): Promise<Record<str
   }
 }
 
+// --- Push Notifications ---
+
+export type PushSubscriptionRecord = {
+  id: string;
+  user_code: string;
+  endpoint: string;
+  p256dh: string;
+  auth_key: string;
+  created_at: string;
+};
+
+/** push_subscriptions: 구독 저장 (upsert by endpoint) */
+export async function supabasePushSubscriptionUpsert(
+  userCode: string,
+  subscription: { endpoint: string; keys: { p256dh: string; auth: string } }
+): Promise<void> {
+  const client = getServerClient();
+  const { error } = await client.from("push_subscriptions").upsert(
+    {
+      user_code: userCode,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth_key: subscription.keys.auth,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "endpoint" }
+  );
+  if (error) {
+    console.error("supabasePushSubscriptionUpsert error:", error.message);
+    throw error;
+  }
+}
+
+/** push_subscriptions: endpoint로 구독 삭제 */
+export async function supabasePushSubscriptionDelete(endpoint: string): Promise<void> {
+  const client = getServerClient();
+  const { error } = await client
+    .from("push_subscriptions")
+    .delete()
+    .eq("endpoint", endpoint);
+  if (error) {
+    console.error("supabasePushSubscriptionDelete error:", error.message);
+    throw error;
+  }
+}
+
+/** push_subscriptions: 전체 구독 목록 조회 (push 발송용) */
+export async function supabasePushSubscriptionsGetAll(): Promise<PushSubscriptionRecord[]> {
+  const client = getServerClient();
+  const { data, error } = await client
+    .from("push_subscriptions")
+    .select("id, user_code, endpoint, p256dh, auth_key, created_at");
+  if (error) {
+    console.error("supabasePushSubscriptionsGetAll error:", error.message);
+    throw error;
+  }
+  return data || [];
+}
+
