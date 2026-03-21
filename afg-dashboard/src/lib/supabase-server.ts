@@ -553,15 +553,7 @@ export async function supabaseUploadHistoryList(limit = 100): Promise<Record<str
   }
 }
 
-// --- Push Notifications (pg 직접 연결 — PostgREST 스키마 캐시 우회) ---
-
-import { Pool } from "pg";
-
-function getPgPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error("DATABASE_URL 환경변수가 없습니다.");
-  return new Pool({ connectionString, ssl: { rejectUnauthorized: false }, max: 3 });
-}
+// --- Push Notifications ---
 
 export type PushSubscriptionRecord = {
   id: string;
@@ -577,47 +569,46 @@ export async function supabasePushSubscriptionUpsert(
   userCode: string,
   subscription: { endpoint: string; keys: { p256dh: string; auth: string } }
 ): Promise<void> {
-  const pool = getPgPool();
-  try {
-    await pool.query(
-      `INSERT INTO public.push_subscriptions (user_code, endpoint, p256dh, auth_key, updated_at)
-       VALUES ($1, $2, $3, $4, now())
-       ON CONFLICT (endpoint) DO UPDATE
-         SET user_code = EXCLUDED.user_code,
-             p256dh    = EXCLUDED.p256dh,
-             auth_key  = EXCLUDED.auth_key,
-             updated_at = now()`,
-      [userCode, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]
-    );
-  } finally {
-    await pool.end();
+  const client = getServerClient();
+  const { error } = await client.from("push_subscriptions").upsert(
+    {
+      user_code: userCode,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth_key: subscription.keys.auth,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "endpoint" }
+  );
+  if (error) {
+    console.error("supabasePushSubscriptionUpsert error:", error.message);
+    throw error;
   }
 }
 
 /** push_subscriptions: endpoint로 구독 삭제 */
 export async function supabasePushSubscriptionDelete(endpoint: string): Promise<void> {
-  const pool = getPgPool();
-  try {
-    await pool.query(
-      `DELETE FROM public.push_subscriptions WHERE endpoint = $1`,
-      [endpoint]
-    );
-  } finally {
-    await pool.end();
+  const client = getServerClient();
+  const { error } = await client
+    .from("push_subscriptions")
+    .delete()
+    .eq("endpoint", endpoint);
+  if (error) {
+    console.error("supabasePushSubscriptionDelete error:", error.message);
+    throw error;
   }
 }
 
 /** push_subscriptions: 전체 구독 목록 조회 (push 발송용) */
 export async function supabasePushSubscriptionsGetAll(): Promise<PushSubscriptionRecord[]> {
-  const pool = getPgPool();
-  try {
-    const result = await pool.query(
-      `SELECT id, user_code, endpoint, p256dh, auth_key, created_at
-       FROM public.push_subscriptions`
-    );
-    return result.rows;
-  } finally {
-    await pool.end();
+  const client = getServerClient();
+  const { data, error } = await client
+    .from("push_subscriptions")
+    .select("id, user_code, endpoint, p256dh, auth_key, created_at");
+  if (error) {
+    console.error("supabasePushSubscriptionsGetAll error:", error.message);
+    throw error;
   }
+  return data || [];
 }
 
