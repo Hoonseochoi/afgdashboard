@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find C:UserschlgnDocuments -type f -name *푸시*)",
+      "Bash(find /c/Users/chlgn/OneDrive/Desktop/AFG_DASHBOARD/afg-dashboard/src -type f \\\\\\(-name *notif* -o -name *push* -o -name *service*worker* -o -name *sw* \\\\\\))",
+      "Bash(npm install:*)",
+      "Bash(find C:/Users/chlgn -maxdepth 4 -name *.md -path *Hoonseo*)",
+      "Bash(node -e \"const webpush = require\\(''web-push''\\); const keys = webpush.generateVAPIDKeys\\(\\); console.log\\(''PUBLIC:'', keys.publicKey\\); console.log\\(''PRIVATE:'', keys.privateKey\\);\")",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}
