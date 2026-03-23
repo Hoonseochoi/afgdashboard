@@ -36,6 +36,8 @@ export const MAR_W3_SPECIAL_PRIZES: [number, number][] = [
   [1000000, 3000000],
   [1200000, 3000000],
 ];
+/** 3월 4주차 특별 현금시상: 3주차와 동일 (10→10, 20→20, 30→30, 50→100, 80→160, 100→300, 120→300 만원) */
+export const MAR_W4_SPECIAL_PRIZES = MAR_W3_SPECIAL_PRIZES;
 
 export const MONTHLY_TIERS = [1000000, 1200000, 1500000, 1800000, 2000000, 2500000];
 export const PLUS_TIERS = [200000, 400000, 600000, 800000, 1000000];
@@ -427,6 +429,13 @@ export const calculateMarW3SpecialPrize = (w3Perf: number): any => {
 };
 
 /**
+ * 3월 4주차 특별 현금시상 (3주차와 동일)
+ */
+export const calculateMarW4SpecialPrize = (w4Perf: number): any => {
+  return calculateIncentiveTier(w4Perf, MAR_W4_SPECIAL_PRIZES);
+};
+
+/**
  * 정규시상 계산
  */
 export const calculateRegularPrize = (perf: number, isPartner: boolean): number => {
@@ -731,6 +740,10 @@ export const calculateIncentiveData = (
   const marchW2SpecialPrize = marchW2SpecialResult ? marchW2SpecialResult.prize : 0;
   const marchW3SpecialResult = selectedMonth === 3 ? calculateMarW3SpecialPrize(week3Perf) : null;
   const marchW3SpecialPrize = marchW3SpecialResult ? marchW3SpecialResult.prize : 0;
+  
+  const week4Perf = weekData.find(w => w.week === 4)?.performance ?? 0;
+  const marchW4SpecialResult = selectedMonth === 3 ? calculateMarW4SpecialPrize(week4Perf) : null;
+  const marchW4SpecialPrize = marchW4SpecialResult ? marchW4SpecialResult.prize : 0;
 
   // 3월 AFG 조기가동: 1주 400%, 2주 300%, 3주 250%, 4주 200% × 구간(10/20/30/40/50만)
   const earlyRunWeekPerfs = [1, 2, 3, 4].map((wNum) => weekData.find(w => w.week === wNum)?.performance ?? 0);
@@ -749,9 +762,9 @@ export const calculateIncentiveData = (
     clubPlus: clubPlusForTotal,
     regular: regularPrizeSize
   });
-  // 3월 다이렉트: 파타야 + 2주차 특별 + 조기가동 시상이 카드에 있으므로 총합에 포함
+  // 3월 다이렉트: 파타야 + 2주차 특별 + 3주차 특별 + 4주차 특별 + 조기가동 시상이 카드에 있으므로 총합에 포함
   if (selectedMonth === 3 && !isPartner) {
-    totalPrize += patayaPrize + marchW2SpecialPrize + marchW3SpecialPrize + earlyRunTotalPrize;
+    totalPrize += patayaPrize + marchW2SpecialPrize + marchW3SpecialPrize + marchW4SpecialPrize + earlyRunTotalPrize;
   }
 
   // 순위 및 목표
@@ -789,6 +802,7 @@ export const calculateIncentiveData = (
     marchW1SpecialPrize,
     marchW2SpecialPrize,
     marchW3SpecialPrize,
+    marchW4SpecialPrize,
     earlyRunWeekPrizes,
     earlyRunWeekPerfs,
     earlyRunTotalPrize,
@@ -798,6 +812,7 @@ export const calculateIncentiveData = (
     plusTargetMinPerf,
     plusProgress,
     week1Perf,
+    week4Perf,
     // 추가 주차 데이터
     week1Prize: weekPrizes[0]?.prize || 0,
     week1Next: weekPrizes[0]?.nextLevel || "",

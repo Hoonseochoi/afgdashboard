@@ -96,52 +96,55 @@ async function main() {
   let updated = 0;
   let notFound = 0;
 
-  for (let i = 0; i < codes.length; i += BATCH) {
-    const chunk = codes.slice(i, i + BATCH);
-    const { data: agents, error: fetchErr } = await supabase
-      .from('agents')
-      .select('id, code')
-      .in('code', chunk);
-
-    if (fetchErr) {
-      console.error('[manager_name/MCLIST] 조회 오류:', fetchErr.message);
-      throw fetchErr;
-    }
-
-    const byCode = new Map((agents || []).map((a) => [normalizeCode(a.code), a]));
-    const updates = [];
-    for (const code of chunk) {
-      const managerName = codeToManager.get(code);
-      const agent = byCode.get(code);
-      if (!agent) {
-        notFound++;
-        continue;
+    for (let i = 0; i < codes.length; i += BATCH) {
+      const chunk = codes.slice(i, i + BATCH);
+      const { data: agents, error: fetchErr } = await supabase
+        .from('agents')
+        .select('id, code, manager_name')
+        .in('code', chunk);
+  
+      if (fetchErr) {
+        console.error('[manager_name/MCLIST] 조회 오류:', fetchErr.message);
+        throw fetchErr;
       }
-      updates.push({ id: agent.id, manager_name: managerName });
-    }
-
-    for (let u = 0; u < updates.length; u += CONCURRENCY) {
-      const group = updates.slice(u, u + CONCURRENCY);
-      const results = await Promise.all(
-        group.map(({ id, manager_name }) =>
-          supabase.from('agents').update({ manager_name }).eq('id', id).then((r) => r.error)
-        )
-      );
-      for (let k = 0; k < results.length; k++) {
-        const err = results[k];
-        if (err) {
-          console.error('[manager_name/MCLIST] 업데이트 실패 id:', group[k].id, err.message);
-        } else {
-          updated++;
+  
+      const byCode = new Map((agents || []).map((a) => [normalizeCode(a.code), a]));
+      const updates = [];
+      for (const code of chunk) {
+        const managerName = codeToManager.get(code);
+        const agent = byCode.get(code);
+        if (!agent) {
+          notFound++;
+          continue;
+        }
+        if (agent.manager_name !== managerName) {
+            console.log(`[변경됨] 설계사 ${code}: 기존 '${agent.manager_name}' -> 변경 '${managerName}'`);
+            updates.push({ id: agent.id, manager_name: managerName });
         }
       }
+  
+      for (let u = 0; u < updates.length; u += CONCURRENCY) {
+        const group = updates.slice(u, u + CONCURRENCY);
+        const results = await Promise.all(
+          group.map(({ id, manager_name }) =>
+            supabase.from('agents').update({ manager_name }).eq('id', id).then((r) => r.error)
+          )
+        );
+        for (let k = 0; k < results.length; k++) {
+          const err = results[k];
+          if (err) {
+            console.error('[manager_name/MCLIST] 업데이트 실패 id:', group[k].id, err.message);
+          } else {
+            updated++;
+          }
+        }
+      }
+      if ((i + BATCH) % 500 === 0 || i + BATCH >= codes.length) {
+        console.log('[manager_name/MCLIST] 진행:', Math.min(i + BATCH, codes.length), '/', codes.length);
+      }
     }
-    if ((i + BATCH) % 500 === 0 || i + BATCH >= codes.length) {
-      console.log('[manager_name/MCLIST] 진행:', Math.min(i + BATCH, codes.length), '/', codes.length);
-    }
-  }
-
-  console.log('[manager_name/MCLIST] 완료. 업데이트:', updated, '건, Supabase에 없는 코드:', notFound, '건');
+  
+    console.log('[manager_name/MCLIST] 완료. 실제 업데이트된 갯수:', updated, '건, Supabase에 없어서 무시된 엑셀 코드 수:', notFound, '건');
 }
 
 main().catch((e) => {
