@@ -30,6 +30,14 @@ jobs:
       GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
       GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
       GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+      
+      # 👇 새롭게 추가된 푸시 알림 환경 변수들 (GitHub Secrets에서 불러옴) 👇
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+      VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+      PUSH_API_SECRET: ${{ secrets.PUSH_API_SECRET }}
+      # Next.js 코드 내에서 `VAPID_PUBLIC_KEY` 라는 이름으로 찾을 경우를 대비한 백업
+      VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }} 
 
     steps:
       - name: Checkout repository
@@ -91,4 +99,3 @@ jobs:
           if [ -f .next-server.pid ]; then
             kill "$(cat .next-server.pid)" || true
           fi
-
